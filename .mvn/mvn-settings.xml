@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <!-- 清空 mirrors、profiles、servers 等公司配置 -->
+    <!-- Maven 默认会使用中央仓库，无需显式声明 -->
+</settings>

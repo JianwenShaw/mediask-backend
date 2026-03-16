@@ -1,0 +1,1 @@
+Before using the mvn command, first confirm whether the current system is macOS (you can verify this using ./scripts/os_detect.py). If it is, replace mvn with ./scripts/m21.sh.
