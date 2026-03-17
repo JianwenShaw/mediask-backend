@@ -25,7 +25,7 @@ public record Result<T>(int code, String msg, T data, String requestId, long tim
                 ErrorCode.SUCCESS.getMessage(),
                 data,
                 null,
-                System.currentTimeMillis());
+                currentTimestamp());
     }
 
     public static <T> Result<T> fail(ErrorCodeType errorCode) {
@@ -38,7 +38,7 @@ public record Result<T>(int code, String msg, T data, String requestId, long tim
                 message,
                 null,
                 null,
-                System.currentTimeMillis());
+                currentTimestamp());
     }
 
     public static <T> Result<T> fail(ErrorCodeType errorCode, String message) {
@@ -53,5 +53,9 @@ public record Result<T>(int code, String msg, T data, String requestId, long tim
             return fail(baseException.getErrorCode());
         }
         return fail(ErrorCode.SYSTEM_ERROR);
+    }
+
+    private static long currentTimestamp() {
+        return System.currentTimeMillis();
     }
 }

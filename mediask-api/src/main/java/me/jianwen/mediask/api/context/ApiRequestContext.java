@@ -1,32 +1,48 @@
 package me.jianwen.mediask.api.context;
 
 import jakarta.servlet.http.HttpServletRequest;
-import me.jianwen.mediask.common.constant.CommonConstants;
-import me.jianwen.mediask.common.util.RequestIdUtils;
+import me.jianwen.mediask.common.request.DefaultRequestIdGenerator;
+import me.jianwen.mediask.common.request.RequestConstants;
+import me.jianwen.mediask.common.request.RequestContextSnapshot;
+import me.jianwen.mediask.common.request.RequestIdGenerator;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 public final class ApiRequestContext {
 
+    private static final RequestIdGenerator REQUEST_ID_GENERATOR = DefaultRequestIdGenerator.INSTANCE;
+
     private ApiRequestContext() {
     }
 
     public static String currentRequestIdOrGenerate() {
+        return currentRequestContext().requestId();
+    }
+
+    public static RequestContextSnapshot currentRequestContext() {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {
-            return RequestIdUtils.generate();
+            return new RequestContextSnapshot(REQUEST_ID_GENERATOR.generate(), null, null);
         }
 
         HttpServletRequest request = attributes.getRequest();
-        Object requestId = request.getAttribute(CommonConstants.REQUEST_ID_ATTRIBUTE);
+        Object requestId = request.getAttribute(RequestConstants.REQUEST_ID_ATTRIBUTE);
+        Object requestUri = request.getAttribute(RequestConstants.REQUEST_URI_ATTRIBUTE);
+        Object userId = request.getAttribute(RequestConstants.USER_ID_ATTRIBUTE);
         if (requestId instanceof String requestIdValue && !requestIdValue.isBlank()) {
-            return requestIdValue;
+            return new RequestContextSnapshot(
+                    requestIdValue,
+                    requestUri instanceof String requestUriValue ? requestUriValue : request.getRequestURI(),
+                    userId instanceof String userIdValue ? userIdValue : null);
         }
 
-        return firstNonBlank(
-                request.getHeader(CommonConstants.REQUEST_ID_HEADER),
-                request.getHeader(CommonConstants.LEGACY_TRACE_ID_HEADER),
-                RequestIdUtils.generate());
+        return new RequestContextSnapshot(
+                firstNonBlank(
+                        request.getHeader(RequestConstants.REQUEST_ID_HEADER),
+                        request.getHeader(RequestConstants.LEGACY_TRACE_ID_HEADER),
+                        REQUEST_ID_GENERATOR.generate()),
+                request.getRequestURI(),
+                userId instanceof String userIdValue ? userIdValue : null);
     }
 
     private static String firstNonBlank(String... values) {

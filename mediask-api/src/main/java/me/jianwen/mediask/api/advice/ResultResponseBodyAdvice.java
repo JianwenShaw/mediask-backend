@@ -1,7 +1,7 @@
 package me.jianwen.mediask.api.advice;
 
 import me.jianwen.mediask.api.context.ApiRequestContext;
-import me.jianwen.mediask.common.constant.CommonConstants;
+import me.jianwen.mediask.common.request.RequestConstants;
 import me.jianwen.mediask.common.result.Result;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
@@ -32,7 +32,7 @@ public class ResultResponseBodyAdvice implements ResponseBodyAdvice<Object> {
         }
 
         String requestId = ApiRequestContext.currentRequestIdOrGenerate();
-        response.getHeaders().set(CommonConstants.REQUEST_ID_HEADER, requestId);
+        response.getHeaders().set(RequestConstants.REQUEST_ID_HEADER, requestId);
         if (result.requestId() != null && !result.requestId().isBlank()) {
             return result;
         }
