@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mediask_dev
+    username: mediask
+    password: ${PG_PASSWORD}
+    hikari:
+      minimum-idle: 2
+      maximum-pool-size: 10
+      connection-timeout: 10000
+      leak-detection-threshold: 30000
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD}
+
+mediask:
+  redisson:
+    address: redis://localhost:6379
+    password: ${REDIS_PASSWORD}

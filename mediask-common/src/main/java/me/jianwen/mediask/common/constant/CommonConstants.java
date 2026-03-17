@@ -1,0 +1,15 @@
+package me.jianwen.mediask.common.constant;
+
+public final class CommonConstants {
+
+    public static final String REQUEST_ID_HEADER = "X-Request-Id";
+    public static final String LEGACY_TRACE_ID_HEADER = "X-Trace-Id";
+    public static final String REQUEST_ID_ATTRIBUTE = "requestId";
+    public static final String REQUEST_URI_ATTRIBUTE = "requestUri";
+    public static final String MDC_REQUEST_ID = "requestId";
+    public static final String MDC_USER_ID = "userId";
+    public static final String MDC_REQUEST_URI = "requestUri";
+
+    private CommonConstants() {
+    }
+}

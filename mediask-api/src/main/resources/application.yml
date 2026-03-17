@@ -1,0 +1,72 @@
+server:
+  port: 8989
+
+spring:
+  application:
+    name: mediask-api
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5432}/${PG_DB:mediask}
+    username: ${PG_USER:mediask}
+    password: ${PG_PASSWORD}
+    hikari:
+      pool-name: MediAskHikariPool
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      keepalive-time: 300000
+      leak-detection-threshold: 60000
+      connection-init-sql: SET TIME ZONE 'Asia/Shanghai'
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      database: 0
+      timeout: 3s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 3s
+  jackson:
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+  global-config:
+    db-config:
+      id-type: INPUT
+      logic-delete-field: deletedAt
+      logic-not-delete-value: "null"
+      logic-delete-value: "now()"
+
+mediask:
+  redisson:
+    address: redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD}
+    database: 0
+    connection-pool-size: 16
+    connection-minimum-idle-size: 4
+    timeout: 3000
+    retry-attempts: 3
+    retry-interval: 1500
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
