@@ -94,6 +94,7 @@ Hard rules:
 - `mediask-infra` implements ports defined by the domain.
 - `mediask-api` and `mediask-worker` are entry-point adapters; controllers and jobs call application services, not repositories.
 - Cross-context communication uses IDs, ports, and domain events, not direct aggregate references.
+- AI must preserve module purity: do not add imports or dependencies that violate the dependency direction, even if they seem convenient.
 
 ## Package and Naming Conventions
 - Base package: `me.jianwen.mediask`.
