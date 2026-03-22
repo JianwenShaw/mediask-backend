@@ -6,7 +6,10 @@ import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
 import me.jianwen.mediask.common.exception.ErrorCodeType;
 import me.jianwen.mediask.common.exception.SysException;
+import me.jianwen.mediask.common.request.RequestConstants;
 import me.jianwen.mediask.common.result.Result;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -20,12 +23,17 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(BizException.class)
     public ResponseEntity<Result<Void>> handleBizException(BizException exception) {
+        String requestId = ApiRequestContext.currentRequestIdOrGenerate();
+        logBusinessExceptionIfNeeded(exception, requestId);
         return buildResponse(
                 resolveStatus(exception.getErrorCode()),
                 Result.<Void>fail(exception.getErrorCode(), exception.getMessage())
-                        .withRequestId(ApiRequestContext.currentRequestIdOrGenerate()));
+                        .withRequestId(requestId),
+                requestId);
     }
 
     @ExceptionHandler({
@@ -37,30 +45,56 @@ public class GlobalExceptionHandler {
             IllegalArgumentException.class
     })
     public ResponseEntity<Result<Void>> handleBadRequest(Exception exception) {
+        String requestId = ApiRequestContext.currentRequestIdOrGenerate();
         return buildResponse(
                 HttpStatus.BAD_REQUEST,
                 Result.<Void>fail(ErrorCode.INVALID_PARAMETER, resolveValidationMessage(exception))
-                        .withRequestId(ApiRequestContext.currentRequestIdOrGenerate()));
+                        .withRequestId(requestId),
+                requestId);
     }
 
     @ExceptionHandler(SysException.class)
     public ResponseEntity<Result<Void>> handleSysException(SysException exception) {
+        String requestId = ApiRequestContext.currentRequestIdOrGenerate();
+        log.error(
+                "System exception handled, requestId={}, code={}, message={}",
+                requestId,
+                exception.getCode(),
+                exception.getMessage(),
+                exception);
         return buildResponse(
                 resolveStatus(exception.getErrorCode()),
                 Result.<Void>fail(exception)
-                        .withRequestId(ApiRequestContext.currentRequestIdOrGenerate()));
+                        .withRequestId(requestId),
+                requestId);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleException(Exception exception) {
+        String requestId = ApiRequestContext.currentRequestIdOrGenerate();
+        log.error("Unhandled exception, requestId={}", requestId, exception);
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 Result.<Void>fail(ErrorCode.SYSTEM_ERROR)
-                        .withRequestId(ApiRequestContext.currentRequestIdOrGenerate()));
+                        .withRequestId(requestId),
+                requestId);
     }
 
-    private ResponseEntity<Result<Void>> buildResponse(HttpStatus status, Result<Void> body) {
-        return ResponseEntity.status(status).body(body);
+    private ResponseEntity<Result<Void>> buildResponse(HttpStatus status, Result<Void> body, String requestId) {
+        return ResponseEntity.status(status)
+                .header(RequestConstants.REQUEST_ID_HEADER, requestId)
+                .body(body);
+    }
+
+    private void logBusinessExceptionIfNeeded(BizException exception, String requestId) {
+        HttpStatus status = resolveStatus(exception.getErrorCode());
+        if (status == HttpStatus.UNAUTHORIZED || status == HttpStatus.FORBIDDEN) {
+            log.warn(
+                    "Access denied, requestId={}, code={}, message={}",
+                    requestId,
+                    exception.getCode(),
+                    exception.getMessage());
+        }
     }
 
     private HttpStatus resolveStatus(ErrorCodeType errorCode) {

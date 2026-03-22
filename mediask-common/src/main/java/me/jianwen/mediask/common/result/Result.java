@@ -50,7 +50,7 @@ public record Result<T>(int code, String msg, T data, String requestId, long tim
             return fail(bizException.getErrorCode(), bizException.getMessage());
         }
         if (throwable instanceof BaseException baseException) {
-            return fail(baseException.getErrorCode());
+            return fail(baseException.getErrorCode(), baseException.getMessage());
         }
         return fail(ErrorCode.SYSTEM_ERROR);
     }
