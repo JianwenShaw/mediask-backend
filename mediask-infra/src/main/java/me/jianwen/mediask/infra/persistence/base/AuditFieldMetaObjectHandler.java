@@ -1,7 +1,7 @@
 package me.jianwen.mediask.infra.persistence.base;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
 
@@ -10,14 +10,14 @@ public class AuditFieldMetaObjectHandler implements MetaObjectHandler {
 
     @Override
     public void insertFill(MetaObject metaObject) {
-        LocalDateTime now = LocalDateTime.now();
-        strictInsertFill(metaObject, "createdAt", LocalDateTime.class, now);
-        strictInsertFill(metaObject, "updatedAt", LocalDateTime.class, now);
+        OffsetDateTime now = OffsetDateTime.now();
+        strictInsertFill(metaObject, "createdAt", OffsetDateTime.class, now);
+        strictInsertFill(metaObject, "updatedAt", OffsetDateTime.class, now);
         strictInsertFill(metaObject, "version", Integer.class, 0);
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
-        strictUpdateFill(metaObject, "updatedAt", LocalDateTime.class, LocalDateTime.now());
+        strictUpdateFill(metaObject, "updatedAt", OffsetDateTime.class, OffsetDateTime.now());
     }
 }
