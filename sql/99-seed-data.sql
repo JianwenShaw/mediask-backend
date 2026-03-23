@@ -23,11 +23,14 @@ VALUES
     (1205, 1003, 1105)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+-- admin / admin123
+-- doctor_zhang / doctor123
+-- patient_li / patient123
 INSERT INTO users (id, username, password_hash, display_name, mobile_masked, user_type, account_status)
 VALUES
-    (2001, 'admin', '{noop}admin123', '系统管理员', '138****0000', 'ADMIN', 'ACTIVE'),
-    (2002, 'doctor_zhang', '{noop}doctor123', '张医生', '139****0001', 'DOCTOR', 'ACTIVE'),
-    (2003, 'patient_li', '{noop}patient123', '李患者', '137****0002', 'PATIENT', 'ACTIVE')
+    (2001, 'admin', '$2y$10$XMYeGErQIJ3Wg5Bzlj9B5.lhFhj3JBe1.YZ4j1OxihiNsHL4rIh8e', '系统管理员', '138****0000', 'ADMIN', 'ACTIVE'),
+    (2002, 'doctor_zhang', '$2y$10$/0Am2Gpefs87WmCYex4Jr.RNGSOKaVsaLz4qmiB8zKOhKBgz.KUUy', '张医生', '139****0001', 'DOCTOR', 'ACTIVE'),
+    (2003, 'patient_li', '$2y$10$xm4nTR2YtFBj9ZWiHbazOu3yq0JedJArylIn5HmdaP7FlLegb8WQe', '李患者', '137****0002', 'PATIENT', 'ACTIVE')
 ON CONFLICT (username) DO NOTHING;
 
 INSERT INTO user_roles (id, user_id, role_id, granted_by)

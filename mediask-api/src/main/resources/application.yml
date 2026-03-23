@@ -50,6 +50,10 @@ mybatis-plus:
       logic-delete-value: "now()"
 
 mediask:
+  jwt:
+    secret: ${MEDIASK_JWT_SECRET}
+    issuer: ${MEDIASK_JWT_ISSUER:mediask}
+    access-token-expire-seconds: ${MEDIASK_JWT_ACCESS_TOKEN_EXPIRE_SECONDS:1800}
   redisson:
     address: redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}
     password: ${REDIS_PASSWORD}
