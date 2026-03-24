@@ -1,5 +1,7 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import me.jianwen.mediask.domain.user.model.AccountStatus;
@@ -10,8 +12,10 @@ import me.jianwen.mediask.infra.persistence.converter.UserAuthenticationConverte
 import me.jianwen.mediask.infra.persistence.dataobject.DoctorDO;
 import me.jianwen.mediask.infra.persistence.dataobject.PatientProfileDO;
 import me.jianwen.mediask.infra.persistence.dataobject.UserDO;
+import me.jianwen.mediask.infra.persistence.mapper.ActiveRoleRow;
 import me.jianwen.mediask.infra.persistence.mapper.DoctorDepartmentRelationMapper;
 import me.jianwen.mediask.infra.persistence.mapper.DoctorMapper;
+import me.jianwen.mediask.infra.persistence.mapper.PermissionMapper;
 import me.jianwen.mediask.infra.persistence.mapper.PatientProfileMapper;
 import me.jianwen.mediask.infra.persistence.mapper.RoleMapper;
 import me.jianwen.mediask.infra.persistence.mapper.UserMapper;
@@ -22,6 +26,7 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
 
     private final UserMapper userMapper;
     private final RoleMapper roleMapper;
+    private final PermissionMapper permissionMapper;
     private final PatientProfileMapper patientProfileMapper;
     private final DoctorMapper doctorMapper;
     private final DoctorDepartmentRelationMapper doctorDepartmentRelationMapper;
@@ -30,11 +35,13 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
     public UserAuthenticationRepositoryAdapter(
             UserMapper userMapper,
             RoleMapper roleMapper,
+            PermissionMapper permissionMapper,
             PatientProfileMapper patientProfileMapper,
             DoctorMapper doctorMapper,
             DoctorDepartmentRelationMapper doctorDepartmentRelationMapper) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
+        this.permissionMapper = permissionMapper;
         this.patientProfileMapper = patientProfileMapper;
         this.doctorMapper = doctorMapper;
         this.doctorDepartmentRelationMapper = doctorDepartmentRelationMapper;
@@ -42,28 +49,41 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
 
     @Override
     public Optional<LoginAccount> findLoginAccountByUsername(String username) {
-        UserDO userDO = userMapper.selectActiveByUsername(username);
+        UserDO userDO = userMapper.selectOne(Wrappers.lambdaQuery(UserDO.class)
+                .eq(UserDO::getUsername, username)
+                .isNull(UserDO::getDeletedAt));
         return Optional.ofNullable(userDO).map(this::toLoginAccount);
     }
 
     @Override
     public Optional<AuthenticatedUser> findAuthenticatedUserById(Long userId) {
-        return Optional.ofNullable(userMapper.selectActiveById(userId))
+        return Optional.ofNullable(userMapper.selectOne(Wrappers.lambdaQuery(UserDO.class)
+                        .eq(UserDO::getId, userId)
+                        .eq(UserDO::getAccountStatus, AccountStatus.ACTIVE.name())
+                        .isNull(UserDO::getDeletedAt)))
                 .filter(this::isCurrentUserAccessible)
                 .map(this::toAuthenticatedUser);
     }
 
     @Override
     public void updateLastLoginAt(Long userId) {
-        userMapper.updateLastLoginAt(userId);
+        OffsetDateTime now = OffsetDateTime.now();
+        userMapper.update(
+                null,
+                Wrappers.lambdaUpdate(UserDO.class)
+                        .eq(UserDO::getId, userId)
+                        .isNull(UserDO::getDeletedAt)
+                        .set(UserDO::getLastLoginAt, now)
+                        .set(UserDO::getUpdatedAt, now));
     }
 
     private LoginAccount toLoginAccount(UserDO userDO) {
         UserIdentityBinding identityBinding = resolveIdentityBinding(userDO.getId());
-        List<String> roleCodes = loadRoleCodes(userDO.getId());
+        ActiveAuthorization activeAuthorization = loadAuthorization(userDO.getId());
         return userAuthenticationConverter.toLoginAccount(
                 userDO,
-                roleCodes,
+                activeAuthorization.roleCodes(),
+                activeAuthorization.permissionCodes(),
                 identityBinding.patientId(),
                 identityBinding.doctorId(),
                 identityBinding.primaryDepartmentId());
@@ -71,10 +91,11 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
 
     private AuthenticatedUser toAuthenticatedUser(UserDO userDO) {
         UserIdentityBinding identityBinding = resolveIdentityBinding(userDO.getId());
-        List<String> roleCodes = loadRoleCodes(userDO.getId());
+        ActiveAuthorization activeAuthorization = loadAuthorization(userDO.getId());
         return userAuthenticationConverter.toAuthenticatedUser(
                 userDO,
-                roleCodes,
+                activeAuthorization.roleCodes(),
+                activeAuthorization.permissionCodes(),
                 identityBinding.patientId(),
                 identityBinding.doctorId(),
                 identityBinding.primaryDepartmentId());
@@ -84,13 +105,34 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
         return AccountStatus.fromCode(userDO.getAccountStatus()) == AccountStatus.ACTIVE;
     }
 
-    private List<String> loadRoleCodes(Long userId) {
-        return roleMapper.selectActiveRoleCodesByUserId(userId);
+    private ActiveAuthorization loadAuthorization(Long userId) {
+        List<ActiveRoleRow> activeRoles = roleMapper.selectActiveRolesByUserId(userId);
+        if (activeRoles == null || activeRoles.isEmpty()) {
+            return new ActiveAuthorization(List.of(), List.of());
+        }
+        List<String> roleCodes = activeRoles.stream()
+                .map(ActiveRoleRow::getRoleCode)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        List<Long> roleIds = activeRoles.stream()
+                .map(ActiveRoleRow::getRoleId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        List<String> permissionCodes = roleIds.isEmpty()
+                ? List.of()
+                : permissionMapper.selectActivePermissionCodesByRoleIds(roleIds);
+        return new ActiveAuthorization(roleCodes, permissionCodes);
     }
 
     private UserIdentityBinding resolveIdentityBinding(Long userId) {
-        PatientProfileDO patientProfileDO = patientProfileMapper.selectActiveByUserId(userId);
-        DoctorDO doctorDO = doctorMapper.selectActiveByUserId(userId);
+        PatientProfileDO patientProfileDO = patientProfileMapper.selectOne(Wrappers.lambdaQuery(PatientProfileDO.class)
+                .eq(PatientProfileDO::getUserId, userId)
+                .isNull(PatientProfileDO::getDeletedAt));
+        DoctorDO doctorDO = doctorMapper.selectOne(Wrappers.lambdaQuery(DoctorDO.class)
+                .eq(DoctorDO::getUserId, userId)
+                .eq(DoctorDO::getStatus, "ACTIVE")
+                .isNull(DoctorDO::getDeletedAt));
         Long patientId = patientProfileDO == null ? null : patientProfileDO.getId();
         Long doctorId = doctorDO == null ? null : doctorDO.getId();
         Long primaryDepartmentId = doctorId == null
@@ -100,5 +142,8 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
     }
 
     private record UserIdentityBinding(Long patientId, Long doctorId, Long primaryDepartmentId) {
+    }
+
+    private record ActiveAuthorization(List<String> roleCodes, List<String> permissionCodes) {
     }
 }

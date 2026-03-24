@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
 import me.jianwen.mediask.domain.user.port.AccessTokenCodec;
+import me.jianwen.mediask.domain.user.port.AccessTokenBlocklistPort;
+import me.jianwen.mediask.domain.user.port.UserAuthenticationRepository;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,6 +45,8 @@ public class SecurityConfig {
         PathPatternRequestMatcher.Builder matcherBuilder = PathPatternRequestMatcher.withDefaults();
         List<RequestMatcher> matchers = new ArrayList<>();
         matchers.add(matcherBuilder.matcher(HttpMethod.POST, "/api/v1/auth/login"));
+        matchers.add(matcherBuilder.matcher(HttpMethod.POST, "/api/v1/auth/refresh"));
+        matchers.add(matcherBuilder.matcher(HttpMethod.POST, "/api/v1/auth/logout"));
         matchers.add(matcherBuilder.matcher(HttpMethod.GET, "/actuator/health"));
         matchers.add(matcherBuilder.matcher(HttpMethod.GET, "/actuator/health/readiness"));
         matchers.add(matcherBuilder.matcher(HttpMethod.GET, "/actuator/health/liveness"));
@@ -73,9 +77,18 @@ public class SecurityConfig {
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(
             AccessTokenCodec accessTokenCodec,
+            AccessTokenBlocklistPort accessTokenBlocklistPort,
+            UserAuthenticationRepository userAuthenticationRepository,
+            ObjectMapper objectMapper,
             JsonAuthenticationEntryPoint jsonAuthenticationEntryPoint,
             RequestMatcher publicRequestMatcher) {
-        return new JwtAuthenticationFilter(accessTokenCodec, jsonAuthenticationEntryPoint, publicRequestMatcher);
+        return new JwtAuthenticationFilter(
+                accessTokenCodec,
+                accessTokenBlocklistPort,
+                userAuthenticationRepository,
+                jsonAuthenticationEntryPoint,
+                objectMapper,
+                publicRequestMatcher);
     }
 
     @Bean

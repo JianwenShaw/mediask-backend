@@ -14,21 +14,32 @@ import me.jianwen.mediask.infra.persistence.dataobject.UserDO;
 public final class UserAuthenticationConverter {
 
     public LoginAccount toLoginAccount(
-            UserDO userDO, List<String> roleCodes, Long patientId, Long doctorId, Long primaryDepartmentId) {
+            UserDO userDO,
+            List<String> roleCodes,
+            List<String> permissionCodes,
+            Long patientId,
+            Long doctorId,
+            Long primaryDepartmentId) {
         return new LoginAccount(
-                toAuthenticatedUser(userDO, roleCodes, patientId, doctorId, primaryDepartmentId),
+                toAuthenticatedUser(userDO, roleCodes, permissionCodes, patientId, doctorId, primaryDepartmentId),
                 userDO.getPasswordHash(),
                 AccountStatus.fromCode(userDO.getAccountStatus()));
     }
 
     public AuthenticatedUser toAuthenticatedUser(
-            UserDO userDO, List<String> roleCodes, Long patientId, Long doctorId, Long primaryDepartmentId) {
+            UserDO userDO,
+            List<String> roleCodes,
+            List<String> permissionCodes,
+            Long patientId,
+            Long doctorId,
+            Long primaryDepartmentId) {
         return new AuthenticatedUser(
                 userDO.getId(),
                 userDO.getUsername(),
                 userDO.getDisplayName(),
                 UserType.fromCode(userDO.getUserType()),
                 toRoleCodes(roleCodes),
+                toPermissions(permissionCodes),
                 patientId,
                 doctorId,
                 primaryDepartmentId);
@@ -41,6 +52,19 @@ public final class UserAuthenticationConverter {
         LinkedHashSet<RoleCode> normalized = new LinkedHashSet<>();
         for (String roleCode : roleCodes) {
             normalized.add(RoleCode.fromCode(roleCode));
+        }
+        return Collections.unmodifiableSet(normalized);
+    }
+
+    private Set<String> toPermissions(List<String> permissionCodes) {
+        if (permissionCodes == null || permissionCodes.isEmpty()) {
+            return Set.of();
+        }
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (String permissionCode : permissionCodes) {
+            if (permissionCode != null && !permissionCode.isBlank()) {
+                normalized.add(permissionCode.trim());
+            }
         }
         return Collections.unmodifiableSet(normalized);
     }

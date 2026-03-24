@@ -11,6 +11,7 @@ public record AuthenticatedUser(
         String displayName,
         UserType userType,
         Set<RoleCode> roles,
+        Set<String> permissions,
         Long patientId,
         Long doctorId,
         Long primaryDepartmentId) {
@@ -21,6 +22,7 @@ public record AuthenticatedUser(
         displayName = requireNonBlank(displayName, "displayName");
         userType = Objects.requireNonNull(userType, "userType must not be null");
         roles = normalizeRoles(roles);
+        permissions = normalizePermissions(permissions);
         patientId = normalizePositive(patientId, "patientId");
         doctorId = normalizePositive(doctorId, "doctorId");
         primaryDepartmentId = normalizePositive(primaryDepartmentId, "primaryDepartmentId");
@@ -28,6 +30,13 @@ public record AuthenticatedUser(
 
     public boolean hasRole(RoleCode roleCode) {
         return roles.contains(roleCode);
+    }
+
+    public boolean hasPermission(String permissionCode) {
+        if (permissionCode == null || permissionCode.isBlank()) {
+            return false;
+        }
+        return permissions.contains(permissionCode.trim());
     }
 
     private static Set<RoleCode> normalizeRoles(Set<RoleCode> roles) {
@@ -38,6 +47,19 @@ public record AuthenticatedUser(
         for (RoleCode role : roles) {
             if (role != null) {
                 normalized.add(role);
+            }
+        }
+        return Collections.unmodifiableSet(normalized);
+    }
+
+    private static Set<String> normalizePermissions(Set<String> permissions) {
+        if (permissions == null || permissions.isEmpty()) {
+            return Set.of();
+        }
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (String permission : permissions) {
+            if (permission != null && !permission.isBlank()) {
+                normalized.add(permission.trim());
             }
         }
         return Collections.unmodifiableSet(normalized);

@@ -11,7 +11,7 @@ import org.apache.ibatis.annotations.Select;
 public interface RoleMapper extends BaseMapper<RoleDO> {
 
     @Select("""
-            SELECT r.role_code
+            SELECT r.id AS role_id, r.role_code
             FROM roles r
             JOIN user_roles ur ON ur.role_id = r.id
             WHERE ur.user_id = #{userId}
@@ -21,5 +21,5 @@ public interface RoleMapper extends BaseMapper<RoleDO> {
               AND r.deleted_at IS NULL
             ORDER BY r.sort_order ASC, r.id ASC
             """)
-    List<String> selectActiveRoleCodesByUserId(@Param("userId") Long userId);
+    List<ActiveRoleRow> selectActiveRolesByUserId(@Param("userId") Long userId);
 }

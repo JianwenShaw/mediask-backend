@@ -13,6 +13,7 @@ public record AuthenticatedUserPrincipal(
         String displayName,
         String userType,
         List<String> roles,
+        List<String> permissions,
         Long patientId,
         Long doctorId,
         Long primaryDepartmentId,
@@ -21,15 +22,24 @@ public record AuthenticatedUserPrincipal(
 
     public static AuthenticatedUserPrincipal from(AuthenticatedUser authenticatedUser) {
         List<String> roles = authenticatedUser.roles().stream().map(Enum::name).toList();
-        List<GrantedAuthority> authorities = roles.stream()
+        List<String> permissions = authenticatedUser.permissions().stream().toList();
+        List<GrantedAuthority> roleAuthorities = roles.stream()
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
                 .toList();
+        List<GrantedAuthority> permissionAuthorities = permissions.stream()
+                .map(permission -> (GrantedAuthority) new SimpleGrantedAuthority(permission))
+                .toList();
+        java.util.ArrayList<GrantedAuthority> authorities = new java.util.ArrayList<>(roleAuthorities.size()
+                + permissionAuthorities.size());
+        authorities.addAll(roleAuthorities);
+        authorities.addAll(permissionAuthorities);
         return new AuthenticatedUserPrincipal(
                 authenticatedUser.userId(),
                 authenticatedUser.username(),
                 authenticatedUser.displayName(),
                 authenticatedUser.userType().name(),
                 roles,
+                permissions,
                 authenticatedUser.patientId(),
                 authenticatedUser.doctorId(),
                 authenticatedUser.primaryDepartmentId(),

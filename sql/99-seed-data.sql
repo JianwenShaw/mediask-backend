@@ -11,7 +11,10 @@ VALUES
     (1102, 'registration:create', '创建挂号', 'API', 'ACTIVE', 20),
     (1103, 'encounter:view', '查看接诊', 'API', 'ACTIVE', 30),
     (1104, 'emr:view', '查看病历', 'API', 'ACTIVE', 40),
-    (1105, 'audit:view', '查看审计', 'API', 'ACTIVE', 50)
+    (1105, 'audit:view', '查看审计', 'API', 'ACTIVE', 50),
+    (1106, 'auth:refresh', '刷新令牌', 'API', 'ACTIVE', 60),
+    (1108, 'patient:profile:view:self', '查看本人患者资料', 'API', 'ACTIVE', 80),
+    (1109, 'doctor:profile:view:self', '查看本人医生资料', 'API', 'ACTIVE', 90)
 ON CONFLICT (permission_code) DO NOTHING;
 
 INSERT INTO role_permissions (id, role_id, permission_id)
@@ -20,7 +23,12 @@ VALUES
     (1202, 1001, 1102),
     (1203, 1002, 1103),
     (1204, 1002, 1104),
-    (1205, 1003, 1105)
+    (1205, 1003, 1105),
+    (1206, 1001, 1106),
+    (1207, 1002, 1106),
+    (1208, 1003, 1106),
+    (1212, 1001, 1108),
+    (1213, 1002, 1109)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- admin / admin123

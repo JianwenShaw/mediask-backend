@@ -8,6 +8,7 @@ public record CurrentUserResponse(
         String displayName,
         String userType,
         List<String> roles,
+        List<String> permissions,
         Long patientId,
         Long doctorId,
         Long primaryDepartmentId) {

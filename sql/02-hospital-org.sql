@@ -66,3 +66,6 @@ CREATE TABLE doctor_department_rel (
 CREATE INDEX idx_departments_hospital ON departments (hospital_id, status);
 CREATE INDEX idx_doctors_hospital ON doctors (hospital_id, status);
 CREATE INDEX idx_doctor_department_rel_department ON doctor_department_rel (department_id, relation_status);
+CREATE UNIQUE INDEX uk_doctor_primary_department_active
+    ON doctor_department_rel (doctor_id)
+    WHERE is_primary = TRUE AND relation_status = 'ACTIVE';

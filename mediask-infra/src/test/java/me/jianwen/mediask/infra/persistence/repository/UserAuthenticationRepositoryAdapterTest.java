@@ -12,11 +12,13 @@ import java.util.function.Function;
 import me.jianwen.mediask.domain.user.model.AccountStatus;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
 import me.jianwen.mediask.domain.user.model.RoleCode;
+import me.jianwen.mediask.infra.persistence.mapper.ActiveRoleRow;
 import me.jianwen.mediask.infra.persistence.dataobject.PatientProfileDO;
 import me.jianwen.mediask.infra.persistence.dataobject.UserDO;
 import me.jianwen.mediask.infra.persistence.mapper.DoctorDepartmentRelationMapper;
 import me.jianwen.mediask.infra.persistence.mapper.DoctorMapper;
 import me.jianwen.mediask.infra.persistence.mapper.PatientProfileMapper;
+import me.jianwen.mediask.infra.persistence.mapper.PermissionMapper;
 import me.jianwen.mediask.infra.persistence.mapper.RoleMapper;
 import me.jianwen.mediask.infra.persistence.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
@@ -49,6 +51,7 @@ class UserAuthenticationRepositoryAdapterTest {
         assertEquals("李患者", authenticatedUser.displayName());
         assertEquals(PATIENT_ID, authenticatedUser.patientId());
         assertTrue(authenticatedUser.hasRole(RoleCode.PATIENT));
+        assertTrue(authenticatedUser.hasPermission("patient:profile:view:self"));
         assertFalse(authenticatedUser.roles().isEmpty());
     }
 
@@ -56,11 +59,17 @@ class UserAuthenticationRepositoryAdapterTest {
         PatientProfileDO patientProfileDO = new PatientProfileDO();
         patientProfileDO.setId(PATIENT_ID);
         patientProfileDO.setUserId(USER_ID);
+        ActiveRoleRow activeRoleRow = new ActiveRoleRow();
+        activeRoleRow.setRoleId(1001L);
+        activeRoleRow.setRoleCode("PATIENT");
         return new UserAuthenticationRepositoryAdapter(
-                proxy(UserMapper.class, Map.of("selectActiveById", arguments -> userDO)),
-                proxy(RoleMapper.class, Map.of("selectActiveRoleCodesByUserId", arguments -> List.of("PATIENT"))),
-                proxy(PatientProfileMapper.class, Map.of("selectActiveByUserId", arguments -> patientProfileDO)),
-                proxy(DoctorMapper.class, Map.of("selectActiveByUserId", arguments -> null)),
+                proxy(UserMapper.class, Map.of("selectOne", arguments -> userDO)),
+                proxy(RoleMapper.class, Map.of("selectActiveRolesByUserId", arguments -> List.of(activeRoleRow))),
+                proxy(
+                        PermissionMapper.class,
+                        Map.of("selectActivePermissionCodesByRoleIds", arguments -> List.of("patient:profile:view:self"))),
+                proxy(PatientProfileMapper.class, Map.of("selectOne", arguments -> patientProfileDO)),
+                proxy(DoctorMapper.class, Map.of("selectOne", arguments -> null)),
                 proxy(DoctorDepartmentRelationMapper.class, Map.of("selectPrimaryDepartmentIdByDoctorId", arguments -> null)));
     }
 

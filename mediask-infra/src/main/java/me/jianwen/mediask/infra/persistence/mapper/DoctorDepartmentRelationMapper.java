@@ -13,8 +13,6 @@ public interface DoctorDepartmentRelationMapper {
             WHERE doctor_id = #{doctorId}
               AND is_primary = TRUE
               AND relation_status = 'ACTIVE'
-            ORDER BY id
-            LIMIT 1
             """)
     Long selectPrimaryDepartmentIdByDoctorId(@Param("doctorId") Long doctorId);
 }

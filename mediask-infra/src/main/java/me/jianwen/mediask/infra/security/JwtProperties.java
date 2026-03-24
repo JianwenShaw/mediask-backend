@@ -8,13 +8,17 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record JwtProperties(
         String secret,
         @DefaultValue("mediask") String issuer,
-        @DefaultValue("1800") long accessTokenExpireSeconds) {
+        @DefaultValue("1800") long accessTokenExpireSeconds,
+        @DefaultValue("7") long refreshTokenExpireDays) {
 
     public JwtProperties {
         secret = requireSecret(secret);
         issuer = requireNonBlank(issuer, "mediask.jwt.issuer");
         if (accessTokenExpireSeconds <= 0L) {
             throw new IllegalArgumentException("mediask.jwt.access-token-expire-seconds must be greater than 0");
+        }
+        if (refreshTokenExpireDays <= 0L) {
+            throw new IllegalArgumentException("mediask.jwt.refresh-token-expire-days must be greater than 0");
         }
     }
 
