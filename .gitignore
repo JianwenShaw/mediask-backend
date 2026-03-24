@@ -40,3 +40,4 @@ build/
 .DS_Store
 ### MVN macos 配置 ###
 .mvn/
+CR/
