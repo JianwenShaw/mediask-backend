@@ -65,25 +65,29 @@ public final class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            AccessTokenClaims accessTokenClaims = parseAccessToken(authorizationHeader);
-            establishAuthentication(request, accessTokenClaims);
-            filterChain.doFilter(request, response);
-        } catch (BizException exception) {
-            SecurityContextHolder.clearContext();
-            request.removeAttribute(RequestConstants.USER_ID_ATTRIBUTE);
-            if (publicRequest) {
-                MDC.remove(RequestConstants.MDC_USER_ID);
-                filterChain.doFilter(request, response);
+            try {
+                AccessTokenClaims accessTokenClaims = parseAccessToken(authorizationHeader);
+                establishAuthentication(request, accessTokenClaims);
+            } catch (BizException | InsufficientAuthenticationException exception) {
+                SecurityContextHolder.clearContext();
+                request.removeAttribute(RequestConstants.USER_ID_ATTRIBUTE);
+                if (publicRequest) {
+                    MDC.remove(RequestConstants.MDC_USER_ID);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                authenticationEntryPoint.commence(
+                        request,
+                        response,
+                        new InsufficientAuthenticationException("invalid access token", exception));
+                return;
+            } catch (AuthenticationProcessingException exception) {
+                SecurityContextHolder.clearContext();
+                request.removeAttribute(RequestConstants.USER_ID_ATTRIBUTE);
+                securityFailureResponder.writeInternalError(request, response, ErrorCode.SYSTEM_ERROR);
                 return;
             }
-            authenticationEntryPoint.commence(
-                    request,
-                    response,
-                    new InsufficientAuthenticationException("invalid access token", exception));
-        } catch (AuthenticationProcessingException exception) {
-            SecurityContextHolder.clearContext();
-            request.removeAttribute(RequestConstants.USER_ID_ATTRIBUTE);
-            securityFailureResponder.writeInternalError(request, response, ErrorCode.SYSTEM_ERROR);
+            filterChain.doFilter(request, response);
         } finally {
             restoreUserId(previousUserId);
         }

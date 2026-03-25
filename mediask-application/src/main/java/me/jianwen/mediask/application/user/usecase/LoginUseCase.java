@@ -51,7 +51,7 @@ public class LoginUseCase {
         RefreshTokenSession refreshTokenSession = refreshTokenManager.issue(authenticatedUser.userId());
         refreshTokenStore.save(refreshTokenSession);
         return new AuthenticationResult(
-                new AuthTokens(accessTokenCodec.issueAccessToken(authenticatedUser), refreshTokenSession),
+                new AuthTokens(accessTokenCodec.issueAccessToken(authenticatedUser, refreshTokenSession.tokenId()), refreshTokenSession),
                 authenticatedUser);
     }
 

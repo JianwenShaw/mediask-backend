@@ -47,6 +47,11 @@ public class LogoutUseCase {
         if (accessTokenClaims != null && !refreshTokenSession.userId().equals(accessTokenClaims.userId())) {
             throw new BizException(UserErrorCode.PERMISSION_DENIED);
         }
+        if (accessTokenClaims != null
+                && accessTokenClaims.sessionId() != null
+                && !refreshTokenSession.tokenId().equals(accessTokenClaims.sessionId())) {
+            throw new BizException(UserErrorCode.PERMISSION_DENIED);
+        }
 
         refreshTokenStore.deleteByTokenValue(command.refreshToken());
         if (accessTokenClaims != null) {

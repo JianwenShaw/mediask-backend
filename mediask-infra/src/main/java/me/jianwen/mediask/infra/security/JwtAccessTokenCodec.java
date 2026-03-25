@@ -20,6 +20,8 @@ import me.jianwen.mediask.domain.user.port.AccessTokenCodec;
 
 public final class JwtAccessTokenCodec implements AccessTokenCodec {
 
+    private static final String SESSION_ID_CLAIM = "sid";
+
     private final JwtProperties jwtProperties;
     private final Clock clock;
     private final SecretKey signingKey;
@@ -31,7 +33,7 @@ public final class JwtAccessTokenCodec implements AccessTokenCodec {
     }
 
     @Override
-    public AccessToken issueAccessToken(AuthenticatedUser authenticatedUser) {
+    public AccessToken issueAccessToken(AuthenticatedUser authenticatedUser, String sessionId) {
         Instant now = clock.instant();
         Instant expiresAt = now.plusSeconds(jwtProperties.accessTokenExpireSeconds());
         String tokenId = UUID.randomUUID().toString();
@@ -39,6 +41,7 @@ public final class JwtAccessTokenCodec implements AccessTokenCodec {
                 .issuer(jwtProperties.issuer())
                 .id(tokenId)
                 .subject(String.valueOf(authenticatedUser.userId()))
+                .claim(SESSION_ID_CLAIM, parseRequiredString(sessionId, SESSION_ID_CLAIM))
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiresAt))
                 .signWith(signingKey)
@@ -64,6 +67,7 @@ public final class JwtAccessTokenCodec implements AccessTokenCodec {
             return new AccessTokenClaims(
                     parsePositiveLong(claims.getSubject(), "subject"),
                     parseRequiredString(claims.getId(), "jti"),
+                    parseOptionalString(claims.get(SESSION_ID_CLAIM)),
                     Objects.requireNonNull(claims.getExpiration(), "expiration must not be null").toInstant());
         } catch (BizException exception) {
             throw exception;
@@ -93,6 +97,14 @@ public final class JwtAccessTokenCodec implements AccessTokenCodec {
             throw unauthorized();
         }
         return normalized;
+    }
+
+    private String parseOptionalString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = String.valueOf(value).trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private BizException unauthorized() {

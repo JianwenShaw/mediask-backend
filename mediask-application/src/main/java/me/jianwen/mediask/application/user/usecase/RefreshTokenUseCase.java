@@ -54,7 +54,9 @@ public class RefreshTokenUseCase {
             throw new BizException(UserErrorCode.INVALID_REFRESH_TOKEN);
         }
         return new AuthenticationResult(
-                new AuthTokens(accessTokenCodec.issueAccessToken(authenticatedUser), nextRefreshTokenSession),
+                new AuthTokens(
+                        accessTokenCodec.issueAccessToken(authenticatedUser, nextRefreshTokenSession.tokenId()),
+                        nextRefreshTokenSession),
                 authenticatedUser);
     }
 

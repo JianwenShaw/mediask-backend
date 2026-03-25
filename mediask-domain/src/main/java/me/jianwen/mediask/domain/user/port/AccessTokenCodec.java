@@ -6,7 +6,7 @@ import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
 
 public interface AccessTokenCodec {
 
-    AccessToken issueAccessToken(AuthenticatedUser authenticatedUser);
+    AccessToken issueAccessToken(AuthenticatedUser authenticatedUser, String sessionId);
 
     AccessTokenClaims parseAccessToken(String accessToken);
 }

@@ -1,5 +1,7 @@
 package me.jianwen.mediask.api.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
+import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.api.security.ApiCorsProperties;
 import me.jianwen.mediask.api.security.ApiSecurityProperties;
 import me.jianwen.mediask.api.security.JsonAuthenticationEntryPoint;
@@ -31,6 +34,7 @@ import me.jianwen.mediask.application.user.usecase.LogoutUseCase;
 import me.jianwen.mediask.application.user.usecase.RefreshTokenUseCase;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
+import me.jianwen.mediask.common.result.Result;
 import me.jianwen.mediask.domain.user.model.AccessToken;
 import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
 import me.jianwen.mediask.domain.user.model.AccountStatus;
@@ -55,15 +59,29 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 class AuthControllerTest {
 
     private static final String VALID_TOKEN = "valid-token";
     private static final String VALID_TOKEN_ID = "valid-token-id";
+    private static final String VALID_TOKEN_OTHER_SESSION = "valid-token-other-session";
+    private static final String VALID_TOKEN_OTHER_SESSION_ID = "valid-token-other-session-id";
+    private static final String VALID_TOKEN_OTHER_USER = "valid-token-other-user";
+    private static final String VALID_TOKEN_OTHER_USER_ID = "valid-token-other-user-id";
+    private static final String PRIMARY_REFRESH_TOKEN = "rt.2003.refresh-token-1.refresh-secret-1";
+    private static final String SAME_USER_OTHER_SESSION_REFRESH_TOKEN =
+            "rt.2003.refresh-token-other-session.refresh-secret-other-session";
+    private static final String OTHER_USER_REFRESH_TOKEN = "rt.2005.refresh-token-other-user.refresh-secret-other-user";
+    private static final Instant TOKEN_EXPIRES_AT = Instant.parse("2026-03-30T08:00:00Z");
 
     private MockMvc mockMvc;
     private InMemoryRefreshTokenSupport refreshTokenSupport;
     private StubAccessTokenBlocklistPort accessTokenBlocklistPort;
+    private StubUserAuthenticationRepository repository;
+    private StubAccessTokenCodec accessTokenCodec;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private final AuthenticatedUser authenticatedUser = new AuthenticatedUser(
@@ -76,18 +94,35 @@ class AuthControllerTest {
             2201L,
             null,
             null);
+    private final AuthenticatedUser otherUser = new AuthenticatedUser(
+            2005L,
+            "patient_wang",
+            "王患者",
+            UserType.PATIENT,
+            new LinkedHashSet<>(java.util.List.of(RoleCode.PATIENT)),
+            Set.of("auth:refresh", "patient:profile:view:self"),
+            2205L,
+            null,
+            null);
 
     @BeforeEach
     void setUp() {
         refreshTokenSupport = new InMemoryRefreshTokenSupport();
         accessTokenBlocklistPort = new StubAccessTokenBlocklistPort();
-        StubUserAuthenticationRepository repository = new StubUserAuthenticationRepository(authenticatedUser);
-        StubAccessTokenCodec accessTokenCodec = new StubAccessTokenCodec(authenticatedUser);
+        repository = new StubUserAuthenticationRepository(authenticatedUser, otherUser);
+        accessTokenCodec = new StubAccessTokenCodec(authenticatedUser);
         PasswordVerifier passwordVerifier = (rawPassword, encodedPassword) ->
                 encodedPassword.equals("hash<" + rawPassword + ">");
 
         RefreshTokenSession initialRefreshToken = refreshTokenSupport.issue(authenticatedUser.userId());
         refreshTokenSupport.save(initialRefreshToken);
+        refreshTokenSupport.save(new RefreshTokenSession(
+                authenticatedUser.userId(),
+                "refresh-token-other-session",
+                "refresh-secret-other-session",
+                TOKEN_EXPIRES_AT));
+        refreshTokenSupport.save(new RefreshTokenSession(
+                otherUser.userId(), "refresh-token-other-user", "refresh-secret-other-user", TOKEN_EXPIRES_AT));
 
         AuthController authController = new AuthController(
                 new LoginUseCase(repository, passwordVerifier, accessTokenCodec, refreshTokenSupport, refreshTokenSupport),
@@ -124,7 +159,7 @@ class AuthControllerTest {
             }
         };
 
-        mockMvc = MockMvcBuilders.standaloneSetup(authController)
+        mockMvc = MockMvcBuilders.standaloneSetup(authController, new ProtectedTestController())
                 .setControllerAdvice(new GlobalExceptionHandler(), new ResultResponseBodyAdvice())
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .setMessageConverters(
@@ -153,6 +188,8 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.userContext.userId").value(2003))
                 .andExpect(jsonPath("$.data.userContext.roles[0]").value("PATIENT"))
                 .andExpect(jsonPath("$.data.userContext.permissions[0]").exists());
+
+        assertEquals("refresh-token-2", accessTokenCodec.lastIssuedSessionId());
     }
 
     @Test
@@ -222,6 +259,8 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.accessToken").value("issued-access-token-1"))
                 .andExpect(jsonPath("$.data.refreshToken").value("rt.2003.refresh-token-2.refresh-secret-2"))
                 .andExpect(jsonPath("$.data.userContext.permissions[0]").exists());
+
+        assertEquals("refresh-token-2", accessTokenCodec.lastIssuedSessionId());
     }
 
     @Test
@@ -239,6 +278,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.code").value(0));
 
         assertTrue(accessTokenBlocklistPort.isBlocked(VALID_TOKEN_ID));
+        assertTrue(refreshTokenSupport.findByTokenValue(PRIMARY_REFRESH_TOKEN).isEmpty());
     }
 
     @Test
@@ -254,6 +294,59 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Request-Id"))
                 .andExpect(jsonPath("$.code").value(0));
+
+        assertTrue(refreshTokenSupport.findByTokenValue(PRIMARY_REFRESH_TOKEN).isEmpty());
+    }
+
+    @Test
+    void logout_WhenAccessTokenMissingButRefreshTokenValid_ReturnSuccess() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "rt.2003.refresh-token-1.refresh-secret-1"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(0));
+
+        assertTrue(refreshTokenSupport.findByTokenValue(PRIMARY_REFRESH_TOKEN).isEmpty());
+        assertFalse(accessTokenBlocklistPort.isBlocked(VALID_TOKEN_ID));
+    }
+
+    @Test
+    void logout_WhenRefreshTokenBelongsToDifferentUser_ReturnForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", "Bearer " + VALID_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "rt.2005.refresh-token-other-user.refresh-secret-other-user"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(2011));
+
+        assertTrue(refreshTokenSupport.findByTokenValue(OTHER_USER_REFRESH_TOKEN).isPresent());
+    }
+
+    @Test
+    void logout_WhenSameUserRefreshTokenFromAnotherSession_ReturnForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", "Bearer " + VALID_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "rt.2003.refresh-token-other-session.refresh-secret-other-session"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(2011));
+
+        assertTrue(refreshTokenSupport.findByTokenValue(SAME_USER_OTHER_SESSION_REFRESH_TOKEN).isPresent());
     }
 
     @Test
@@ -298,9 +391,61 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.permissions[0]").exists());
     }
 
+    @Test
+    void protectedEndpoint_WhenPermissionRevokedAfterLogin_FailsImmediately() throws Exception {
+        mockMvc.perform(get("/api/v1/test/patient-self").header("Authorization", "Bearer " + VALID_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.userId").value(2003));
+
+        repository.replacePermissions(authenticatedUser.userId(), Set.of("auth:refresh"));
+
+        mockMvc.perform(get("/api/v1/test/patient-self").header("Authorization", "Bearer " + VALID_TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(1003));
+    }
+
+    @Test
+    void me_WhenTokenRevoked_ReturnUnauthorized() throws Exception {
+        accessTokenBlocklistPort.block(VALID_TOKEN_ID, TOKEN_EXPIRES_AT);
+
+        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + VALID_TOKEN))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(1001));
+    }
+
+    @Test
+    void me_WhenBlocklistCheckFails_ReturnSystemError() throws Exception {
+        accessTokenBlocklistPort.failOnLookup(VALID_TOKEN_ID);
+
+        mockMvc.perform(get("/api/v1/auth/me").header("Authorization", "Bearer " + VALID_TOKEN))
+                .andExpect(status().isInternalServerError())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(9999));
+    }
+
+    @RestController
+    @RequestMapping("/api/v1/test")
+    private static final class ProtectedTestController {
+
+        @GetMapping("/patient-self")
+        public Result<Map<String, Object>> patientSelf(@org.springframework.security.core.annotation.AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+            if (principal == null) {
+                throw new BizException(ErrorCode.UNAUTHORIZED);
+            }
+            if (!principal.permissions().contains("patient:profile:view:self")) {
+                throw new BizException(ErrorCode.FORBIDDEN);
+            }
+            return Result.ok(Map.of("userId", principal.userId(), "username", principal.username()));
+        }
+    }
+
     private static final class StubUserAuthenticationRepository implements UserAuthenticationRepository {
 
-        private final AuthenticatedUser authenticatedUser;
+        private final Map<Long, AuthenticatedUser> usersById = new ConcurrentHashMap<>();
+        private final Map<String, LoginAccount> loginAccountsByUsername = new ConcurrentHashMap<>();
         private final AuthenticatedUser spacedPasswordUser = new AuthenticatedUser(
                 2004L,
                 "patient_space",
@@ -312,30 +457,42 @@ class AuthControllerTest {
                 null,
                 null);
 
-        private StubUserAuthenticationRepository(AuthenticatedUser authenticatedUser) {
-            this.authenticatedUser = authenticatedUser;
+        private StubUserAuthenticationRepository(AuthenticatedUser authenticatedUser, AuthenticatedUser otherUser) {
+            registerUser(authenticatedUser, "hash<patient123>");
+            registerUser(otherUser, "hash<patient456>");
+            registerUser(spacedPasswordUser, "hash<  secret-pass  >");
+        }
+
+        private void registerUser(AuthenticatedUser user, String passwordHash) {
+            usersById.put(user.userId(), user);
+            loginAccountsByUsername.put(user.username(), new LoginAccount(user, passwordHash, AccountStatus.ACTIVE));
+        }
+
+        private void replacePermissions(Long userId, Set<String> permissions) {
+            AuthenticatedUser currentUser = usersById.get(userId);
+            AuthenticatedUser updatedUser = new AuthenticatedUser(
+                    currentUser.userId(),
+                    currentUser.username(),
+                    currentUser.displayName(),
+                    currentUser.userType(),
+                    currentUser.roles(),
+                    permissions,
+                    currentUser.patientId(),
+                    currentUser.doctorId(),
+                    currentUser.primaryDepartmentId());
+            LoginAccount loginAccount = loginAccountsByUsername.get(currentUser.username());
+            usersById.put(userId, updatedUser);
+            loginAccountsByUsername.put(currentUser.username(), new LoginAccount(updatedUser, loginAccount.passwordHash(), AccountStatus.ACTIVE));
         }
 
         @Override
         public Optional<LoginAccount> findLoginAccountByUsername(String username) {
-            if (authenticatedUser.username().equals(username)) {
-                return Optional.of(new LoginAccount(authenticatedUser, "hash<patient123>", AccountStatus.ACTIVE));
-            }
-            if (spacedPasswordUser.username().equals(username)) {
-                return Optional.of(new LoginAccount(spacedPasswordUser, "hash<  secret-pass  >", AccountStatus.ACTIVE));
-            }
-            return Optional.empty();
+            return Optional.ofNullable(loginAccountsByUsername.get(username));
         }
 
         @Override
         public Optional<AuthenticatedUser> findAuthenticatedUserById(Long userId) {
-            if (authenticatedUser.userId().equals(userId)) {
-                return Optional.of(authenticatedUser);
-            }
-            if (spacedPasswordUser.userId().equals(userId)) {
-                return Optional.of(spacedPasswordUser);
-            }
-            return Optional.empty();
+            return Optional.ofNullable(usersById.get(userId));
         }
 
         @Override
@@ -347,24 +504,40 @@ class AuthControllerTest {
 
         private final AuthenticatedUser authenticatedUser;
         private int issueSequence = 0;
+        private String lastIssuedSessionId;
 
         private StubAccessTokenCodec(AuthenticatedUser authenticatedUser) {
             this.authenticatedUser = authenticatedUser;
         }
 
         @Override
-        public AccessToken issueAccessToken(AuthenticatedUser authenticatedUser) {
+        public AccessToken issueAccessToken(AuthenticatedUser authenticatedUser, String sessionId) {
             issueSequence++;
+            lastIssuedSessionId = sessionId;
             return new AccessToken(
                     "issued-access-token-" + issueSequence,
                     "issued-token-id-" + issueSequence,
-                    Instant.parse("2026-03-30T08:00:00Z"));
+                    TOKEN_EXPIRES_AT);
+        }
+
+        private String lastIssuedSessionId() {
+            return lastIssuedSessionId;
         }
 
         @Override
         public AccessTokenClaims parseAccessToken(String accessToken) {
             if (VALID_TOKEN.equals(accessToken)) {
-                return new AccessTokenClaims(authenticatedUser.userId(), VALID_TOKEN_ID, Instant.parse("2026-03-30T08:00:00Z"));
+                return new AccessTokenClaims(authenticatedUser.userId(), VALID_TOKEN_ID, "refresh-token-1", TOKEN_EXPIRES_AT);
+            }
+            if (VALID_TOKEN_OTHER_SESSION.equals(accessToken)) {
+                return new AccessTokenClaims(
+                        authenticatedUser.userId(),
+                        VALID_TOKEN_OTHER_SESSION_ID,
+                        "refresh-token-other-session",
+                        TOKEN_EXPIRES_AT);
+            }
+            if (VALID_TOKEN_OTHER_USER.equals(accessToken)) {
+                return new AccessTokenClaims(2005L, VALID_TOKEN_OTHER_USER_ID, "refresh-token-other-user", TOKEN_EXPIRES_AT);
             }
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
@@ -414,6 +587,11 @@ class AuthControllerTest {
     private static final class StubAccessTokenBlocklistPort implements AccessTokenBlocklistPort {
 
         private final Set<String> blockedTokenIds = ConcurrentHashMap.newKeySet();
+        private final Set<String> failingTokenIds = ConcurrentHashMap.newKeySet();
+
+        private void failOnLookup(String tokenId) {
+            failingTokenIds.add(tokenId);
+        }
 
         @Override
         public void block(String tokenId, Instant expiresAt) {
@@ -422,6 +600,9 @@ class AuthControllerTest {
 
         @Override
         public boolean isBlocked(String tokenId) {
+            if (failingTokenIds.contains(tokenId)) {
+                throw new IllegalStateException("redis unavailable");
+            }
             return blockedTokenIds.contains(tokenId);
         }
     }
