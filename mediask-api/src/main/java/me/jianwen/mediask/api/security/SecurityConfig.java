@@ -46,7 +46,6 @@ public class SecurityConfig {
         List<RequestMatcher> matchers = new ArrayList<>();
         matchers.add(matcherBuilder.matcher(HttpMethod.POST, "/api/v1/auth/login"));
         matchers.add(matcherBuilder.matcher(HttpMethod.POST, "/api/v1/auth/refresh"));
-        matchers.add(matcherBuilder.matcher(HttpMethod.POST, "/api/v1/auth/logout"));
         matchers.add(matcherBuilder.matcher(HttpMethod.GET, "/actuator/health"));
         matchers.add(matcherBuilder.matcher(HttpMethod.GET, "/actuator/health/readiness"));
         matchers.add(matcherBuilder.matcher(HttpMethod.GET, "/actuator/health/liveness"));

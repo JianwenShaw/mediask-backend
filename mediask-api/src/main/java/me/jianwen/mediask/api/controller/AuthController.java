@@ -66,10 +66,17 @@ public class AuthController {
             @RequestBody LogoutRequest request,
             @RequestHeader(name = "Authorization", required = false) String authorizationHeader,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        if (principal == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        String accessToken = resolveAccessToken(authorizationHeader);
+        if (accessToken == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
         logoutUseCase.handle(new LogoutCommand(
                 request.refreshToken(),
-                resolveAccessToken(authorizationHeader),
-                principal == null ? null : principal.userId()));
+                accessToken,
+                principal.userId()));
         return Result.ok();
     }
 

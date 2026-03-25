@@ -21,6 +21,7 @@ class SecurityConfigTest {
     void publicRequestMatcher_WhenSafeEndpoints_ReturnsTrue() {
         RequestMatcher publicRequestMatcher = securityConfig.publicRequestMatcher(new ApiSecurityProperties(false));
         assertTrue(matches(publicRequestMatcher, HttpMethod.POST, "/api/v1/auth/login"));
+        assertTrue(matches(publicRequestMatcher, HttpMethod.POST, "/api/v1/auth/refresh"));
         assertTrue(matches(publicRequestMatcher, HttpMethod.GET, "/actuator/health"));
         assertTrue(matches(publicRequestMatcher, HttpMethod.GET, "/actuator/health/readiness"));
         assertTrue(matches(publicRequestMatcher, HttpMethod.GET, "/actuator/health/liveness"));
@@ -30,6 +31,7 @@ class SecurityConfigTest {
     void publicRequestMatcher_WhenSensitiveOperationalOrDocsEndpoints_ReturnsFalse() {
         RequestMatcher publicRequestMatcher = securityConfig.publicRequestMatcher(new ApiSecurityProperties(false));
         assertFalse(matches(publicRequestMatcher, HttpMethod.GET, "/api/v1/auth/me"));
+        assertFalse(matches(publicRequestMatcher, HttpMethod.POST, "/api/v1/auth/logout"));
         assertFalse(matches(publicRequestMatcher, HttpMethod.GET, "/actuator/info"));
         assertFalse(matches(publicRequestMatcher, HttpMethod.GET, "/actuator/prometheus"));
         assertFalse(matches(publicRequestMatcher, HttpMethod.GET, "/actuator/metrics"));

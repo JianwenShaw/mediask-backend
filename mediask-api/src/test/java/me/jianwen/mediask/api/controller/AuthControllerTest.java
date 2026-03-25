@@ -71,6 +71,8 @@ class AuthControllerTest {
     private static final String VALID_TOKEN_OTHER_SESSION_ID = "valid-token-other-session-id";
     private static final String VALID_TOKEN_OTHER_USER = "valid-token-other-user";
     private static final String VALID_TOKEN_OTHER_USER_ID = "valid-token-other-user-id";
+    private static final String LEGACY_TOKEN_WITHOUT_SESSION = "legacy-token-without-session";
+    private static final String LEGACY_TOKEN_WITHOUT_SESSION_ID = "legacy-token-without-session-id";
     private static final String PRIMARY_REFRESH_TOKEN = "rt.2003.refresh-token-1.refresh-secret-1";
     private static final String SAME_USER_OTHER_SESSION_REFRESH_TOKEN =
             "rt.2003.refresh-token-other-session.refresh-secret-other-session";
@@ -291,15 +293,15 @@ class AuthControllerTest {
                                   "refreshToken": "rt.2003.refresh-token-1.refresh-secret-1"
                                 }
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(header().exists("X-Request-Id"))
-                .andExpect(jsonPath("$.code").value(0));
+                .andExpect(jsonPath("$.code").value(1001));
 
-        assertTrue(refreshTokenSupport.findByTokenValue(PRIMARY_REFRESH_TOKEN).isEmpty());
+        assertTrue(refreshTokenSupport.findByTokenValue(PRIMARY_REFRESH_TOKEN).isPresent());
     }
 
     @Test
-    void logout_WhenAccessTokenMissingButRefreshTokenValid_ReturnSuccess() throws Exception {
+    void logout_WhenAccessTokenMissingButRefreshTokenValid_ReturnUnauthorized() throws Exception {
         mockMvc.perform(post("/api/v1/auth/logout")
                         .contentType(APPLICATION_JSON)
                         .content("""
@@ -307,11 +309,11 @@ class AuthControllerTest {
                                   "refreshToken": "rt.2003.refresh-token-1.refresh-secret-1"
                                 }
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isUnauthorized())
                 .andExpect(header().exists("X-Request-Id"))
-                .andExpect(jsonPath("$.code").value(0));
+                .andExpect(jsonPath("$.code").value(1001));
 
-        assertTrue(refreshTokenSupport.findByTokenValue(PRIMARY_REFRESH_TOKEN).isEmpty());
+        assertTrue(refreshTokenSupport.findByTokenValue(PRIMARY_REFRESH_TOKEN).isPresent());
         assertFalse(accessTokenBlocklistPort.isBlocked(VALID_TOKEN_ID));
     }
 
@@ -347,6 +349,24 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.code").value(2011));
 
         assertTrue(refreshTokenSupport.findByTokenValue(SAME_USER_OTHER_SESSION_REFRESH_TOKEN).isPresent());
+    }
+
+    @Test
+    void logout_WhenAccessTokenHasNoSessionId_ReturnForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("Authorization", "Bearer " + LEGACY_TOKEN_WITHOUT_SESSION)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "refreshToken": "rt.2003.refresh-token-1.refresh-secret-1"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(2011));
+
+        assertTrue(refreshTokenSupport.findByTokenValue(PRIMARY_REFRESH_TOKEN).isPresent());
+        assertFalse(accessTokenBlocklistPort.isBlocked(LEGACY_TOKEN_WITHOUT_SESSION_ID));
     }
 
     @Test
@@ -538,6 +558,10 @@ class AuthControllerTest {
             }
             if (VALID_TOKEN_OTHER_USER.equals(accessToken)) {
                 return new AccessTokenClaims(2005L, VALID_TOKEN_OTHER_USER_ID, "refresh-token-other-user", TOKEN_EXPIRES_AT);
+            }
+            if (LEGACY_TOKEN_WITHOUT_SESSION.equals(accessToken)) {
+                return new AccessTokenClaims(
+                        authenticatedUser.userId(), LEGACY_TOKEN_WITHOUT_SESSION_ID, null, TOKEN_EXPIRES_AT);
             }
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
