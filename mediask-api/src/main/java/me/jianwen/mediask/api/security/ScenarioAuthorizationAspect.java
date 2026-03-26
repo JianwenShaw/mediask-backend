@@ -4,7 +4,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import me.jianwen.mediask.application.authz.AuthzDecision;
 import me.jianwen.mediask.application.authz.AuthzInvocationContext;
-import me.jianwen.mediask.application.authz.AuthzSubjectPrincipal;
 import me.jianwen.mediask.application.authz.AuthorizeScenario;
 import me.jianwen.mediask.application.authz.AuthorizationDecisionService;
 import me.jianwen.mediask.common.exception.BizException;
@@ -33,13 +32,13 @@ public class ScenarioAuthorizationAspect {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
-        if (!(authentication.getPrincipal() instanceof AuthzSubjectPrincipal subjectPrincipal)) {
+        if (!(authentication.getPrincipal() instanceof AuthenticatedUserPrincipal principal)) {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
 
         AuthzDecision decision = authorizationDecisionService.decide(new AuthzInvocationContext(
                 authorizeScenario.value(),
-                subjectPrincipal.toAuthzSubject(),
+                principal.toAuthzSubject(),
                 resolveArguments(joinPoint)));
         if (!decision.allowed()) {
             throw new BizException(ErrorCode.FORBIDDEN);

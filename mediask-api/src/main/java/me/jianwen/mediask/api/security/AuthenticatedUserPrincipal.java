@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import me.jianwen.mediask.application.authz.AuthzSubject;
-import me.jianwen.mediask.application.authz.AuthzSubjectPrincipal;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
 import me.jianwen.mediask.domain.user.model.DataScopeRule;
 import org.springframework.security.core.GrantedAuthority;
@@ -23,7 +22,7 @@ public record AuthenticatedUserPrincipal(
         Long doctorId,
         Long primaryDepartmentId,
         Collection<? extends GrantedAuthority> authorities)
-        implements Principal, AuthzSubjectPrincipal {
+        implements Principal {
 
     public static AuthenticatedUserPrincipal from(AuthenticatedUser authenticatedUser) {
         List<String> roles = authenticatedUser.roles().stream().map(Enum::name).toList();
@@ -58,7 +57,6 @@ public record AuthenticatedUserPrincipal(
         return username;
     }
 
-    @Override
     public AuthzSubject toAuthzSubject() {
         return new AuthzSubject(
                 userId,

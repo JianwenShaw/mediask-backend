@@ -6,7 +6,6 @@ import java.util.Optional;
 import me.jianwen.mediask.application.authz.AuthzDecision;
 import me.jianwen.mediask.application.authz.AuthzInvocationContext;
 import me.jianwen.mediask.application.authz.AuthzSubject;
-import me.jianwen.mediask.application.authz.AuthzSubjectPrincipal;
 import me.jianwen.mediask.application.authz.AuthorizeScenario;
 import me.jianwen.mediask.application.authz.AuthorizationDecisionService;
 import me.jianwen.mediask.common.exception.BizException;
@@ -42,9 +41,6 @@ public class ScenarioAuthorizationAspect {
 
     private Optional<AuthzSubject> resolveSubject(Object[] arguments) {
         for (Object argument : arguments) {
-            if (argument instanceof AuthzSubjectPrincipal principal) {
-                return Optional.of(principal.toAuthzSubject());
-            }
             if (argument instanceof AuthzSubject subject) {
                 return Optional.of(subject);
             }
