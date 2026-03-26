@@ -1,0 +1,12 @@
+package me.jianwen.mediask.application.authz;
+
+public enum AuthzDecisionReason {
+    ALLOWED,
+    UNAUTHENTICATED,
+    MISSING_PERMISSION,
+    RESOURCE_REFERENCE_MISSING,
+    NO_RESOURCE_RESOLVER,
+    RESOURCE_NOT_FOUND,
+    OBJECT_SCOPE_DENIED,
+    INVALID_RESOURCE_REFERENCE
+}

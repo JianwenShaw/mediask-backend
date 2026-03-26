@@ -3,11 +3,13 @@ package me.jianwen.mediask.api.assembler;
 import java.util.List;
 import me.jianwen.mediask.api.dto.DoctorProfileResponse;
 import me.jianwen.mediask.api.dto.CurrentUserResponse;
+import me.jianwen.mediask.api.dto.DataScopeRuleResponse;
 import me.jianwen.mediask.api.dto.LoginResponse;
 import me.jianwen.mediask.api.dto.PatientProfileResponse;
 import me.jianwen.mediask.api.dto.RefreshTokenResponse;
 import me.jianwen.mediask.application.user.usecase.AuthenticationResult;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
+import me.jianwen.mediask.domain.user.model.DataScopeRule;
 import me.jianwen.mediask.domain.user.model.DoctorProfile;
 import me.jianwen.mediask.domain.user.model.PatientProfileSnapshot;
 import me.jianwen.mediask.domain.user.model.RoleCode;
@@ -45,6 +47,7 @@ public final class AuthAssembler {
                 authenticatedUser.userType().name(),
                 toRoleCodes(authenticatedUser),
                 toPermissionCodes(authenticatedUser),
+                toDataScopeRules(authenticatedUser),
                 authenticatedUser.patientId(),
                 authenticatedUser.doctorId(),
                 authenticatedUser.primaryDepartmentId());
@@ -77,5 +80,18 @@ public final class AuthAssembler {
 
     private static List<String> toPermissionCodes(AuthenticatedUser authenticatedUser) {
         return authenticatedUser.permissions().stream().toList();
+    }
+
+    private static List<DataScopeRuleResponse> toDataScopeRules(AuthenticatedUser authenticatedUser) {
+        return authenticatedUser.dataScopeRules().stream()
+                .map(AuthAssembler::toDataScopeRuleResponse)
+                .toList();
+    }
+
+    private static DataScopeRuleResponse toDataScopeRuleResponse(DataScopeRule dataScopeRule) {
+        return new DataScopeRuleResponse(
+                dataScopeRule.resourceType(),
+                dataScopeRule.scopeType().name(),
+                dataScopeRule.scopeDepartmentId());
     }
 }

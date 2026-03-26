@@ -2,8 +2,12 @@ package me.jianwen.mediask.api.security;
 
 import java.security.Principal;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import me.jianwen.mediask.application.authz.AuthzSubject;
+import me.jianwen.mediask.application.authz.AuthzSubjectPrincipal;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
+import me.jianwen.mediask.domain.user.model.DataScopeRule;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
@@ -14,15 +18,17 @@ public record AuthenticatedUserPrincipal(
         String userType,
         List<String> roles,
         List<String> permissions,
+        List<DataScopeRule> dataScopeRules,
         Long patientId,
         Long doctorId,
         Long primaryDepartmentId,
         Collection<? extends GrantedAuthority> authorities)
-        implements Principal {
+        implements Principal, AuthzSubjectPrincipal {
 
     public static AuthenticatedUserPrincipal from(AuthenticatedUser authenticatedUser) {
         List<String> roles = authenticatedUser.roles().stream().map(Enum::name).toList();
         List<String> permissions = authenticatedUser.permissions().stream().toList();
+        List<DataScopeRule> dataScopeRules = authenticatedUser.dataScopeRules().stream().toList();
         List<GrantedAuthority> roleAuthorities = roles.stream()
                 .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
                 .toList();
@@ -40,6 +46,7 @@ public record AuthenticatedUserPrincipal(
                 authenticatedUser.userType().name(),
                 roles,
                 permissions,
+                dataScopeRules,
                 authenticatedUser.patientId(),
                 authenticatedUser.doctorId(),
                 authenticatedUser.primaryDepartmentId(),
@@ -49,5 +56,14 @@ public record AuthenticatedUserPrincipal(
     @Override
     public String getName() {
         return username;
+    }
+
+    @Override
+    public AuthzSubject toAuthzSubject() {
+        return new AuthzSubject(
+                userId,
+                new LinkedHashSet<>(permissions),
+                new LinkedHashSet<>(dataScopeRules),
+                primaryDepartmentId);
     }
 }

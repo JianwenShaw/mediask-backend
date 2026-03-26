@@ -2,8 +2,10 @@ package me.jianwen.mediask.domain.user.model;
 
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public record AuthenticatedUser(
         Long userId,
@@ -12,6 +14,7 @@ public record AuthenticatedUser(
         UserType userType,
         Set<RoleCode> roles,
         Set<String> permissions,
+        Set<DataScopeRule> dataScopeRules,
         Long patientId,
         Long doctorId,
         Long primaryDepartmentId) {
@@ -23,6 +26,7 @@ public record AuthenticatedUser(
         userType = Objects.requireNonNull(userType, "userType must not be null");
         roles = normalizeRoles(roles);
         permissions = normalizePermissions(permissions);
+        dataScopeRules = normalizeDataScopeRules(dataScopeRules);
         patientId = normalizePositive(patientId, "patientId");
         doctorId = normalizePositive(doctorId, "doctorId");
         primaryDepartmentId = normalizePositive(primaryDepartmentId, "primaryDepartmentId");
@@ -37,6 +41,25 @@ public record AuthenticatedUser(
             return false;
         }
         return permissions.contains(permissionCode.trim());
+    }
+
+    public Set<DataScopeRule> dataScopeRulesByResource(String resourceType) {
+        if (resourceType == null || resourceType.isBlank()) {
+            return Set.of();
+        }
+        String normalizedResourceType = resourceType.trim().toUpperCase(Locale.ROOT);
+        return dataScopeRules.stream()
+                .filter(rule -> rule.resourceType().equals(normalizedResourceType))
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public boolean hasDataScopeType(String resourceType, DataScopeType dataScopeType) {
+        if (dataScopeType == null) {
+            return false;
+        }
+        return dataScopeRulesByResource(resourceType).stream()
+                .map(DataScopeRule::scopeType)
+                .anyMatch(dataScopeType::equals);
     }
 
     private static Set<RoleCode> normalizeRoles(Set<RoleCode> roles) {
@@ -60,6 +83,19 @@ public record AuthenticatedUser(
         for (String permission : permissions) {
             if (permission != null && !permission.isBlank()) {
                 normalized.add(permission.trim());
+            }
+        }
+        return Collections.unmodifiableSet(normalized);
+    }
+
+    private static Set<DataScopeRule> normalizeDataScopeRules(Set<DataScopeRule> dataScopeRules) {
+        if (dataScopeRules == null || dataScopeRules.isEmpty()) {
+            return Set.of();
+        }
+        LinkedHashSet<DataScopeRule> normalized = new LinkedHashSet<>();
+        for (DataScopeRule dataScopeRule : dataScopeRules) {
+            if (dataScopeRule != null) {
+                normalized.add(dataScopeRule);
             }
         }
         return Collections.unmodifiableSet(normalized);

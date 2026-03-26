@@ -9,6 +9,7 @@ public record CurrentUserResponse(
         String userType,
         List<String> roles,
         List<String> permissions,
+        List<DataScopeRuleResponse> dataScopeRules,
         Long patientId,
         Long doctorId,
         Long primaryDepartmentId) {

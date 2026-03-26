@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import me.jianwen.mediask.domain.user.model.AccountStatus;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
+import me.jianwen.mediask.domain.user.model.DataScopeRule;
 import me.jianwen.mediask.domain.user.model.LoginAccount;
 import me.jianwen.mediask.domain.user.model.RoleCode;
 import me.jianwen.mediask.domain.user.model.UserType;
@@ -17,11 +18,13 @@ public final class UserAuthenticationConverter {
             UserDO userDO,
             List<String> roleCodes,
             List<String> permissionCodes,
+            Set<DataScopeRule> dataScopeRules,
             Long patientId,
             Long doctorId,
             Long primaryDepartmentId) {
         return new LoginAccount(
-                toAuthenticatedUser(userDO, roleCodes, permissionCodes, patientId, doctorId, primaryDepartmentId),
+                toAuthenticatedUser(
+                        userDO, roleCodes, permissionCodes, dataScopeRules, patientId, doctorId, primaryDepartmentId),
                 userDO.getPasswordHash(),
                 AccountStatus.fromCode(userDO.getAccountStatus()));
     }
@@ -30,6 +33,7 @@ public final class UserAuthenticationConverter {
             UserDO userDO,
             List<String> roleCodes,
             List<String> permissionCodes,
+            Set<DataScopeRule> dataScopeRules,
             Long patientId,
             Long doctorId,
             Long primaryDepartmentId) {
@@ -40,6 +44,7 @@ public final class UserAuthenticationConverter {
                 UserType.fromCode(userDO.getUserType()),
                 toRoleCodes(roleCodes),
                 toPermissions(permissionCodes),
+                toDataScopeRules(dataScopeRules),
                 patientId,
                 doctorId,
                 primaryDepartmentId);
@@ -64,6 +69,19 @@ public final class UserAuthenticationConverter {
         for (String permissionCode : permissionCodes) {
             if (permissionCode != null && !permissionCode.isBlank()) {
                 normalized.add(permissionCode.trim());
+            }
+        }
+        return Collections.unmodifiableSet(normalized);
+    }
+
+    private Set<DataScopeRule> toDataScopeRules(Set<DataScopeRule> dataScopeRules) {
+        if (dataScopeRules == null || dataScopeRules.isEmpty()) {
+            return Set.of();
+        }
+        LinkedHashSet<DataScopeRule> normalized = new LinkedHashSet<>();
+        for (DataScopeRule dataScopeRule : dataScopeRules) {
+            if (dataScopeRule != null) {
+                normalized.add(dataScopeRule);
             }
         }
         return Collections.unmodifiableSet(normalized);

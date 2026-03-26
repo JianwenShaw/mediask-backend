@@ -3,12 +3,13 @@ package me.jianwen.mediask.api.controller;
 import me.jianwen.mediask.api.assembler.AuthAssembler;
 import me.jianwen.mediask.api.dto.DoctorProfileResponse;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
+import me.jianwen.mediask.application.authz.AuthorizeScenario;
+import me.jianwen.mediask.application.authz.ScenarioCode;
 import me.jianwen.mediask.application.user.query.GetCurrentUserQuery;
 import me.jianwen.mediask.application.user.usecase.GetCurrentDoctorProfileUseCase;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
 import me.jianwen.mediask.common.result.Result;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +26,7 @@ public class DoctorProfileController {
     }
 
     @GetMapping("/profile")
-    @PreAuthorize("hasAuthority('doctor:profile:view:self')")
+    @AuthorizeScenario(ScenarioCode.DOCTOR_SELF_PROFILE_VIEW)
     public Result<DoctorProfileResponse> profile(@AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
         if (principal == null) {
             throw new BizException(ErrorCode.UNAUTHORIZED);

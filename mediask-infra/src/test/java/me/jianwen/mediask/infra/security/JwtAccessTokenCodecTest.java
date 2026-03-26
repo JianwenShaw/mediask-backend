@@ -40,6 +40,7 @@ class JwtAccessTokenCodecTest {
                 UserType.PATIENT,
                 new LinkedHashSet<>(java.util.List.of(RoleCode.PATIENT)),
                 Set.of("auth:logout", "patient:profile:view:self"),
+                Set.of(),
                 2201L,
                 null,
                 null);

@@ -4,15 +4,20 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import me.jianwen.mediask.domain.user.model.AccountStatus;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
+import me.jianwen.mediask.domain.user.model.DataScopeRule;
+import me.jianwen.mediask.domain.user.model.DataScopeType;
 import me.jianwen.mediask.domain.user.model.LoginAccount;
 import me.jianwen.mediask.domain.user.port.UserAuthenticationRepository;
 import me.jianwen.mediask.infra.persistence.converter.UserAuthenticationConverter;
 import me.jianwen.mediask.infra.persistence.dataobject.DoctorDO;
 import me.jianwen.mediask.infra.persistence.dataobject.PatientProfileDO;
 import me.jianwen.mediask.infra.persistence.dataobject.UserDO;
+import me.jianwen.mediask.infra.persistence.mapper.ActiveDataScopeRuleRow;
 import me.jianwen.mediask.infra.persistence.mapper.ActiveRoleRow;
+import me.jianwen.mediask.infra.persistence.mapper.DataScopeRuleMapper;
 import me.jianwen.mediask.infra.persistence.mapper.DoctorDepartmentRelationMapper;
 import me.jianwen.mediask.infra.persistence.mapper.DoctorMapper;
 import me.jianwen.mediask.infra.persistence.mapper.PermissionMapper;
@@ -27,6 +32,7 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
     private final UserMapper userMapper;
     private final RoleMapper roleMapper;
     private final PermissionMapper permissionMapper;
+    private final DataScopeRuleMapper dataScopeRuleMapper;
     private final PatientProfileMapper patientProfileMapper;
     private final DoctorMapper doctorMapper;
     private final DoctorDepartmentRelationMapper doctorDepartmentRelationMapper;
@@ -36,12 +42,14 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
             UserMapper userMapper,
             RoleMapper roleMapper,
             PermissionMapper permissionMapper,
+            DataScopeRuleMapper dataScopeRuleMapper,
             PatientProfileMapper patientProfileMapper,
             DoctorMapper doctorMapper,
             DoctorDepartmentRelationMapper doctorDepartmentRelationMapper) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
         this.permissionMapper = permissionMapper;
+        this.dataScopeRuleMapper = dataScopeRuleMapper;
         this.patientProfileMapper = patientProfileMapper;
         this.doctorMapper = doctorMapper;
         this.doctorDepartmentRelationMapper = doctorDepartmentRelationMapper;
@@ -84,6 +92,7 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
                 userDO,
                 activeAuthorization.roleCodes(),
                 activeAuthorization.permissionCodes(),
+                activeAuthorization.dataScopeRules(),
                 identityBinding.patientId(),
                 identityBinding.doctorId(),
                 identityBinding.primaryDepartmentId());
@@ -96,6 +105,7 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
                 userDO,
                 activeAuthorization.roleCodes(),
                 activeAuthorization.permissionCodes(),
+                activeAuthorization.dataScopeRules(),
                 identityBinding.patientId(),
                 identityBinding.doctorId(),
                 identityBinding.primaryDepartmentId());
@@ -108,7 +118,7 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
     private ActiveAuthorization loadAuthorization(Long userId) {
         List<ActiveRoleRow> activeRoles = roleMapper.selectActiveRolesByUserId(userId);
         if (activeRoles == null || activeRoles.isEmpty()) {
-            return new ActiveAuthorization(List.of(), List.of());
+            return new ActiveAuthorization(List.of(), List.of(), Set.of());
         }
         List<String> roleCodes = activeRoles.stream()
                 .map(ActiveRoleRow::getRoleCode)
@@ -122,7 +132,19 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
         List<String> permissionCodes = roleIds.isEmpty()
                 ? List.of()
                 : permissionMapper.selectActivePermissionCodesByRoleIds(roleIds);
-        return new ActiveAuthorization(roleCodes, permissionCodes);
+        Set<DataScopeRule> dataScopeRules = roleIds.isEmpty()
+                ? Set.of()
+                : dataScopeRuleMapper.selectActiveRulesByRoleIds(roleIds).stream()
+                        .map(this::toDataScopeRule)
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new ActiveAuthorization(roleCodes, permissionCodes, dataScopeRules);
+    }
+
+    private DataScopeRule toDataScopeRule(ActiveDataScopeRuleRow row) {
+        return new DataScopeRule(
+                row.getResourceType(),
+                DataScopeType.fromCode(row.getScopeType()),
+                row.getScopeDeptId());
     }
 
     private UserIdentityBinding resolveIdentityBinding(Long userId) {
@@ -144,6 +166,7 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
     private record UserIdentityBinding(Long patientId, Long doctorId, Long primaryDepartmentId) {
     }
 
-    private record ActiveAuthorization(List<String> roleCodes, List<String> permissionCodes) {
+    private record ActiveAuthorization(
+            List<String> roleCodes, List<String> permissionCodes, Set<DataScopeRule> dataScopeRules) {
     }
 }

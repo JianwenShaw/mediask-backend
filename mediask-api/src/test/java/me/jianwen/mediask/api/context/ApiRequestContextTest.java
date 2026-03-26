@@ -35,6 +35,7 @@ class ApiRequestContextTest {
                 "PATIENT",
                 List.of("PATIENT"),
                 List.of("patient:profile:view:self"),
+                List.of(),
                 2201L,
                 null,
                 null,
