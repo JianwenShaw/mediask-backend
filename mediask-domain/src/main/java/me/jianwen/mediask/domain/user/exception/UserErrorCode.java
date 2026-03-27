@@ -14,7 +14,9 @@ public enum UserErrorCode implements ErrorCodeType {
     ROLE_MISMATCH(2008, "role mismatch", ErrorCodeCategory.FORBIDDEN),
     PATIENT_PROFILE_NOT_FOUND(2009, "patient profile not found", ErrorCodeCategory.NOT_FOUND),
     DOCTOR_PROFILE_NOT_FOUND(2010, "doctor profile not found", ErrorCodeCategory.NOT_FOUND),
-    PERMISSION_DENIED(2011, "permission denied", ErrorCodeCategory.FORBIDDEN);
+    PERMISSION_DENIED(2011, "permission denied", ErrorCodeCategory.FORBIDDEN),
+    PATIENT_PROFILE_UPDATE_CONFLICT(2012, "patient profile update conflict", ErrorCodeCategory.CONFLICT),
+    DOCTOR_PROFILE_UPDATE_CONFLICT(2013, "doctor profile update conflict", ErrorCodeCategory.CONFLICT);
 
     private final int code;
     private final String message;

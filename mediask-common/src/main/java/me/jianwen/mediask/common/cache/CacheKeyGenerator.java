@@ -14,4 +14,12 @@ public final class CacheKeyGenerator {
     public static String refreshToken(Long userId, String tokenId) {
         return String.join(DELIMITER, "auth", "refresh", String.valueOf(userId), tokenId);
     }
+
+    public static String doctorProfileByUserId(Long userId) {
+        return String.join(DELIMITER, "user", "doctor-profile", String.valueOf(userId));
+    }
+
+    public static String patientProfileByUserId(Long userId) {
+        return String.join(DELIMITER, "user", "patient-profile", String.valueOf(userId));
+    }
 }

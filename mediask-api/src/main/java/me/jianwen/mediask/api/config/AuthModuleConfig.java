@@ -7,11 +7,15 @@ import me.jianwen.mediask.application.user.usecase.GetCurrentPatientProfileUseCa
 import me.jianwen.mediask.application.user.usecase.LoginUseCase;
 import me.jianwen.mediask.application.user.usecase.LogoutUseCase;
 import me.jianwen.mediask.application.user.usecase.RefreshTokenUseCase;
+import me.jianwen.mediask.application.user.usecase.UpdateCurrentDoctorProfileUseCase;
+import me.jianwen.mediask.application.user.usecase.UpdateCurrentPatientProfileUseCase;
 import me.jianwen.mediask.domain.user.port.AccessTokenCodec;
 import me.jianwen.mediask.domain.user.port.AccessTokenBlocklistPort;
 import me.jianwen.mediask.domain.user.port.DoctorProfileRepository;
+import me.jianwen.mediask.domain.user.port.DoctorProfileWriteRepository;
 import me.jianwen.mediask.domain.user.port.PasswordVerifier;
 import me.jianwen.mediask.domain.user.port.PatientProfileRepository;
+import me.jianwen.mediask.domain.user.port.PatientProfileWriteRepository;
 import me.jianwen.mediask.domain.user.port.RefreshTokenManager;
 import me.jianwen.mediask.domain.user.port.RefreshTokenStore;
 import me.jianwen.mediask.domain.user.port.UserAuthenticationRepository;
@@ -71,5 +75,19 @@ public class AuthModuleConfig {
     public GetCurrentDoctorProfileUseCase getCurrentDoctorProfileUseCase(
             UserAuthenticationRepository userAuthenticationRepository, DoctorProfileRepository doctorProfileRepository) {
         return new GetCurrentDoctorProfileUseCase(userAuthenticationRepository, doctorProfileRepository);
+    }
+
+    @Bean
+    public UpdateCurrentPatientProfileUseCase updateCurrentPatientProfileUseCase(
+            UserAuthenticationRepository userAuthenticationRepository,
+            PatientProfileWriteRepository patientProfileWriteRepository) {
+        return new UpdateCurrentPatientProfileUseCase(userAuthenticationRepository, patientProfileWriteRepository);
+    }
+
+    @Bean
+    public UpdateCurrentDoctorProfileUseCase updateCurrentDoctorProfileUseCase(
+            UserAuthenticationRepository userAuthenticationRepository,
+            DoctorProfileWriteRepository doctorProfileWriteRepository) {
+        return new UpdateCurrentDoctorProfileUseCase(userAuthenticationRepository, doctorProfileWriteRepository);
     }
 }

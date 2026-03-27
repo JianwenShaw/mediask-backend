@@ -2,7 +2,9 @@ package me.jianwen.mediask.application.authz;
 
 public enum ScenarioCode {
     DOCTOR_SELF_PROFILE_VIEW(ActionType.READ, CombinationMode.ALL, "doctor:profile:view:self", false, false),
+    DOCTOR_SELF_PROFILE_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "doctor:profile:update:self", false, false),
     PATIENT_SELF_PROFILE_VIEW(ActionType.READ, CombinationMode.ALL, "patient:profile:view:self", false, false),
+    PATIENT_SELF_PROFILE_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "patient:profile:update:self", false, false),
     EMR_RECORD_READ(ActionType.READ, CombinationMode.ALL, "emr:read", true, false),
     EMR_RECORD_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "emr:update", true, false),
     AI_SESSION_READ(ActionType.READ, CombinationMode.ALL, "ai:session:read", true, true),

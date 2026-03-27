@@ -31,52 +31,7 @@ For backend changes, also read:
 - No `.github/copilot-instructions.md` file was found.
 - This `AGENTS.md` is the repository-local rule file for agents.
 
-## Platform Rule
-Before running any `mvn` command, check the OS with `./scripts/os_detect.py`.
-- macOS: use `./scripts/m21.sh` instead of `mvn`.
-- Linux/Windows: use `mvn` normally.
 
-For this repo on macOS, prefer:
-```bash
-./scripts/m21.sh <goals>
-```
-
-## Build / Run Commands
-Run from the repository root unless there is a clear reason not to.
-- Full build: `./scripts/m21.sh clean verify`
-- Compile only: `./scripts/m21.sh clean compile`
-- Package without tests: `./scripts/m21.sh clean package -DskipTests`
-- Run all tests: `./scripts/m21.sh test`
-- Build one module and dependencies: `./scripts/m21.sh -pl mediask-api -am clean verify`
-- Run module tests and dependencies: `./scripts/m21.sh -pl mediask-api -am test`
-- Start API: `./scripts/m21.sh spring-boot:run -pl mediask-api`
-- Start worker: `./scripts/m21.sh spring-boot:run -pl mediask-worker`
-
-If plugin prefix resolution fails, use:
-```bash
-./scripts/m21.sh -pl mediask-api org.springframework.boot:spring-boot-maven-plugin:run
-```
-
-## Test Commands
-The root `pom.xml` does not currently configure custom Surefire, Failsafe, JaCoCo, Checkstyle, or Spotless plugins. Use standard Maven commands.
-
-- All tests: `./scripts/m21.sh test`
-- Single module: `./scripts/m21.sh -pl mediask-domain -am test`
-- Single test class: `./scripts/m21.sh -pl mediask-domain -am -Dtest=RegistrationOrderTest test`
-- Single test method: `./scripts/m21.sh -pl mediask-domain -am -Dtest=RegistrationOrderTest#confirm_WhenInvalidState_ThrowException test`
-- Multiple test classes: `./scripts/m21.sh -pl mediask-domain -am -Dtest=RegistrationOrderTest,ClinicSessionTest test`
-- Package while skipping tests: `./scripts/m21.sh package -DskipTests`
-
-Notes:
-- `-pl <module> -am` is the safest default in this multi-module repo.
-- Run single tests from the smallest relevant module, usually `mediask-domain`, `mediask-application`, or `mediask-api`.
-- If no tests exist yet in the touched area, add focused tests near the changed code.
-
-## Lint / Formatting State
-- No `.editorconfig` exists.
-- No linter or formatter is wired into the build yet.
-- Treat `./scripts/m21.sh test` and `./scripts/m21.sh verify` as the current quality gates.
-- If you introduce lint or format tooling, wire it into `verify` and update this file.
 
 ## Architecture Rules
 Dependency direction:

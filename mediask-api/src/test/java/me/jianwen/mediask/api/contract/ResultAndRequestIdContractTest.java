@@ -164,6 +164,21 @@ class ResultAndRequestIdContractTest {
         assertEquals(requestId, assertJsonRequestIdMatchesHeader(mvcResult));
     }
 
+    @Test
+    void illegalArgument_WhenThrown_ReturnBadRequestAndStableCode() throws Exception {
+        String requestId = "req_illegal_argument_001";
+
+        MvcResult mvcResult = mockMvc.perform(get("/test/contracts/illegal-argument")
+                        .header(RequestConstants.REQUEST_ID_HEADER, requestId))
+                .andExpect(status().isBadRequest())
+                .andExpect(header().string(RequestConstants.REQUEST_ID_HEADER, requestId))
+                .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+                .andExpect(jsonPath("$.msg").value(ErrorCode.INVALID_PARAMETER.getMessage()))
+                .andReturn();
+
+        assertEquals(requestId, assertJsonRequestIdMatchesHeader(mvcResult));
+    }
+
     private String assertJsonRequestIdMatchesHeader(MvcResult mvcResult) throws Exception {
         String headerRequestId = mvcResult.getResponse().getHeader(RequestConstants.REQUEST_ID_HEADER);
         assertNotNull(headerRequestId);
@@ -211,6 +226,11 @@ class ResultAndRequestIdContractTest {
         @PostMapping("/echo")
         Result<EchoRequest> echo(@RequestBody EchoRequest request) {
             return Result.ok(request);
+        }
+
+        @GetMapping("/illegal-argument")
+        Result<Void> illegalArgument() {
+            throw new IllegalArgumentException("gender must be one of MALE, FEMALE, OTHER");
         }
     }
 
