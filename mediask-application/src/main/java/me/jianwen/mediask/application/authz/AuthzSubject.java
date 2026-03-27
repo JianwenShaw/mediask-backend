@@ -3,6 +3,7 @@ package me.jianwen.mediask.application.authz;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import me.jianwen.mediask.common.util.ArgumentChecks;
 import me.jianwen.mediask.domain.user.model.DataScopeRule;
 
 public record AuthzSubject(
@@ -12,10 +13,10 @@ public record AuthzSubject(
         Long primaryDepartmentId) {
 
     public AuthzSubject {
-        userId = requirePositive(userId, "userId");
+        userId = ArgumentChecks.requirePositive(userId, "userId");
         permissions = normalizePermissions(permissions);
         dataScopeRules = normalizeDataScopeRules(dataScopeRules);
-        primaryDepartmentId = normalizePositive(primaryDepartmentId, "primaryDepartmentId");
+        primaryDepartmentId = ArgumentChecks.normalizePositive(primaryDepartmentId, "primaryDepartmentId");
     }
 
     public boolean hasPermission(String permissionCode) {
@@ -51,20 +52,4 @@ public record AuthzSubject(
         return Collections.unmodifiableSet(normalized);
     }
 
-    private static Long requirePositive(Long value, String fieldName) {
-        if (value == null || value <= 0L) {
-            throw new IllegalArgumentException(fieldName + " must be greater than 0");
-        }
-        return value;
-    }
-
-    private static Long normalizePositive(Long value, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-        if (value <= 0L) {
-            throw new IllegalArgumentException(fieldName + " must be greater than 0");
-        }
-        return value;
-    }
 }

@@ -1,6 +1,7 @@
 package me.jianwen.mediask.domain.user.model;
 
 import java.time.LocalDate;
+import me.jianwen.mediask.common.util.ArgumentChecks;
 
 public record PatientProfileSnapshot(
         Long patientId,
@@ -11,28 +12,10 @@ public record PatientProfileSnapshot(
         String allergySummary) {
 
     public PatientProfileSnapshot {
-        patientId = requirePositive(patientId, "patientId");
-        patientNo = requireNonBlank(patientNo, "patientNo");
-        gender = normalizeNullable(gender);
-        bloodType = normalizeNullable(bloodType);
-        allergySummary = normalizeNullable(allergySummary);
-    }
-
-    private static Long requirePositive(Long value, String fieldName) {
-        if (value == null || value <= 0L) {
-            throw new IllegalArgumentException(fieldName + " must be greater than 0");
-        }
-        return value;
-    }
-
-    private static String requireNonBlank(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return value.trim();
-    }
-
-    private static String normalizeNullable(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
+        patientId = ArgumentChecks.requirePositive(patientId, "patientId");
+        patientNo = ArgumentChecks.requireNonBlank(patientNo, "patientNo");
+        gender = ArgumentChecks.blankToNull(gender);
+        bloodType = ArgumentChecks.blankToNull(bloodType);
+        allergySummary = ArgumentChecks.blankToNull(allergySummary);
     }
 }

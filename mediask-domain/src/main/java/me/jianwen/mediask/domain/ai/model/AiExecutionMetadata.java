@@ -1,6 +1,7 @@
 package me.jianwen.mediask.domain.ai.model;
 
 import java.util.List;
+import me.jianwen.mediask.common.util.ArgumentChecks;
 
 public record AiExecutionMetadata(
         String providerRunId,
@@ -11,7 +12,7 @@ public record AiExecutionMetadata(
         boolean degraded) {
 
     public AiExecutionMetadata {
-        providerRunId = normalizeBlank(providerRunId);
+        providerRunId = ArgumentChecks.blankToNull(providerRunId);
         matchedRuleCodes = matchedRuleCodes == null
                 ? List.of()
                 : matchedRuleCodes.stream().filter(code -> code != null && !code.isBlank()).map(String::trim).toList();
@@ -34,7 +35,4 @@ public record AiExecutionMetadata(
         return value;
     }
 
-    private static String normalizeBlank(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
-    }
 }

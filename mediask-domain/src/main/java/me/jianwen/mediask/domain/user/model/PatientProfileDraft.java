@@ -3,6 +3,7 @@ package me.jianwen.mediask.domain.user.model;
 import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Set;
+import me.jianwen.mediask.common.util.ArgumentChecks;
 
 public record PatientProfileDraft(
         String gender,
@@ -14,12 +15,12 @@ public record PatientProfileDraft(
 
     public PatientProfileDraft {
         gender = normalizeGender(gender);
-        bloodType = normalizeNullable(bloodType);
-        allergySummary = normalizeNullable(allergySummary);
+        bloodType = ArgumentChecks.blankToNull(bloodType);
+        allergySummary = ArgumentChecks.blankToNull(allergySummary);
     }
 
     private static String normalizeGender(String value) {
-        String normalized = normalizeNullable(value);
+        String normalized = ArgumentChecks.blankToNull(value);
         if (normalized == null) {
             return null;
         }
@@ -28,9 +29,5 @@ public record PatientProfileDraft(
             throw new IllegalArgumentException("gender must be one of MALE, FEMALE, OTHER");
         }
         return upperCased;
-    }
-
-    private static String normalizeNullable(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
     }
 }

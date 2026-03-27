@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import me.jianwen.mediask.common.util.ArgumentChecks;
 
 public record AuthenticatedUser(
         Long userId,
@@ -20,16 +21,16 @@ public record AuthenticatedUser(
         Long primaryDepartmentId) {
 
     public AuthenticatedUser {
-        userId = requirePositive(userId, "userId");
-        username = requireNonBlank(username, "username");
-        displayName = requireNonBlank(displayName, "displayName");
+        userId = ArgumentChecks.requirePositive(userId, "userId");
+        username = ArgumentChecks.requireNonBlank(username, "username");
+        displayName = ArgumentChecks.requireNonBlank(displayName, "displayName");
         userType = Objects.requireNonNull(userType, "userType must not be null");
         roles = normalizeRoles(roles);
         permissions = normalizePermissions(permissions);
         dataScopeRules = normalizeDataScopeRules(dataScopeRules);
-        patientId = normalizePositive(patientId, "patientId");
-        doctorId = normalizePositive(doctorId, "doctorId");
-        primaryDepartmentId = normalizePositive(primaryDepartmentId, "primaryDepartmentId");
+        patientId = ArgumentChecks.normalizePositive(patientId, "patientId");
+        doctorId = ArgumentChecks.normalizePositive(doctorId, "doctorId");
+        primaryDepartmentId = ArgumentChecks.normalizePositive(primaryDepartmentId, "primaryDepartmentId");
     }
 
     public boolean hasRole(RoleCode roleCode) {
@@ -101,27 +102,4 @@ public record AuthenticatedUser(
         return Collections.unmodifiableSet(normalized);
     }
 
-    private static Long requirePositive(Long value, String fieldName) {
-        if (value == null || value <= 0L) {
-            throw new IllegalArgumentException(fieldName + " must be greater than 0");
-        }
-        return value;
-    }
-
-    private static Long normalizePositive(Long value, String fieldName) {
-        if (value == null) {
-            return null;
-        }
-        if (value <= 0L) {
-            throw new IllegalArgumentException(fieldName + " must be greater than 0");
-        }
-        return value;
-    }
-
-    private static String requireNonBlank(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return value.trim();
-    }
 }

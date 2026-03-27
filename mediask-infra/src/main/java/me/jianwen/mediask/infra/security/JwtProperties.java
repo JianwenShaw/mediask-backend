@@ -1,6 +1,7 @@
 package me.jianwen.mediask.infra.security;
 
 import java.nio.charset.StandardCharsets;
+import me.jianwen.mediask.common.util.ArgumentChecks;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -13,7 +14,7 @@ public record JwtProperties(
 
     public JwtProperties {
         secret = requireSecret(secret);
-        issuer = requireNonBlank(issuer, "mediask.jwt.issuer");
+        issuer = ArgumentChecks.requireNonBlank(issuer, "mediask.jwt.issuer");
         if (accessTokenExpireSeconds <= 0L) {
             throw new IllegalArgumentException("mediask.jwt.access-token-expire-seconds must be greater than 0");
         }
@@ -23,17 +24,10 @@ public record JwtProperties(
     }
 
     private static String requireSecret(String value) {
-        String normalized = requireNonBlank(value, "mediask.jwt.secret");
+        String normalized = ArgumentChecks.requireNonBlank(value, "mediask.jwt.secret");
         if (normalized.getBytes(StandardCharsets.UTF_8).length < 32) {
             throw new IllegalArgumentException("mediask.jwt.secret must be at least 32 bytes");
         }
         return normalized;
-    }
-
-    private static String requireNonBlank(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return value.trim();
     }
 }

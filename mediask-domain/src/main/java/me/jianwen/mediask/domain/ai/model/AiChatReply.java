@@ -2,6 +2,7 @@ package me.jianwen.mediask.domain.ai.model;
 
 import java.util.List;
 import java.util.Objects;
+import me.jianwen.mediask.common.util.ArgumentChecks;
 
 public record AiChatReply(
         String answer,
@@ -14,24 +15,13 @@ public record AiChatReply(
         AiExecutionMetadata executionMetadata) {
 
     public AiChatReply {
-        answer = requireNonBlank(answer, "answer");
-        chiefComplaintSummary = normalizeBlank(chiefComplaintSummary);
+        answer = ArgumentChecks.requireNonBlank(answer, "answer");
+        chiefComplaintSummary = ArgumentChecks.blankToNull(chiefComplaintSummary);
         riskLevel = Objects.requireNonNull(riskLevel, "riskLevel must not be null");
         guardrailAction = Objects.requireNonNull(guardrailAction, "guardrailAction must not be null");
         recommendedDepartments = recommendedDepartments == null ? List.of() : List.copyOf(recommendedDepartments);
-        careAdvice = normalizeBlank(careAdvice);
+        careAdvice = ArgumentChecks.blankToNull(careAdvice);
         citations = citations == null ? List.of() : List.copyOf(citations);
         executionMetadata = executionMetadata == null ? AiExecutionMetadata.empty() : executionMetadata;
-    }
-
-    private static String requireNonBlank(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return value.trim();
-    }
-
-    private static String normalizeBlank(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
     }
 }

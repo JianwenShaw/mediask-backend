@@ -2,6 +2,7 @@ package me.jianwen.mediask.infra.ai.config;
 
 import java.net.URI;
 import java.time.Duration;
+import me.jianwen.mediask.common.util.ArgumentChecks;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -14,7 +15,7 @@ public record AiServiceProperties(
 
     public AiServiceProperties {
         baseUrl = requireValue(baseUrl, "mediask.ai.service.base-url");
-        apiKey = requireNonBlank(apiKey, "mediask.ai.service.api-key");
+        apiKey = ArgumentChecks.requireNonBlank(apiKey, "mediask.ai.service.api-key");
         connectTimeout = requirePositive(connectTimeout, "mediask.ai.service.connect-timeout");
         readTimeout = requirePositive(readTimeout, "mediask.ai.service.read-timeout");
     }
@@ -24,13 +25,6 @@ public record AiServiceProperties(
             throw new IllegalArgumentException(fieldName + " must not be null");
         }
         return value;
-    }
-
-    private static String requireNonBlank(String value, String fieldName) {
-        if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(fieldName + " must not be blank");
-        }
-        return value.trim();
     }
 
     private static Duration requirePositive(Duration value, String fieldName) {
