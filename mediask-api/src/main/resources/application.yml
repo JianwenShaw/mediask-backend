@@ -6,7 +6,7 @@ spring:
     name: mediask-api
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5432}/${PG_DB:mediask}
+    url: jdbc:postgresql://${MEDIASK_DEV_MIDWARE_HOST}:${PG_PORT:5432}/${PG_DB:mediask}
     username: ${PG_USER:mediask}
     password: ${PG_PASSWORD}
     hikari:
@@ -22,8 +22,8 @@ spring:
       connection-init-sql: SET TIME ZONE 'Asia/Shanghai'
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      host: ${MEDIASK_DEV_MIDWARE_HOST:localhost}
+      port: ${REDIS_PORT:16379}
       password: ${REDIS_PASSWORD}
       database: 0
       timeout: 3s
@@ -56,7 +56,7 @@ mediask:
     access-token-expire-seconds: ${MEDIASK_JWT_ACCESS_TOKEN_EXPIRE_SECONDS:1800}
     refresh-token-expire-days: ${MEDIASK_JWT_REFRESH_TOKEN_EXPIRE_DAYS:7}
   redisson:
-    address: redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}
+    address: redis://${MEDIASK_DEV_MIDWARE_HOST}:${REDIS_PORT:16379}
     password: ${REDIS_PASSWORD}
     database: 0
     connection-pool-size: 16

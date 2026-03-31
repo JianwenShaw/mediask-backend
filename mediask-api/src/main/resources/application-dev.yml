@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/mediask_dev
+    url: jdbc:postgresql://${MEDIASK_DEV_MIDWARE_HOST}:5432/mediask_dev
     username: mediask
     password: ${PG_PASSWORD}
     hikari:
@@ -10,8 +10,8 @@ spring:
       leak-detection-threshold: 30000
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${MEDIASK_DEV_MIDWARE_HOST}
+      port: 16379
       password: ${REDIS_PASSWORD}
 
 mediask:
@@ -20,7 +20,7 @@ mediask:
       - http://localhost:3000
       - http://localhost:5173
   redisson:
-    address: redis://localhost:6379
+    address: redis://${MEDIASK_DEV_MIDWARE_HOST}:${REDIS_PORT:16379}
     password: ${REDIS_PASSWORD}
   security:
     public-docs-enabled: true
