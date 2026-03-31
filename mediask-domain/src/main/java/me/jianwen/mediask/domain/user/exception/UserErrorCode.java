@@ -16,7 +16,13 @@ public enum UserErrorCode implements ErrorCodeType {
     DOCTOR_PROFILE_NOT_FOUND(2010, "doctor profile not found", ErrorCodeCategory.NOT_FOUND),
     PERMISSION_DENIED(2011, "permission denied", ErrorCodeCategory.FORBIDDEN),
     PATIENT_PROFILE_UPDATE_CONFLICT(2012, "patient profile update conflict", ErrorCodeCategory.CONFLICT),
-    DOCTOR_PROFILE_UPDATE_CONFLICT(2013, "doctor profile update conflict", ErrorCodeCategory.CONFLICT);
+    DOCTOR_PROFILE_UPDATE_CONFLICT(2013, "doctor profile update conflict", ErrorCodeCategory.CONFLICT),
+    ADMIN_PATIENT_NOT_FOUND(2014, "admin patient not found", ErrorCodeCategory.NOT_FOUND),
+    ADMIN_PATIENT_USERNAME_CONFLICT(2015, "admin patient username conflict", ErrorCodeCategory.CONFLICT),
+    ADMIN_PATIENT_NO_CONFLICT(2016, "admin patient number conflict", ErrorCodeCategory.CONFLICT),
+    ADMIN_PATIENT_ROLE_NOT_FOUND(2017, "admin patient role not found", ErrorCodeCategory.NOT_FOUND),
+    ADMIN_PATIENT_UPDATE_CONFLICT(2018, "admin patient update conflict", ErrorCodeCategory.CONFLICT),
+    ADMIN_PATIENT_DELETE_CONFLICT(2019, "admin patient delete conflict", ErrorCodeCategory.CONFLICT);
 
     private final int code;
     private final String message;

@@ -1,6 +1,8 @@
 package me.jianwen.mediask.api.assembler;
 
 import java.util.List;
+import me.jianwen.mediask.api.dto.AdminPatientDetailResponse;
+import me.jianwen.mediask.api.dto.AdminPatientListItemResponse;
 import me.jianwen.mediask.api.dto.DoctorProfileResponse;
 import me.jianwen.mediask.api.dto.CurrentUserResponse;
 import me.jianwen.mediask.api.dto.DataScopeRuleResponse;
@@ -8,6 +10,8 @@ import me.jianwen.mediask.api.dto.LoginResponse;
 import me.jianwen.mediask.api.dto.PatientProfileResponse;
 import me.jianwen.mediask.api.dto.RefreshTokenResponse;
 import me.jianwen.mediask.application.user.usecase.AuthenticationResult;
+import me.jianwen.mediask.domain.user.model.AdminPatientDetail;
+import me.jianwen.mediask.domain.user.model.AdminPatientListItem;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
 import me.jianwen.mediask.domain.user.model.DataScopeRule;
 import me.jianwen.mediask.domain.user.model.DoctorProfile;
@@ -20,13 +24,12 @@ public final class AuthAssembler {
     }
 
     public static LoginResponse toLoginResponse(AuthenticationResult authenticationResult) {
-        CurrentUserResponse userContext = toCurrentUserResponse(authenticationResult.authenticatedUser());
         return new LoginResponse(
                 authenticationResult.tokens().accessToken().value(),
                 authenticationResult.tokens().accessToken().expiresAt().toEpochMilli(),
                 authenticationResult.tokens().refreshTokenSession().tokenValue(),
                 authenticationResult.tokens().refreshTokenSession().expiresAt().toEpochMilli(),
-                userContext);
+                toCurrentUserResponse(authenticationResult.authenticatedUser()));
     }
 
     public static RefreshTokenResponse toRefreshTokenResponse(AuthenticationResult authenticationResult) {
@@ -61,6 +64,35 @@ public final class AuthAssembler {
                 patientProfile.birthDate(),
                 patientProfile.bloodType(),
                 patientProfile.allergySummary());
+    }
+
+    public static AdminPatientListItemResponse toAdminPatientListItemResponse(AdminPatientListItem adminPatient) {
+        return new AdminPatientListItemResponse(
+                adminPatient.patientId(),
+                adminPatient.userId(),
+                adminPatient.patientNo(),
+                adminPatient.username(),
+                adminPatient.displayName(),
+                adminPatient.mobileMasked(),
+                adminPatient.gender(),
+                adminPatient.birthDate(),
+                adminPatient.bloodType(),
+                adminPatient.accountStatus());
+    }
+
+    public static AdminPatientDetailResponse toAdminPatientDetailResponse(AdminPatientDetail adminPatient) {
+        return new AdminPatientDetailResponse(
+                adminPatient.patientId(),
+                adminPatient.userId(),
+                adminPatient.patientNo(),
+                adminPatient.username(),
+                adminPatient.displayName(),
+                adminPatient.mobileMasked(),
+                adminPatient.gender(),
+                adminPatient.birthDate(),
+                adminPatient.bloodType(),
+                adminPatient.allergySummary(),
+                adminPatient.accountStatus());
     }
 
     public static DoctorProfileResponse toDoctorProfileResponse(DoctorProfile doctorProfile) {

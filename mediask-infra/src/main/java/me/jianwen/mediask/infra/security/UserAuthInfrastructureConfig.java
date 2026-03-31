@@ -3,6 +3,7 @@ package me.jianwen.mediask.infra.security;
 import java.time.Clock;
 import me.jianwen.mediask.domain.user.port.AccessTokenCodec;
 import me.jianwen.mediask.domain.user.port.AccessTokenBlocklistPort;
+import me.jianwen.mediask.domain.user.port.PasswordHasher;
 import me.jianwen.mediask.domain.user.port.PasswordVerifier;
 import me.jianwen.mediask.domain.user.port.RefreshTokenManager;
 import me.jianwen.mediask.domain.user.port.RefreshTokenStore;
@@ -32,6 +33,11 @@ public class UserAuthInfrastructureConfig {
     @Bean
     public PasswordVerifier passwordVerifier(PasswordEncoder passwordEncoder) {
         return new SpringPasswordVerifier(passwordEncoder);
+    }
+
+    @Bean
+    public PasswordHasher passwordHasher(PasswordEncoder passwordEncoder) {
+        return new SpringPasswordHasher(passwordEncoder);
     }
 
     @Bean

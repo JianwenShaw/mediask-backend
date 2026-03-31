@@ -1,6 +1,11 @@
 package me.jianwen.mediask.application.authz;
 
 public enum ScenarioCode {
+    ADMIN_PATIENT_LIST(ActionType.READ, CombinationMode.ALL, "admin:patient:list", false, false),
+    ADMIN_PATIENT_VIEW(ActionType.READ, CombinationMode.ALL, "admin:patient:view", false, false),
+    ADMIN_PATIENT_CREATE(ActionType.CREATE, CombinationMode.ALL, "admin:patient:create", false, false),
+    ADMIN_PATIENT_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "admin:patient:update", false, false),
+    ADMIN_PATIENT_DELETE(ActionType.DELETE, CombinationMode.ALL, "admin:patient:delete", false, false),
     DOCTOR_SELF_PROFILE_VIEW(ActionType.READ, CombinationMode.ALL, "doctor:profile:view:self", false, false),
     DOCTOR_SELF_PROFILE_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "doctor:profile:update:self", false, false),
     PATIENT_SELF_PROFILE_VIEW(ActionType.READ, CombinationMode.ALL, "patient:profile:view:self", false, false),
