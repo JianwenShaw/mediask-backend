@@ -2,6 +2,7 @@ package me.jianwen.mediask.api.security;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Collections;
 import me.jianwen.mediask.application.authz.AuthzDecision;
 import me.jianwen.mediask.application.authz.AuthzInvocationContext;
 import me.jianwen.mediask.application.authz.AuthorizeScenario;
@@ -57,6 +58,6 @@ public class ScenarioAuthorizationAspect {
                     : "arg" + i;
             mappedArguments.put(parameterName, arguments[i]);
         }
-        return Map.copyOf(mappedArguments);
+        return Collections.unmodifiableMap(mappedArguments);
     }
 }

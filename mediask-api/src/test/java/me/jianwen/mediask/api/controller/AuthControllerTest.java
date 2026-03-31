@@ -13,7 +13,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.Filter;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -77,7 +79,9 @@ class AuthControllerTest {
     private static final String SAME_USER_OTHER_SESSION_REFRESH_TOKEN =
             "rt.2003.refresh-token-other-session.refresh-secret-other-session";
     private static final String OTHER_USER_REFRESH_TOKEN = "rt.2005.refresh-token-other-user.refresh-secret-other-user";
-    private static final Instant TOKEN_EXPIRES_AT = Instant.parse("2026-03-30T08:00:00Z");
+    private static final Instant TEST_NOW = Instant.parse("2026-03-30T07:00:00Z");
+    private static final Clock TEST_CLOCK = Clock.fixed(TEST_NOW, ZoneOffset.UTC);
+    private static final Instant TOKEN_EXPIRES_AT = TEST_NOW.plusSeconds(3600);
 
     private MockMvc mockMvc;
     private InMemoryRefreshTokenSupport refreshTokenSupport;
@@ -130,12 +134,12 @@ class AuthControllerTest {
 
         AuthController authController = new AuthController(
                 new LoginUseCase(repository, passwordVerifier, accessTokenCodec, refreshTokenSupport, refreshTokenSupport),
-                new RefreshTokenUseCase(repository, accessTokenCodec, refreshTokenSupport, refreshTokenSupport, java.time.Clock.systemUTC()),
+                new RefreshTokenUseCase(repository, accessTokenCodec, refreshTokenSupport, refreshTokenSupport, TEST_CLOCK),
                 new LogoutUseCase(
                         refreshTokenSupport,
                         accessTokenBlocklistPort,
                         accessTokenCodec,
-                        java.time.Clock.systemUTC()),
+                        TEST_CLOCK),
                 new GetCurrentUserUseCase(repository));
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);
@@ -191,7 +195,8 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.refreshToken").value("rt.2003.refresh-token-2.refresh-secret-2"))
                 .andExpect(jsonPath("$.data.userContext.userId").value(2003))
                 .andExpect(jsonPath("$.data.userContext.roles[0]").value("PATIENT"))
-                .andExpect(jsonPath("$.data.userContext.permissions[0]").exists());
+                .andExpect(jsonPath("$.data.userContext.permissions[0]").value("auth:refresh"))
+                .andExpect(jsonPath("$.data.userContext.patientId").value(2201));
 
         assertEquals("refresh-token-2", accessTokenCodec.lastIssuedSessionId());
     }
@@ -211,7 +216,9 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.userContext.userId").value(2004))
                 .andExpect(jsonPath("$.data.userContext.username").value("patient_space"))
-                .andExpect(jsonPath("$.data.userContext.roles[0]").value("PATIENT"));
+                .andExpect(jsonPath("$.data.userContext.roles[0]").value("PATIENT"))
+                .andExpect(jsonPath("$.data.userContext.permissions[0]").value("auth:refresh"))
+                .andExpect(jsonPath("$.data.userContext.patientId").value(2202));
     }
 
     @Test
@@ -583,7 +590,7 @@ class AuthControllerTest {
                     userId,
                     "refresh-token-" + sequence,
                     "refresh-secret-" + sequence,
-                    Instant.parse("2026-03-30T08:00:00Z"));
+                    TOKEN_EXPIRES_AT);
         }
 
         @Override
