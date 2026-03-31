@@ -73,6 +73,12 @@ When a business field must support clearing to `NULL`:
 - Do not switch to `mapper.update(null, wrapper)` just to force `NULL` writes on `BaseDO` entities.
 - Add a regression test that captures the entity passed to `updateById(...)` and asserts the cleared field is `null`.
 
+Important repo pitfall:
+
+- Upstream normalization such as `blankToNull(...)` does **not** make the database column clearable by itself.
+- If a request accepts an empty string or blank string as "clear this field", and the draft/command converts that value to `null`, the corresponding DO field still needs `@TableField(updateStrategy = FieldStrategy.ALWAYS)`.
+- Otherwise the repository test can show `null` reaching `updateById(...)` while the database row still keeps the old value, because MyBatis-Plus drops that column from the generated `UPDATE`.
+
 Use this only for fields that are intentionally clearable. Do not blanket-apply `ALWAYS` to unrelated columns.
 
 ### 4. Keep “not found” and “conflict” distinct
