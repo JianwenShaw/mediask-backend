@@ -1,0 +1,144 @@
+[output]
+full_body = true
+
+[[requests]]
+name = "login"
+method = "POST"
+url = "{{env.base_url}}/api/v1/auth/login"
+body = """
+{
+  "username": "{{env.username}}",
+  "password": "{{env.password}}"
+}
+"""
+
+[requests.save]
+token = "body.data.accessToken"
+refreshToken = "body.data.refreshToken"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.data.accessToken"
+op = "exists"
+
+[[requests]]
+name = "list patients default page"
+method = "GET"
+url = "{{env.base_url}}/api/v1/admin/patients"
+depends_on = ["login"]
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.data.pageNum"
+op = "eq"
+right = 1
+
+[[requests.assert]]
+left = "body.data.pageSize"
+op = "eq"
+right = 20
+
+[[requests.assert]]
+left = "body.data.items"
+op = "exists"
+
+[[requests]]
+name = "list patients explicit page"
+method = "GET"
+url = "{{env.base_url}}/api/v1/admin/patients?pageNum=1&pageSize=2"
+depends_on = ["login"]
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.data.pageNum"
+op = "eq"
+right = 1
+
+[[requests.assert]]
+left = "body.data.pageSize"
+op = "eq"
+right = 2
+
+[[requests.assert]]
+left = "body.data.items"
+op = "exists"
+
+[[requests]]
+name = "list patients invalid page size"
+method = "GET"
+url = "{{env.base_url}}/api/v1/admin/patients?pageSize=101"
+depends_on = ["login"]
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 400
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 1002
+
+[[requests.assert]]
+left = "body.requestId"
+op = "exists"
+
+[[requests]]
+name = "logout"
+method = "POST"
+url = "{{env.base_url}}/api/v1/auth/logout"
+depends_on = ["login", "list patients default page", "list patients explicit page", "list patients invalid page size"]
+body = """
+{
+  "refreshToken": "{{run.refreshToken}}"
+}
+"""
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
