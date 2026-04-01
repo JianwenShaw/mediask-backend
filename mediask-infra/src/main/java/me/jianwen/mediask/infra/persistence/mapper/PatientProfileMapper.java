@@ -1,5 +1,6 @@
 package me.jianwen.mediask.infra.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import java.util.List;
 import me.jianwen.mediask.infra.persistence.dataobject.PatientProfileDO;
@@ -40,7 +41,8 @@ public interface PatientProfileMapper extends BaseMapper<PatientProfileDO> {
             ORDER BY p.created_at DESC, p.id DESC
             </script>
             """)
-    List<AdminPatientRow> selectAdminPatientsByKeyword(@Param("keyword") String keyword);
+    IPage<AdminPatientRow> selectAdminPatientsByKeywordPage(IPage<AdminPatientRow> page, @Param("keyword") String keyword);
+
 
     @Select("""
             SELECT
@@ -48,6 +50,7 @@ public interface PatientProfileMapper extends BaseMapper<PatientProfileDO> {
                 u.id AS user_id,
                 u.version AS user_version,
                 p.version AS patient_profile_version,
+                p.created_at,
                 p.patient_no,
                 u.username,
                 u.display_name,

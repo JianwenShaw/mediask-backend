@@ -1,6 +1,5 @@
 package me.jianwen.mediask.api.controller;
 
-import java.util.List;
 import me.jianwen.mediask.api.assembler.AuthAssembler;
 import me.jianwen.mediask.api.dto.AdminPatientDetailResponse;
 import me.jianwen.mediask.api.dto.AdminPatientListItemResponse;
@@ -18,6 +17,7 @@ import me.jianwen.mediask.application.user.usecase.DeleteAdminPatientUseCase;
 import me.jianwen.mediask.application.user.usecase.GetAdminPatientDetailUseCase;
 import me.jianwen.mediask.application.user.usecase.ListAdminPatientsUseCase;
 import me.jianwen.mediask.application.user.usecase.UpdateAdminPatientUseCase;
+import me.jianwen.mediask.common.pagination.PageData;
 import me.jianwen.mediask.common.result.Result;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -54,10 +54,14 @@ public class AdminPatientController {
 
     @GetMapping
     @AuthorizeScenario(ScenarioCode.ADMIN_PATIENT_LIST)
-    public Result<List<AdminPatientListItemResponse>> list(@RequestParam(required = false) String keyword) {
-        return Result.ok(listAdminPatientsUseCase.handle(new ListAdminPatientsQuery(keyword)).stream()
-                .map(AuthAssembler::toAdminPatientListItemResponse)
-                .toList());
+    public Result<PageData<AdminPatientListItemResponse>> list(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long pageNum,
+            @RequestParam(required = false) Long pageSize) {
+        PageData<AdminPatientListItemResponse> response = listAdminPatientsUseCase
+                .handle(ListAdminPatientsQuery.page(keyword, pageNum, pageSize))
+                .map(AuthAssembler::toAdminPatientListItemResponse);
+        return Result.ok(response);
     }
 
     @GetMapping("/{patientId}")

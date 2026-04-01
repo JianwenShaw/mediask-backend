@@ -11,6 +11,8 @@ import me.jianwen.mediask.application.user.command.DeleteAdminPatientCommand;
 import me.jianwen.mediask.application.user.command.UpdateAdminPatientCommand;
 import me.jianwen.mediask.application.user.query.GetAdminPatientDetailQuery;
 import me.jianwen.mediask.application.user.query.ListAdminPatientsQuery;
+import me.jianwen.mediask.common.pagination.PageData;
+import me.jianwen.mediask.common.pagination.PageQuery;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.user.exception.UserErrorCode;
 import me.jianwen.mediask.domain.user.model.AdminPatientCreateDraft;
@@ -76,15 +78,44 @@ class AdminPatientManagementUseCaseTest {
 
     @Test
     void list_WhenKeywordProvided_DelegateToRepository() {
-        ListAdminPatientsUseCase useCase = new ListAdminPatientsUseCase(new StubAdminPatientQueryRepository(
+        StubAdminPatientQueryRepository queryRepository = new StubAdminPatientQueryRepository(
                 Optional.of(detail()),
                 List.of(new AdminPatientListItem(
-                        2208L, 2008L, "P20260008", "patient_new", "李新患者", "137****1234", "FEMALE", LocalDate.of(1995, 6, 1), "A", "ACTIVE"))));
+                        2208L, 2008L, "P20260008", "patient_new", "李新患者", "137****1234", "FEMALE", LocalDate.of(1995, 6, 1), "A", "ACTIVE")));
+        ListAdminPatientsUseCase useCase = new ListAdminPatientsUseCase(queryRepository);
 
-        List<AdminPatientListItem> result = useCase.handle(new ListAdminPatientsQuery("patient"));
+        PageData<AdminPatientListItem> result = useCase.handle(ListAdminPatientsQuery.page("patient", 1L, 20L));
 
-        assertEquals(1, result.size());
-        assertEquals("patient_new", result.getFirst().username());
+        assertEquals(1, result.items().size());
+        assertEquals("patient_new", result.items().getFirst().username());
+        assertEquals("patient", queryRepository.lastKeyword);
+        assertEquals(1L, queryRepository.lastPageQuery.pageNum());
+        assertEquals(20L, queryRepository.lastPageQuery.pageSize());
+    }
+
+    @Test
+    void listQueryPage_WhenPagingMissing_UseDefaults() {
+        ListAdminPatientsQuery query = ListAdminPatientsQuery.page("patient", null, null);
+
+        assertEquals("patient", query.keyword());
+        assertEquals(PageQuery.DEFAULT_PAGE_NUM, query.pageQuery().pageNum());
+        assertEquals(PageQuery.DEFAULT_PAGE_SIZE, query.pageQuery().pageSize());
+    }
+
+    @Test
+    void listQueryPage_WhenPageNumInvalid_ThrowIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> ListAdminPatientsQuery.page("patient", 0L, 20L));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> ListAdminPatientsQuery.page("patient", PageQuery.MAX_PAGE_NUM + 1L, 20L));
+    }
+
+    @Test
+    void listQueryPage_WhenPageSizeInvalid_ThrowIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> ListAdminPatientsQuery.page("patient", 1L, 0L));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> ListAdminPatientsQuery.page("patient", 1L, PageQuery.MAX_PAGE_SIZE + 1L));
     }
 
     @Test
@@ -160,12 +191,23 @@ class AdminPatientManagementUseCaseTest {
         }
     }
 
-    private record StubAdminPatientQueryRepository(Optional<AdminPatientDetail> detail, List<AdminPatientListItem> items)
-            implements AdminPatientQueryRepository {
+    private static final class StubAdminPatientQueryRepository implements AdminPatientQueryRepository {
+
+        private final Optional<AdminPatientDetail> detail;
+        private final List<AdminPatientListItem> items;
+        private String lastKeyword;
+        private PageQuery lastPageQuery;
+
+        private StubAdminPatientQueryRepository(Optional<AdminPatientDetail> detail, List<AdminPatientListItem> items) {
+            this.detail = detail;
+            this.items = items;
+        }
 
         @Override
-        public List<AdminPatientListItem> listByKeyword(String keyword) {
-            return items;
+        public PageData<AdminPatientListItem> pageByKeyword(String keyword, PageQuery pageQuery) {
+            this.lastKeyword = keyword;
+            this.lastPageQuery = pageQuery;
+            return new PageData<>(items, pageQuery.pageNum(), pageQuery.pageSize(), items.size(), items.isEmpty() ? 0 : 1, false);
         }
 
         @Override

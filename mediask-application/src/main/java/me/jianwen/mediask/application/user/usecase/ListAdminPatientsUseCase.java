@@ -1,7 +1,7 @@
 package me.jianwen.mediask.application.user.usecase;
 
-import java.util.List;
 import me.jianwen.mediask.application.user.query.ListAdminPatientsQuery;
+import me.jianwen.mediask.common.pagination.PageData;
 import me.jianwen.mediask.domain.user.model.AdminPatientListItem;
 import me.jianwen.mediask.domain.user.port.AdminPatientQueryRepository;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +15,7 @@ public class ListAdminPatientsUseCase {
     }
 
     @Transactional(readOnly = true)
-    public List<AdminPatientListItem> handle(ListAdminPatientsQuery query) {
-        return adminPatientQueryRepository.listByKeyword(query.keyword());
+    public PageData<AdminPatientListItem> handle(ListAdminPatientsQuery query) {
+        return adminPatientQueryRepository.pageByKeyword(query.keyword(), query.pageQuery());
     }
 }

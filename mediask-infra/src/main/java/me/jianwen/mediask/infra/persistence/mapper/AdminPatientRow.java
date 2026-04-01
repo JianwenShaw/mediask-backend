@@ -1,6 +1,7 @@
 package me.jianwen.mediask.infra.persistence.mapper;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,6 +13,7 @@ public class AdminPatientRow {
     private Long userId;
     private Integer userVersion;
     private Integer patientProfileVersion;
+    private OffsetDateTime createdAt;
     private String patientNo;
     private String username;
     private String displayName;

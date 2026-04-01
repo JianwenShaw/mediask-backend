@@ -11,6 +11,13 @@ public final class ArgumentChecks {
         return value.trim();
     }
 
+    public static <T> T requireNonNull(T value, String fieldName) {
+        if (value == null) {
+            throw new IllegalArgumentException(fieldName + " must not be null");
+        }
+        return value;
+    }
+
     public static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }

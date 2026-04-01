@@ -33,6 +33,8 @@ import me.jianwen.mediask.application.user.usecase.DeleteAdminPatientUseCase;
 import me.jianwen.mediask.application.user.usecase.GetAdminPatientDetailUseCase;
 import me.jianwen.mediask.application.user.usecase.ListAdminPatientsUseCase;
 import me.jianwen.mediask.application.user.usecase.UpdateAdminPatientUseCase;
+import me.jianwen.mediask.common.pagination.PageData;
+import me.jianwen.mediask.common.pagination.PageQuery;
 import me.jianwen.mediask.domain.user.model.AccessToken;
 import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
 import me.jianwen.mediask.domain.user.model.AdminPatientDetail;
@@ -154,10 +156,34 @@ class AdminPatientControllerTest {
                         .header("Authorization", "Bearer " + ADMIN_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data[0].patientId").value(2208))
-                .andExpect(jsonPath("$.data[0].username").value("patient_new"))
-                .andExpect(jsonPath("$.data[0].displayName").value("李新患者"))
-                .andExpect(jsonPath("$.data[0].accountStatus").value("ACTIVE"));
+                .andExpect(jsonPath("$.data.pageNum").value(1))
+                .andExpect(jsonPath("$.data.pageSize").value(20))
+                .andExpect(jsonPath("$.data.items[0].patientId").value(2208))
+                .andExpect(jsonPath("$.data.items[0].username").value("patient_new"))
+                .andExpect(jsonPath("$.data.items[0].displayName").value("李新患者"))
+                .andExpect(jsonPath("$.data.items[0].accountStatus").value("ACTIVE"));
+    }
+
+    @Test
+    void list_WhenExplicitPagingProvided_ReturnRequestedPaging() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/patients")
+                        .param("pageNum", "2")
+                        .param("pageSize", "5")
+                        .header("Authorization", "Bearer " + ADMIN_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.pageNum").value(2))
+                .andExpect(jsonPath("$.data.pageSize").value(5));
+    }
+
+    @Test
+    void list_WhenPageNumExceedsMax_ReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/patients")
+                        .param("pageNum", String.valueOf(PageQuery.MAX_PAGE_NUM + 1L))
+                        .header("Authorization", "Bearer " + ADMIN_TOKEN))
+                .andExpect(status().isBadRequest())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(1002));
     }
 
     @Test
@@ -303,9 +329,10 @@ class AdminPatientControllerTest {
     private static final class StubAdminPatientQueryRepository implements AdminPatientQueryRepository {
 
         @Override
-        public List<AdminPatientListItem> listByKeyword(String keyword) {
-            return List.of(new AdminPatientListItem(
+        public PageData<AdminPatientListItem> pageByKeyword(String keyword, PageQuery pageQuery) {
+            List<AdminPatientListItem> items = List.of(new AdminPatientListItem(
                     2208L, 2008L, "P20260008", "patient_new", "李新患者", "137****1234", "FEMALE", LocalDate.of(1995, 6, 1), "A", "ACTIVE"));
+            return new PageData<>(items, pageQuery.pageNum(), pageQuery.pageSize(), 1L, 1L, false);
         }
 
         @Override

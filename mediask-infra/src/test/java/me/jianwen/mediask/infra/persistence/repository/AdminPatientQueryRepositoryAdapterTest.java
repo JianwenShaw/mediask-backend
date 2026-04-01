@@ -3,12 +3,16 @@ package me.jianwen.mediask.infra.persistence.repository;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.lang.reflect.Proxy;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import me.jianwen.mediask.common.pagination.PageData;
+import me.jianwen.mediask.common.pagination.PageQuery;
 import me.jianwen.mediask.domain.user.model.AdminPatientDetail;
 import me.jianwen.mediask.domain.user.model.AdminPatientListItem;
 import me.jianwen.mediask.infra.persistence.mapper.AdminPatientRow;
@@ -18,15 +22,31 @@ import org.junit.jupiter.api.Test;
 class AdminPatientQueryRepositoryAdapterTest {
 
     @Test
-    void listByKeyword_WhenRowsReturned_MapListItems() {
+    void pageByKeyword_WhenRowsReturned_MapListItems() {
         AdminPatientQueryRepositoryAdapter adapter = new AdminPatientQueryRepositoryAdapter(proxy(PatientProfileMapper.class, Map.of(
-                "selectAdminPatientsByKeyword", arguments -> List.of(createRow()))));
+                "selectAdminPatientsByKeywordPage", arguments -> new Page<AdminPatientRow>(1L, 20L, 1L)
+                        .setRecords(List.of(createRow())))));
 
-        List<AdminPatientListItem> result = adapter.listByKeyword("patient");
+        PageData<AdminPatientListItem> result = adapter.pageByKeyword("patient", new PageQuery(1L, 20L));
 
-        assertEquals(1, result.size());
-        assertEquals("patient_new", result.getFirst().username());
-        assertEquals("ACTIVE", result.getFirst().accountStatus());
+        assertEquals(1, result.items().size());
+        assertEquals("patient_new", result.items().getFirst().username());
+        assertEquals("ACTIVE", result.items().getFirst().accountStatus());
+    }
+
+    @Test
+    void pageByKeyword_WhenPagedResultReturned_MapPagingMetadata() {
+        AdminPatientQueryRepositoryAdapter adapter = new AdminPatientQueryRepositoryAdapter(proxy(PatientProfileMapper.class, Map.of(
+                "selectAdminPatientsByKeywordPage", arguments -> new Page<AdminPatientRow>(2L, 20L, 45L)
+                        .setRecords(List.of(createRow())))));
+
+        PageData<AdminPatientListItem> result = adapter.pageByKeyword("patient", new PageQuery(2L, 20L));
+
+        assertEquals(2L, result.pageNum());
+        assertEquals(20L, result.pageSize());
+        assertEquals(45L, result.total());
+        assertEquals(3L, result.totalPages());
+        assertTrue(result.hasNext());
     }
 
     @Test
@@ -45,6 +65,7 @@ class AdminPatientQueryRepositoryAdapterTest {
         row.setPatientId(2208L);
         row.setUserId(2008L);
         row.setPatientNo("P20260008");
+        row.setCreatedAt(OffsetDateTime.parse("2026-03-31T10:15:30+08:00"));
         row.setUsername("patient_new");
         row.setDisplayName("李新患者");
         row.setMobileMasked("137****1234");

@@ -1,7 +1,9 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
-import java.util.List;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import java.util.Optional;
+import me.jianwen.mediask.common.pagination.PageData;
+import me.jianwen.mediask.common.pagination.PageQuery;
 import me.jianwen.mediask.domain.user.model.AdminPatientDetail;
 import me.jianwen.mediask.domain.user.model.AdminPatientListItem;
 import me.jianwen.mediask.domain.user.port.AdminPatientQueryRepository;
@@ -19,10 +21,16 @@ public class AdminPatientQueryRepositoryAdapter implements AdminPatientQueryRepo
     }
 
     @Override
-    public List<AdminPatientListItem> listByKeyword(String keyword) {
-        return patientProfileMapper.selectAdminPatientsByKeyword(keyword).stream()
-                .map(this::toListItem)
-                .toList();
+    public PageData<AdminPatientListItem> pageByKeyword(String keyword, PageQuery pageQuery) {
+        Page<AdminPatientRow> page = new Page<>(pageQuery.pageNum(), pageQuery.pageSize(), true);
+        var result = patientProfileMapper.selectAdminPatientsByKeywordPage(page, keyword);
+        return new PageData<>(
+                result.getRecords().stream().map(this::toListItem).toList(),
+                result.getCurrent(),
+                result.getSize(),
+                result.getTotal(),
+                result.getPages(),
+                result.getCurrent() < result.getPages());
     }
 
     @Override
@@ -58,4 +66,5 @@ public class AdminPatientQueryRepositoryAdapter implements AdminPatientQueryRepo
                 row.getAllergySummary(),
                 row.getAccountStatus());
     }
+
 }
