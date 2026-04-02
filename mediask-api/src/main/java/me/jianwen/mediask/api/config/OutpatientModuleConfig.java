@@ -2,9 +2,11 @@ package me.jianwen.mediask.api.config;
 
 import me.jianwen.mediask.application.outpatient.usecase.ListClinicSessionsUseCase;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationUseCase;
+import me.jianwen.mediask.application.outpatient.usecase.ListRegistrationsUseCase;
 import me.jianwen.mediask.domain.outpatient.port.ClinicSlotReservationRepository;
 import me.jianwen.mediask.domain.outpatient.port.ClinicSessionQueryRepository;
 import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderRepository;
+import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderQueryRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,5 +23,11 @@ public class OutpatientModuleConfig {
             ClinicSlotReservationRepository clinicSlotReservationRepository,
             RegistrationOrderRepository registrationOrderRepository) {
         return new CreateRegistrationUseCase(clinicSlotReservationRepository, registrationOrderRepository);
+    }
+
+    @Bean
+    public ListRegistrationsUseCase listRegistrationsUseCase(
+            RegistrationOrderQueryRepository registrationOrderQueryRepository) {
+        return new ListRegistrationsUseCase(registrationOrderQueryRepository);
     }
 }

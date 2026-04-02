@@ -1,6 +1,7 @@
 package me.jianwen.mediask.api.controller;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -9,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.Filter;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +25,8 @@ import me.jianwen.mediask.api.security.JwtAuthenticationFilter;
 import me.jianwen.mediask.api.security.SecurityConfig;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationResult;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationUseCase;
+import me.jianwen.mediask.application.outpatient.usecase.ListRegistrationsUseCase;
+import me.jianwen.mediask.domain.outpatient.model.RegistrationListItem;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
 import me.jianwen.mediask.domain.user.model.AccessToken;
 import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
@@ -99,6 +103,20 @@ class RegistrationControllerTest {
     }
 
     @Test
+    void list_WhenAuthenticatedPatient_ReturnOwnRegistrations() throws Exception {
+        patientMockMvc.perform(get("/api/v1/registrations")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN)
+                        .param("status", "CONFIRMED"))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].registrationId").value(6101))
+                .andExpect(jsonPath("$.data.items[0].orderNo").value("REG6101"))
+                .andExpect(jsonPath("$.data.items[0].status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.data.items[0].sourceAiSessionId").value(7101));
+    }
+
+    @Test
     void create_WhenUnauthenticated_ReturnUnauthorized() throws Exception {
         patientMockMvc.perform(post("/api/v1/registrations")
                         .contentType(APPLICATION_JSON)
@@ -127,8 +145,24 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.code").value(2008));
     }
 
+    @Test
+    void list_WhenUnauthenticated_ReturnUnauthorized() throws Exception {
+        patientMockMvc.perform(get("/api/v1/registrations"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value(1001));
+    }
+
+    @Test
+    void list_WhenAuthenticatedDoctor_ReturnRoleMismatch() throws Exception {
+        doctorMockMvc.perform(get("/api/v1/registrations")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(2008));
+    }
+
     private MockMvc buildMockMvc(AuthenticatedUser authenticatedUser) {
-        RegistrationController controller = new RegistrationController(new StubCreateRegistrationUseCase());
+        RegistrationController controller =
+                new RegistrationController(new StubCreateRegistrationUseCase(), new StubListRegistrationsUseCase());
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);
         SecurityConfig securityConfig = new SecurityConfig();
@@ -174,6 +208,23 @@ class RegistrationControllerTest {
         @Override
         public CreateRegistrationResult handle(me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand command) {
             return new CreateRegistrationResult(6101L, "REG6101", RegistrationStatus.PENDING_PAYMENT);
+        }
+    }
+
+    private static final class StubListRegistrationsUseCase extends ListRegistrationsUseCase {
+
+        private StubListRegistrationsUseCase() {
+            super(null);
+        }
+
+        @Override
+        public List<RegistrationListItem> handle(me.jianwen.mediask.application.outpatient.query.ListRegistrationsQuery query) {
+            return List.of(new RegistrationListItem(
+                    6101L,
+                    "REG6101",
+                    RegistrationStatus.CONFIRMED,
+                    OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
+                    7101L));
         }
     }
 

@@ -5,9 +5,16 @@ import me.jianwen.mediask.api.dto.ClinicSessionListItemResponse;
 import me.jianwen.mediask.api.dto.ClinicSessionListResponse;
 import me.jianwen.mediask.api.dto.CreateRegistrationRequest;
 import me.jianwen.mediask.api.dto.CreateRegistrationResponse;
+import me.jianwen.mediask.api.dto.RegistrationListItemResponse;
+import me.jianwen.mediask.api.dto.RegistrationListResponse;
 import me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand;
+import me.jianwen.mediask.application.outpatient.query.ListRegistrationsQuery;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationResult;
 import me.jianwen.mediask.domain.outpatient.model.ClinicSessionListItem;
+import me.jianwen.mediask.domain.outpatient.model.RegistrationListItem;
+import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
+import me.jianwen.mediask.common.exception.BizException;
+import me.jianwen.mediask.common.exception.ErrorCode;
 
 public final class OutpatientAssembler {
 
@@ -42,5 +49,35 @@ public final class OutpatientAssembler {
 
     public static CreateRegistrationResponse toCreateRegistrationResponse(CreateRegistrationResult result) {
         return new CreateRegistrationResponse(result.registrationId(), result.orderNo(), result.status().name());
+    }
+
+    public static ListRegistrationsQuery toListRegistrationsQuery(Long patientId, String status) {
+        return new ListRegistrationsQuery(patientId, toRegistrationStatus(status));
+    }
+
+    public static RegistrationListResponse toRegistrationListResponse(List<RegistrationListItem> items) {
+        return new RegistrationListResponse(items.stream()
+                .map(OutpatientAssembler::toRegistrationListItemResponse)
+                .toList());
+    }
+
+    private static RegistrationListItemResponse toRegistrationListItemResponse(RegistrationListItem item) {
+        return new RegistrationListItemResponse(
+                item.registrationId(),
+                item.orderNo(),
+                item.status().name(),
+                item.createdAt(),
+                item.sourceAiSessionId());
+    }
+
+    private static RegistrationStatus toRegistrationStatus(String status) {
+        if (status == null) {
+            return null;
+        }
+        try {
+            return RegistrationStatus.valueOf(status);
+        } catch (IllegalArgumentException exception) {
+            throw new BizException(ErrorCode.INVALID_PARAMETER);
+        }
     }
 }
