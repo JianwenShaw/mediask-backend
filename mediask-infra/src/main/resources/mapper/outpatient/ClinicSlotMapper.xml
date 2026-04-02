@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="me.jianwen.mediask.infra.persistence.mapper.ClinicSlotMapper">
+
+    <select id="selectReservableSlot"
+            resultType="me.jianwen.mediask.infra.persistence.mapper.ClinicSlotReservationRow">
+        SELECT
+            slot.session_id,
+            slot.id AS slot_id,
+            slot.version AS slot_version,
+            session.doctor_id,
+            session.department_id,
+            session.fee
+        FROM clinic_slot slot
+        JOIN clinic_session session ON session.id = slot.session_id
+        WHERE slot.id = #{slotId}
+          AND slot.session_id = #{sessionId}
+          AND slot.deleted_at IS NULL
+          AND slot.slot_status = 'AVAILABLE'
+          AND session.deleted_at IS NULL
+          AND session.session_status = 'OPEN'
+    </select>
+
+    <select id="countAvailableSlots" resultType="java.lang.Integer">
+        SELECT CAST(COUNT(*) AS INTEGER)
+        FROM clinic_slot
+        WHERE session_id = #{sessionId}
+          AND deleted_at IS NULL
+          AND slot_status = 'AVAILABLE'
+    </select>
+</mapper>

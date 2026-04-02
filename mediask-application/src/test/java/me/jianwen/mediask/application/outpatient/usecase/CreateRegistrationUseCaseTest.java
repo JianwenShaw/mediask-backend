@@ -1,0 +1,105 @@
+package me.jianwen.mediask.application.outpatient.usecase;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.math.BigDecimal;
+import java.util.Optional;
+import me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand;
+import me.jianwen.mediask.common.exception.BizException;
+import me.jianwen.mediask.domain.outpatient.exception.OutpatientErrorCode;
+import me.jianwen.mediask.domain.outpatient.model.ClinicSlotReservation;
+import me.jianwen.mediask.domain.outpatient.model.RegistrationOrder;
+import me.jianwen.mediask.domain.outpatient.port.ClinicSlotReservationRepository;
+import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderRepository;
+import org.junit.jupiter.api.Test;
+
+class CreateRegistrationUseCaseTest {
+
+    @Test
+    void handle_WhenOpenSessionAndAvailableSlot_CreatePendingPaymentOrder() {
+        StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
+        CapturingRegistrationOrderRepository orderRepository = new CapturingRegistrationOrderRepository();
+        CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(reservationRepository, orderRepository);
+
+        CreateRegistrationResult result =
+                useCase.handle(new CreateRegistrationCommand(2201L, 4101L, 5101L, 7101L));
+
+        assertTrue(reservationRepository.existsOpenSessionCalled);
+        assertTrue(reservationRepository.reserveAvailableSlotCalled);
+        assertTrue(reservationRepository.refreshSessionRemainingCountCalled);
+        assertEquals(2201L, orderRepository.savedOrder.patientId());
+        assertEquals(2101L, orderRepository.savedOrder.doctorId());
+        assertEquals(3101L, orderRepository.savedOrder.departmentId());
+        assertEquals(4101L, orderRepository.savedOrder.sessionId());
+        assertEquals(5101L, orderRepository.savedOrder.slotId());
+        assertEquals(7101L, orderRepository.savedOrder.sourceAiSessionId());
+        assertEquals("PENDING_PAYMENT", result.status().name());
+        assertEquals(orderRepository.savedOrder.registrationId(), result.registrationId());
+        assertEquals(orderRepository.savedOrder.orderNo(), result.orderNo());
+    }
+
+    @Test
+    void handle_WhenSessionMissing_ThrowSessionNotFound() {
+        StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
+        reservationRepository.existsOpenSession = false;
+        CreateRegistrationUseCase useCase =
+                new CreateRegistrationUseCase(reservationRepository, registrationOrder -> {});
+
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2201L, 4101L, 5101L, null)));
+
+        assertEquals(OutpatientErrorCode.SESSION_NOT_FOUND, exception.getErrorCode());
+    }
+
+    @Test
+    void handle_WhenSlotUnavailable_ThrowSlotNotAvailable() {
+        StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
+        reservationRepository.reservation = Optional.empty();
+        CreateRegistrationUseCase useCase =
+                new CreateRegistrationUseCase(reservationRepository, registrationOrder -> {});
+
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2201L, 4101L, 5101L, null)));
+
+        assertEquals(OutpatientErrorCode.SLOT_NOT_AVAILABLE, exception.getErrorCode());
+    }
+
+    private static final class StubClinicSlotReservationRepository implements ClinicSlotReservationRepository {
+
+        private boolean existsOpenSession = true;
+        private Optional<ClinicSlotReservation> reservation = Optional.of(
+                new ClinicSlotReservation(4101L, 5101L, 2101L, 3101L, new BigDecimal("18.00")));
+        private boolean existsOpenSessionCalled;
+        private boolean reserveAvailableSlotCalled;
+        private boolean refreshSessionRemainingCountCalled;
+
+        @Override
+        public boolean existsOpenSession(Long sessionId) {
+            existsOpenSessionCalled = true;
+            return existsOpenSession;
+        }
+
+        @Override
+        public Optional<ClinicSlotReservation> reserveAvailableSlot(Long sessionId, Long slotId) {
+            reserveAvailableSlotCalled = true;
+            return reservation;
+        }
+
+        @Override
+        public void refreshSessionRemainingCount(Long sessionId) {
+            refreshSessionRemainingCountCalled = true;
+        }
+    }
+
+    private static final class CapturingRegistrationOrderRepository implements RegistrationOrderRepository {
+
+        private RegistrationOrder savedOrder;
+
+        @Override
+        public void save(RegistrationOrder registrationOrder) {
+            this.savedOrder = registrationOrder;
+        }
+    }
+}
