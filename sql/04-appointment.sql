@@ -22,7 +22,7 @@ CREATE TABLE clinic_session (
     CONSTRAINT fk_clinic_session_doctor FOREIGN KEY (doctor_id) REFERENCES doctors (id),
     CONSTRAINT ck_clinic_session_period_code CHECK (period_code IN ('MORNING', 'AFTERNOON', 'EVENING')),
     CONSTRAINT ck_clinic_session_type CHECK (clinic_type IN ('GENERAL', 'SPECIALIST', 'EXPERT')),
-    CONSTRAINT ck_clinic_session_status CHECK (session_status IN ('DRAFT', 'PUBLISHED', 'CLOSED', 'CANCELLED')),
+    CONSTRAINT ck_clinic_session_status CHECK (session_status IN ('DRAFT', 'PUBLISHED', 'OPEN', 'CLOSED', 'CANCELLED')),
     CONSTRAINT ck_clinic_session_capacity CHECK (capacity >= 0),
     CONSTRAINT ck_clinic_session_remaining CHECK (remaining_count >= 0 AND remaining_count <= capacity),
     CONSTRAINT ck_clinic_session_fee CHECK (fee >= 0)

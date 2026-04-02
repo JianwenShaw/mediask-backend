@@ -31,6 +31,7 @@ class SecurityConfigTest {
     void publicRequestMatcher_WhenSensitiveOperationalOrDocsEndpoints_ReturnsFalse() {
         RequestMatcher publicRequestMatcher = securityConfig.publicRequestMatcher(new ApiSecurityProperties(false));
         assertFalse(matches(publicRequestMatcher, HttpMethod.GET, "/api/v1/auth/me"));
+        assertFalse(matches(publicRequestMatcher, HttpMethod.GET, "/api/v1/clinic-sessions"));
         assertFalse(matches(publicRequestMatcher, HttpMethod.POST, "/api/v1/auth/logout"));
         assertFalse(matches(publicRequestMatcher, HttpMethod.GET, "/actuator/info"));
         assertFalse(matches(publicRequestMatcher, HttpMethod.GET, "/actuator/prometheus"));

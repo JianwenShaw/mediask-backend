@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="me.jianwen.mediask.infra.persistence.mapper.ClinicSessionMapper">
+
+    <select id="selectOpenClinicSessions"
+            resultType="me.jianwen.mediask.infra.persistence.mapper.ClinicSessionListRow">
+        SELECT
+            cs.id AS clinic_session_id,
+            cs.department_id,
+            d.name AS department_name,
+            cs.doctor_id,
+            u.display_name AS doctor_name,
+            cs.session_date,
+            cs.period_code,
+            cs.clinic_type,
+            CAST(COUNT(slot.id) AS INTEGER) AS remaining_count,
+            cs.fee
+        FROM clinic_session cs
+        JOIN departments d ON d.id = cs.department_id
+        JOIN doctors doc ON doc.id = cs.doctor_id
+        JOIN users u ON u.id = doc.user_id
+        LEFT JOIN clinic_slot slot ON slot.session_id = cs.id
+            AND slot.deleted_at IS NULL
+            AND slot.slot_status = 'AVAILABLE'
+        WHERE cs.deleted_at IS NULL
+          AND d.deleted_at IS NULL
+          AND doc.deleted_at IS NULL
+          AND u.deleted_at IS NULL
+          AND cs.session_status = 'OPEN'
+        <if test="departmentId != null">
+            AND cs.department_id = #{departmentId}
+        </if>
+        <if test="dateFrom != null">
+            AND cs.session_date <![CDATA[>=]]> #{dateFrom}
+        </if>
+        <if test="dateTo != null">
+            AND cs.session_date <![CDATA[<=]]> #{dateTo}
+        </if>
+        GROUP BY
+            cs.id,
+            cs.department_id,
+            d.name,
+            cs.doctor_id,
+            u.display_name,
+            cs.session_date,
+            cs.period_code,
+            cs.clinic_type,
+            cs.fee
+        ORDER BY
+            cs.session_date ASC,
+            CASE cs.period_code
+                WHEN 'MORNING' THEN 1
+                WHEN 'AFTERNOON' THEN 2
+                WHEN 'EVENING' THEN 3
+                ELSE 99
+            END ASC,
+            cs.id ASC
+    </select>
+</mapper>

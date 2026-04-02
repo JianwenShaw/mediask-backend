@@ -165,7 +165,7 @@ class ResultAndRequestIdContractTest {
     }
 
     @Test
-    void illegalArgument_WhenThrown_ReturnBadRequestAndStableCode() throws Exception {
+    void illegalArgument_WhenThrown_ReturnBadRequestAndStableMessage() throws Exception {
         String requestId = "req_illegal_argument_001";
 
         MvcResult mvcResult = mockMvc.perform(get("/test/contracts/illegal-argument")
@@ -174,6 +174,21 @@ class ResultAndRequestIdContractTest {
                 .andExpect(header().string(RequestConstants.REQUEST_ID_HEADER, requestId))
                 .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
                 .andExpect(jsonPath("$.msg").value(ErrorCode.INVALID_PARAMETER.getMessage()))
+                .andReturn();
+
+        assertEquals(requestId, assertJsonRequestIdMatchesHeader(mvcResult));
+    }
+
+    @Test
+    void missingParameter_WhenRequiredParameterMissing_ReturnBadRequestAndSpecificMessage() throws Exception {
+        String requestId = "req_missing_param_001";
+
+        MvcResult mvcResult = mockMvc.perform(get("/test/contracts/missing-parameter")
+                        .header(RequestConstants.REQUEST_ID_HEADER, requestId))
+                .andExpect(status().isBadRequest())
+                .andExpect(header().string(RequestConstants.REQUEST_ID_HEADER, requestId))
+                .andExpect(jsonPath("$.code").value(ErrorCode.INVALID_PARAMETER.getCode()))
+                .andExpect(jsonPath("$.msg").value("keyword is required"))
                 .andReturn();
 
         assertEquals(requestId, assertJsonRequestIdMatchesHeader(mvcResult));
@@ -230,7 +245,12 @@ class ResultAndRequestIdContractTest {
 
         @GetMapping("/illegal-argument")
         Result<Void> illegalArgument() {
-            throw new IllegalArgumentException("gender must be one of MALE, FEMALE, OTHER");
+            throw new IllegalArgumentException("No enum constant me.jianwen.mediask.domain.outpatient.model.ClinicType.UNKNOWN");
+        }
+
+        @GetMapping("/missing-parameter")
+        Result<String> missingParameter(@RequestParam String keyword) {
+            return Result.ok(keyword);
         }
     }
 

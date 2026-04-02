@@ -1,0 +1,11 @@
+[output]
+preview_limit = 500
+full_body = false
+
+[environments.dev.vars]
+base_url = "http://localhost:8989"
+username = "admin"
+password = "admin123"
+
+[environments.dev.headers]
+Content-Type = "application/json"

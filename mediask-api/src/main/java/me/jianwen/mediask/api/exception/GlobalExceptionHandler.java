@@ -1,6 +1,5 @@
 package me.jianwen.mediask.api.exception;
 
-import java.util.Objects;
 import me.jianwen.mediask.api.context.ApiRequestContext;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
@@ -13,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.BindingResult;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -110,14 +110,29 @@ public class GlobalExceptionHandler {
     }
 
     private String resolveValidationMessage(Exception exception) {
-        if (exception instanceof MethodArgumentNotValidException methodArgumentNotValidException
-                && methodArgumentNotValidException.getBindingResult().getFieldError() != null) {
-            return Objects.requireNonNull(methodArgumentNotValidException.getBindingResult().getFieldError())
-                    .getDefaultMessage();
+        if (exception instanceof MethodArgumentNotValidException methodArgumentNotValidException) {
+            return resolveBindingResultMessage(methodArgumentNotValidException.getBindingResult());
         }
-        if (exception instanceof BindException bindException && bindException.getFieldError() != null) {
-            return Objects.requireNonNull(bindException.getFieldError()).getDefaultMessage();
+        if (exception instanceof BindException bindException) {
+            return resolveBindingResultMessage(bindException.getBindingResult());
+        }
+        if (exception instanceof MissingServletRequestParameterException missingServletRequestParameterException) {
+            return missingServletRequestParameterException.getParameterName() + " is required";
         }
         return ErrorCode.INVALID_PARAMETER.getMessage();
+    }
+
+    private String resolveBindingResultMessage(BindingResult bindingResult) {
+        if (bindingResult.getFieldError() != null) {
+            return firstNonBlank(bindingResult.getFieldError().getDefaultMessage());
+        }
+        if (bindingResult.getGlobalError() != null) {
+            return firstNonBlank(bindingResult.getGlobalError().getDefaultMessage());
+        }
+        return ErrorCode.INVALID_PARAMETER.getMessage();
+    }
+
+    private String firstNonBlank(String message) {
+        return message == null || message.isBlank() ? ErrorCode.INVALID_PARAMETER.getMessage() : message;
     }
 }
