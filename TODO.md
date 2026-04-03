@@ -14,7 +14,7 @@
 
 ## Phase 1 - 门诊挂号最小闭环
 
-### CURRENT - T1 门诊场次列表查询
+### T1 门诊场次列表查询
 
 - ID: `T1`
 - 状态: `done`
@@ -32,7 +32,7 @@
 ### T2 创建挂号订单
 
 - ID: `T2`
-- 状态: `todo`
+- 状态: `done`
 - 目标: 完成 `POST /api/v1/registrations`，创建最小挂号订单。
 - 完成标准:
   - 写入 `registration_order`。
@@ -48,7 +48,7 @@
 ### T3 患者查看我的挂号
 
 - ID: `T3`
-- 状态: `todo`
+- 状态: `done`
 - 目标: 完成 `GET /api/v1/registrations`，支持患者查看自己的挂号记录。
 - 完成标准:
   - 只返回当前患者自己的挂号记录。
@@ -58,7 +58,7 @@
   - `GET /api/v1/registrations`
   - `registration_order`
 
-### T4 医生接诊列表
+### CURRENT - T4 医生接诊列表
 
 - ID: `T4`
 - 状态: `todo`

@@ -18,21 +18,21 @@ class ListRegistrationsUseCaseTest {
         ListRegistrationsUseCase useCase = new ListRegistrationsUseCase(repository);
 
         List<RegistrationListItem> result =
-                useCase.handle(new ListRegistrationsQuery(2201L, RegistrationStatus.CONFIRMED));
+                useCase.handle(new ListRegistrationsQuery(2003L, RegistrationStatus.CONFIRMED));
 
         assertEquals(1, result.size());
-        assertEquals(2201L, repository.lastPatientId);
+        assertEquals(2003L, repository.lastPatientUserId);
         assertEquals(RegistrationStatus.CONFIRMED, repository.lastStatus);
     }
 
     private static final class StubRegistrationOrderQueryRepository implements RegistrationOrderQueryRepository {
 
-        private Long lastPatientId;
+        private Long lastPatientUserId;
         private RegistrationStatus lastStatus;
 
         @Override
-        public List<RegistrationListItem> listByPatientId(Long patientId, RegistrationStatus status) {
-            this.lastPatientId = patientId;
+        public List<RegistrationListItem> listByPatientUserId(Long patientUserId, RegistrationStatus status) {
+            this.lastPatientUserId = patientUserId;
             this.lastStatus = status;
             return List.of(new RegistrationListItem(
                     6101L,

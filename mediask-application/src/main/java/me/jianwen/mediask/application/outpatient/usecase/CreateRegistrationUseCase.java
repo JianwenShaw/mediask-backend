@@ -32,7 +32,7 @@ public class CreateRegistrationUseCase {
                 .orElseThrow(() -> new BizException(OutpatientErrorCode.SLOT_NOT_AVAILABLE));
 
         RegistrationOrder registrationOrder = RegistrationOrder.createPendingPayment(
-                command.patientId(),
+                command.patientUserId(),
                 reservation.doctorId(),
                 reservation.departmentId(),
                 reservation.sessionId(),

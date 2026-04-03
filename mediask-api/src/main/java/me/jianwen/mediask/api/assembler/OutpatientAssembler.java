@@ -42,17 +42,17 @@ public final class OutpatientAssembler {
     }
 
     public static CreateRegistrationCommand toCreateRegistrationCommand(
-            Long patientId, CreateRegistrationRequest request) {
+            Long patientUserId, CreateRegistrationRequest request) {
         return new CreateRegistrationCommand(
-                patientId, request.clinicSessionId(), request.clinicSlotId(), request.sourceAiSessionId());
+                patientUserId, request.clinicSessionId(), request.clinicSlotId(), request.sourceAiSessionId());
     }
 
     public static CreateRegistrationResponse toCreateRegistrationResponse(CreateRegistrationResult result) {
         return new CreateRegistrationResponse(result.registrationId(), result.orderNo(), result.status().name());
     }
 
-    public static ListRegistrationsQuery toListRegistrationsQuery(Long patientId, String status) {
-        return new ListRegistrationsQuery(patientId, toRegistrationStatus(status));
+    public static ListRegistrationsQuery toListRegistrationsQuery(Long patientUserId, String status) {
+        return new ListRegistrationsQuery(patientUserId, toRegistrationStatus(status));
     }
 
     public static RegistrationListResponse toRegistrationListResponse(List<RegistrationListItem> items) {

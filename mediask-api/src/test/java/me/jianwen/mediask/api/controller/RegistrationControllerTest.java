@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.Filter;
@@ -55,9 +56,13 @@ class RegistrationControllerTest {
 
     private MockMvc patientMockMvc;
     private MockMvc doctorMockMvc;
+    private StubCreateRegistrationUseCase patientCreateRegistrationUseCase;
+    private StubListRegistrationsUseCase patientListRegistrationsUseCase;
 
     @BeforeEach
     void setUp() {
+        patientCreateRegistrationUseCase = new StubCreateRegistrationUseCase();
+        patientListRegistrationsUseCase = new StubListRegistrationsUseCase();
         patientMockMvc = buildMockMvc(new AuthenticatedUser(
                 2003L,
                 "patient_li",
@@ -68,7 +73,7 @@ class RegistrationControllerTest {
                 Set.of(),
                 2201L,
                 null,
-                null));
+                null), patientCreateRegistrationUseCase, patientListRegistrationsUseCase);
         doctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2004L,
                 "doctor_zhang",
@@ -79,7 +84,7 @@ class RegistrationControllerTest {
                 Set.of(),
                 null,
                 2101L,
-                3101L));
+                3101L), new StubCreateRegistrationUseCase(), new StubListRegistrationsUseCase());
     }
 
     @Test
@@ -100,6 +105,11 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.data.registrationId").value(6101))
                 .andExpect(jsonPath("$.data.orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"));
+
+        assertEquals(2003L, patientCreateRegistrationUseCase.lastCommand.patientUserId());
+        assertEquals(4101L, patientCreateRegistrationUseCase.lastCommand.clinicSessionId());
+        assertEquals(5101L, patientCreateRegistrationUseCase.lastCommand.clinicSlotId());
+        assertEquals(7101L, patientCreateRegistrationUseCase.lastCommand.sourceAiSessionId());
     }
 
     @Test
@@ -114,6 +124,9 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.data.items[0].orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.items[0].status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.data.items[0].sourceAiSessionId").value(7101));
+
+        assertEquals(2003L, patientListRegistrationsUseCase.lastQuery.patientUserId());
+        assertEquals(RegistrationStatus.CONFIRMED, patientListRegistrationsUseCase.lastQuery.status());
     }
 
     @Test
@@ -160,9 +173,12 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.code").value(2008));
     }
 
-    private MockMvc buildMockMvc(AuthenticatedUser authenticatedUser) {
+    private MockMvc buildMockMvc(
+            AuthenticatedUser authenticatedUser,
+            StubCreateRegistrationUseCase createRegistrationUseCase,
+            StubListRegistrationsUseCase listRegistrationsUseCase) {
         RegistrationController controller =
-                new RegistrationController(new StubCreateRegistrationUseCase(), new StubListRegistrationsUseCase());
+                new RegistrationController(createRegistrationUseCase, listRegistrationsUseCase);
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);
         SecurityConfig securityConfig = new SecurityConfig();
@@ -201,17 +217,22 @@ class RegistrationControllerTest {
 
     private static final class StubCreateRegistrationUseCase extends CreateRegistrationUseCase {
 
+        private me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand lastCommand;
+
         private StubCreateRegistrationUseCase() {
             super(null, null);
         }
 
         @Override
         public CreateRegistrationResult handle(me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand command) {
+            this.lastCommand = command;
             return new CreateRegistrationResult(6101L, "REG6101", RegistrationStatus.PENDING_PAYMENT);
         }
     }
 
     private static final class StubListRegistrationsUseCase extends ListRegistrationsUseCase {
+
+        private me.jianwen.mediask.application.outpatient.query.ListRegistrationsQuery lastQuery;
 
         private StubListRegistrationsUseCase() {
             super(null);
@@ -219,6 +240,7 @@ class RegistrationControllerTest {
 
         @Override
         public List<RegistrationListItem> handle(me.jianwen.mediask.application.outpatient.query.ListRegistrationsQuery query) {
+            this.lastQuery = query;
             return List.of(new RegistrationListItem(
                     6101L,
                     "REG6101",

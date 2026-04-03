@@ -1,0 +1,15 @@
+[output]
+preview_limit = 500
+full_body = false
+
+[environments.dev.vars]
+base_url = "http://localhost:8989"
+username = "patient_li"
+password = "patient123"
+department_id = "3103"
+session_date = "2026-05-20"
+clinic_session_id = "4101"
+clinic_slot_id = "5101"
+
+[environments.dev.headers]
+Content-Type = "application/json"

@@ -1,0 +1,206 @@
+[output]
+full_body = true
+
+[[requests]]
+name = "login patient"
+method = "POST"
+url = "{{env.base_url}}/api/v1/auth/login"
+body = """
+{
+  "username": "{{env.username}}",
+  "password": "{{env.password}}"
+}
+"""
+
+[requests.save]
+token = "body.data.accessToken"
+refreshToken = "body.data.refreshToken"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.data.accessToken"
+op = "exists"
+
+[[requests]]
+name = "list seeded clinic sessions"
+method = "GET"
+url = "{{env.base_url}}/api/v1/clinic-sessions?departmentId={{env.department_id}}&dateFrom={{env.session_date}}&dateTo={{env.session_date}}"
+depends_on = ["login patient"]
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.requestId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.items[*].clinicSessionId"
+op = "contains"
+right = "{{env.clinic_session_id}}"
+
+[[requests.assert]]
+left = "body.data.items[*].departmentId"
+op = "contains"
+right = "{{env.department_id}}"
+
+[[requests.assert]]
+left = "body.data.items[*].sessionDate"
+op = "contains"
+right = "{{env.session_date}}"
+
+[[requests]]
+name = "create registration"
+method = "POST"
+url = "{{env.base_url}}/api/v1/registrations"
+depends_on = ["login patient", "list seeded clinic sessions"]
+body = """
+{
+  "clinicSessionId": {{env.clinic_session_id}},
+  "clinicSlotId": {{env.clinic_slot_id}}
+}
+"""
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[requests.save]
+registrationId = "body.data.registrationId"
+orderNo = "body.data.orderNo"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.requestId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.registrationId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.orderNo"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.status"
+op = "eq"
+right = "PENDING_PAYMENT"
+
+[[requests]]
+name = "list my registrations"
+method = "GET"
+url = "{{env.base_url}}/api/v1/registrations?status=PENDING_PAYMENT"
+depends_on = ["login patient", "create registration"]
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.requestId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.items[*].registrationId"
+op = "contains"
+right = "{{run.registrationId}}"
+
+[[requests.assert]]
+left = "body.data.items[*].orderNo"
+op = "contains"
+right = "{{run.orderNo}}"
+
+[[requests.assert]]
+left = "body.data.items[*].status"
+op = "contains"
+right = "PENDING_PAYMENT"
+
+[[requests]]
+name = "list registrations invalid status"
+method = "GET"
+url = "{{env.base_url}}/api/v1/registrations?status=INVALID_STATUS"
+depends_on = ["login patient"]
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 400
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 1002
+
+[[requests.assert]]
+left = "body.requestId"
+op = "exists"
+
+[[requests]]
+name = "logout patient"
+method = "POST"
+url = "{{env.base_url}}/api/v1/auth/logout"
+depends_on = [
+  "login patient",
+  "list seeded clinic sessions",
+  "create registration",
+  "list my registrations",
+  "list registrations invalid status"
+]
+body = """
+{
+  "refreshToken": "{{run.refreshToken}}"
+}
+"""
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0

@@ -46,7 +46,7 @@ public class RegistrationController {
             throw new BizException(UserErrorCode.ROLE_MISMATCH);
         }
         CreateRegistrationCommand command =
-                OutpatientAssembler.toCreateRegistrationCommand(principal.patientId(), request);
+                OutpatientAssembler.toCreateRegistrationCommand(principal.userId(), request);
         CreateRegistrationResult result = createRegistrationUseCase.handle(command);
         return Result.ok(OutpatientAssembler.toCreateRegistrationResponse(result));
     }
@@ -62,6 +62,6 @@ public class RegistrationController {
             throw new BizException(UserErrorCode.ROLE_MISMATCH);
         }
         return Result.ok(OutpatientAssembler.toRegistrationListResponse(
-                listRegistrationsUseCase.handle(OutpatientAssembler.toListRegistrationsQuery(principal.patientId(), status))));
+                listRegistrationsUseCase.handle(OutpatientAssembler.toListRegistrationsQuery(principal.userId(), status))));
     }
 }

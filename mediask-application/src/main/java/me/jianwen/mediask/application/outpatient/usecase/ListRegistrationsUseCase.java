@@ -16,6 +16,6 @@ public class ListRegistrationsUseCase {
 
     @Transactional(readOnly = true)
     public List<RegistrationListItem> handle(ListRegistrationsQuery query) {
-        return registrationOrderQueryRepository.listByPatientId(query.patientId(), query.status());
+        return registrationOrderQueryRepository.listByPatientUserId(query.patientUserId(), query.status());
     }
 }

@@ -6,5 +6,5 @@ import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
 
 public interface RegistrationOrderQueryRepository {
 
-    List<RegistrationListItem> listByPatientId(Long patientId, RegistrationStatus status);
+    List<RegistrationListItem> listByPatientUserId(Long patientUserId, RegistrationStatus status);
 }

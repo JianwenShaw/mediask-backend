@@ -17,12 +17,12 @@ import org.junit.jupiter.api.Test;
 class RegistrationOrderQueryRepositoryAdapterTest {
 
     @Test
-    void listByPatientId_WhenStatusProvided_ReturnMappedItems() {
+    void listByPatientUserId_WhenStatusProvided_ReturnMappedItems() {
         CapturingHandler handler = new CapturingHandler();
         RegistrationOrderQueryRepositoryAdapter adapter = new RegistrationOrderQueryRepositoryAdapter(
                 proxy(RegistrationOrderMapper.class, Map.of("selectList", handler::selectList)));
 
-        List<RegistrationListItem> result = adapter.listByPatientId(2201L, RegistrationStatus.CONFIRMED);
+        List<RegistrationListItem> result = adapter.listByPatientUserId(2003L, RegistrationStatus.CONFIRMED);
 
         assertEquals(1, result.size());
         assertEquals(6101L, result.getFirst().registrationId());

@@ -107,3 +107,38 @@ INSERT INTO knowledge_base (id, kb_code, name, owner_type, visibility, status)
 VALUES
     (4001, 'KB_SYSTEM_TRIAGE', '系统导诊知识库', 'SYSTEM', 'PUBLIC', 'ENABLED')
 ON CONFLICT (kb_code) DO NOTHING;
+
+INSERT INTO clinic_session (
+    id,
+    hospital_id,
+    department_id,
+    doctor_id,
+    session_date,
+    period_code,
+    clinic_type,
+    session_status,
+    capacity,
+    remaining_count,
+    fee,
+    source_type
+)
+VALUES
+    (4101, 3001, 3103, 3201, DATE '2026-05-20', 'MORNING', 'GENERAL', 'OPEN', 2, 2, 25.00, 'MANUAL'),
+    (4102, 3001, 3103, 3201, DATE '2026-05-20', 'AFTERNOON', 'GENERAL', 'PUBLISHED', 1, 1, 25.00, 'MANUAL')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO clinic_slot (
+    id,
+    session_id,
+    slot_seq,
+    slot_start_time,
+    slot_end_time,
+    slot_status,
+    capacity,
+    remaining_count
+)
+VALUES
+    (5101, 4101, 1, TIMESTAMPTZ '2026-05-20 09:00:00+08', TIMESTAMPTZ '2026-05-20 09:15:00+08', 'AVAILABLE', 1, 1),
+    (5102, 4101, 2, TIMESTAMPTZ '2026-05-20 09:15:00+08', TIMESTAMPTZ '2026-05-20 09:30:00+08', 'AVAILABLE', 1, 1),
+    (5103, 4102, 1, TIMESTAMPTZ '2026-05-20 14:00:00+08', TIMESTAMPTZ '2026-05-20 14:15:00+08', 'AVAILABLE', 1, 1)
+ON CONFLICT (id) DO NOTHING;

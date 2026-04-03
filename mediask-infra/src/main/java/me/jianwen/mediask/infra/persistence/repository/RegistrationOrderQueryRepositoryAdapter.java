@@ -19,9 +19,9 @@ public class RegistrationOrderQueryRepositoryAdapter implements RegistrationOrde
     }
 
     @Override
-    public List<RegistrationListItem> listByPatientId(Long patientId, RegistrationStatus status) {
+    public List<RegistrationListItem> listByPatientUserId(Long patientUserId, RegistrationStatus status) {
         return registrationOrderMapper.selectList(Wrappers.lambdaQuery(RegistrationOrderDO.class)
-                        .eq(RegistrationOrderDO::getPatientId, patientId)
+                        .eq(RegistrationOrderDO::getPatientId, patientUserId)
                         .eq(status != null, RegistrationOrderDO::getOrderStatus, status.name())
                         .isNull(RegistrationOrderDO::getDeletedAt)
                         .orderByDesc(RegistrationOrderDO::getCreatedAt))

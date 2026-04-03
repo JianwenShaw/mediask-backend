@@ -24,12 +24,12 @@ class CreateRegistrationUseCaseTest {
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(reservationRepository, orderRepository);
 
         CreateRegistrationResult result =
-                useCase.handle(new CreateRegistrationCommand(2201L, 4101L, 5101L, 7101L));
+                useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L, 7101L));
 
         assertTrue(reservationRepository.existsOpenSessionCalled);
         assertTrue(reservationRepository.reserveAvailableSlotCalled);
         assertTrue(reservationRepository.refreshSessionRemainingCountCalled);
-        assertEquals(2201L, orderRepository.savedOrder.patientId());
+        assertEquals(2003L, orderRepository.savedOrder.patientId());
         assertEquals(2101L, orderRepository.savedOrder.doctorId());
         assertEquals(3101L, orderRepository.savedOrder.departmentId());
         assertEquals(4101L, orderRepository.savedOrder.sessionId());
@@ -48,7 +48,7 @@ class CreateRegistrationUseCaseTest {
                 new CreateRegistrationUseCase(reservationRepository, registrationOrder -> {});
 
         BizException exception = assertThrows(
-                BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2201L, 4101L, 5101L, null)));
+                BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L, null)));
 
         assertEquals(OutpatientErrorCode.SESSION_NOT_FOUND, exception.getErrorCode());
     }
@@ -61,7 +61,7 @@ class CreateRegistrationUseCaseTest {
                 new CreateRegistrationUseCase(reservationRepository, registrationOrder -> {});
 
         BizException exception = assertThrows(
-                BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2201L, 4101L, 5101L, null)));
+                BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L, null)));
 
         assertEquals(OutpatientErrorCode.SLOT_NOT_AVAILABLE, exception.getErrorCode());
     }
