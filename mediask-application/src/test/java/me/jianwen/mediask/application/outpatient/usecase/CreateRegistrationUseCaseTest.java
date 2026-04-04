@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import me.jianwen.mediask.domain.clinical.model.VisitEncounter;
+import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
+import me.jianwen.mediask.domain.clinical.port.VisitEncounterRepository;
 import me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.outpatient.exception.OutpatientErrorCode;
@@ -21,7 +24,9 @@ class CreateRegistrationUseCaseTest {
     void handle_WhenOpenSessionAndAvailableSlot_CreatePendingPaymentOrder() {
         StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
         CapturingRegistrationOrderRepository orderRepository = new CapturingRegistrationOrderRepository();
-        CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(reservationRepository, orderRepository);
+        CapturingVisitEncounterRepository visitEncounterRepository = new CapturingVisitEncounterRepository();
+        CreateRegistrationUseCase useCase =
+                new CreateRegistrationUseCase(reservationRepository, orderRepository, visitEncounterRepository);
 
         CreateRegistrationResult result =
                 useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L, 7101L));
@@ -35,6 +40,11 @@ class CreateRegistrationUseCaseTest {
         assertEquals(4101L, orderRepository.savedOrder.sessionId());
         assertEquals(5101L, orderRepository.savedOrder.slotId());
         assertEquals(7101L, orderRepository.savedOrder.sourceAiSessionId());
+        assertEquals(orderRepository.savedOrder.registrationId(), visitEncounterRepository.savedEncounter.registrationId());
+        assertEquals(2003L, visitEncounterRepository.savedEncounter.patientUserId());
+        assertEquals(2101L, visitEncounterRepository.savedEncounter.doctorId());
+        assertEquals(3101L, visitEncounterRepository.savedEncounter.departmentId());
+        assertEquals(VisitEncounterStatus.SCHEDULED, visitEncounterRepository.savedEncounter.status());
         assertEquals("PENDING_PAYMENT", result.status().name());
         assertEquals(orderRepository.savedOrder.registrationId(), result.registrationId());
         assertEquals(orderRepository.savedOrder.orderNo(), result.orderNo());
@@ -45,7 +55,7 @@ class CreateRegistrationUseCaseTest {
         StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
         reservationRepository.existsOpenSession = false;
         CreateRegistrationUseCase useCase =
-                new CreateRegistrationUseCase(reservationRepository, registrationOrder -> {});
+                new CreateRegistrationUseCase(reservationRepository, registrationOrder -> {}, visitEncounter -> {});
 
         BizException exception = assertThrows(
                 BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L, null)));
@@ -58,7 +68,7 @@ class CreateRegistrationUseCaseTest {
         StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
         reservationRepository.reservation = Optional.empty();
         CreateRegistrationUseCase useCase =
-                new CreateRegistrationUseCase(reservationRepository, registrationOrder -> {});
+                new CreateRegistrationUseCase(reservationRepository, registrationOrder -> {}, visitEncounter -> {});
 
         BizException exception = assertThrows(
                 BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L, null)));
@@ -100,6 +110,16 @@ class CreateRegistrationUseCaseTest {
         @Override
         public void save(RegistrationOrder registrationOrder) {
             this.savedOrder = registrationOrder;
+        }
+    }
+
+    private static final class CapturingVisitEncounterRepository implements VisitEncounterRepository {
+
+        private VisitEncounter savedEncounter;
+
+        @Override
+        public void save(VisitEncounter visitEncounter) {
+            this.savedEncounter = visitEncounter;
         }
     }
 }

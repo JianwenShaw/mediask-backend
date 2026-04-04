@@ -220,7 +220,7 @@ class RegistrationControllerTest {
         private me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand lastCommand;
 
         private StubCreateRegistrationUseCase() {
-            super(null, null);
+            super(null, null, null);
         }
 
         @Override

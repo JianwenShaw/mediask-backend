@@ -58,21 +58,22 @@
   - `GET /api/v1/registrations`
   - `registration_order`
 
-### CURRENT - T4 医生接诊列表
+### T4 医生接诊列表
 
 - ID: `T4`
-- 状态: `todo`
+- 状态: `done`
 - 目标: 完成 `GET /api/v1/encounters`，支持医生查看待接诊/已接诊列表。
 - 完成标准:
-  - 基于 `visit_encounter` 返回最小列表信息。
+  - 基于已预创建的 `visit_encounter` 返回最小列表信息。
   - 仅返回当前医生可见的接诊记录。
+  - 挂号创建成功后预创建 `visit_encounter`，初始状态为 `SCHEDULED`。
   - 有主成功路径测试。
 - 涉及接口/表:
   - `GET /api/v1/encounters`
   - `visit_encounter`
   - `registration_order`
 
-### T5 接诊详情
+### CURRENT - T5 接诊详情
 
 - ID: `T5`
 - 状态: `todo`
