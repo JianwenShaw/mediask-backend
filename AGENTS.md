@@ -27,6 +27,14 @@ For backend changes, also read:
 ### when you begin to test
 `docs/docs/05-TESTING.md`
 
+Additional Maven testing note:
+
+- This repo is a Maven multi-module build. When running tests for a specific module from the repo root, prefer `mvn -pl <module> -am ...` so Maven also builds required local reactor dependencies.
+- Do not assume `mvn -pl <module> ...` alone will work. It can fail with `Could not find artifact me.jianwen:mediask-...:1.0-SNAPSHOT` when dependent local modules have not been built into the local repository.
+- Recommended pattern:
+  - `mvn -pl mediask-api -am -Dtest=SomeTest test`
+  - add `-Dsurefire.failIfNoSpecifiedTests=false` when targeting a narrow test set across the reactor and upstream modules have no matching tests.
+
 ### when changing AI APIs or SSE.
 `docs/docs/10A-JAVA_AI_API_CONTRACT.md` 
 

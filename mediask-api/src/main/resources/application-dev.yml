@@ -19,6 +19,7 @@ mediask:
     allowed-origins:
       - http://localhost:3000
       - http://localhost:5173
+      - http://localhost:5174
   redisson:
     address: redis://${MEDIASK_DEV_MIDWARE_HOST}:${REDIS_PORT:16379}
     password: ${REDIS_PASSWORD}
