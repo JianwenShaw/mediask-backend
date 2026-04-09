@@ -11,13 +11,15 @@ public record AiServiceProperties(
         URI baseUrl,
         String apiKey,
         @DefaultValue("PT3S") Duration connectTimeout,
-        @DefaultValue("PT30S") Duration readTimeout) {
+        @DefaultValue("PT30S") Duration readTimeout,
+        @DefaultValue("PT5M") Duration streamReadTimeout) {
 
     public AiServiceProperties {
         baseUrl = requireValue(baseUrl, "mediask.ai.service.base-url");
         apiKey = ArgumentChecks.requireNonBlank(apiKey, "mediask.ai.service.api-key");
         connectTimeout = requirePositive(connectTimeout, "mediask.ai.service.connect-timeout");
         readTimeout = requirePositive(readTimeout, "mediask.ai.service.read-timeout");
+        streamReadTimeout = requirePositive(streamReadTimeout, "mediask.ai.service.stream-read-timeout");
     }
 
     private static <T> T requireValue(T value, String fieldName) {

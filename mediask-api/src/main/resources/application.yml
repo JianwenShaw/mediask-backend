@@ -75,3 +75,22 @@ management:
       show-details: when-authorized
       probes:
         enabled: true
+
+logging:
+  structured:
+    format:
+      console: logstash
+    json:
+      context:
+        include: false
+      add:
+        service: ${spring.application.name}
+      customizer:
+        - me.jianwen.mediask.api.logging.ApiStructuredLoggingJsonCustomizer
+      rename:
+        '@timestamp': timestamp
+        logger_name: logger
+        thread_name: thread
+      exclude:
+        - '@version'
+        - level_value

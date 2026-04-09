@@ -15,6 +15,10 @@ spring:
       password: ${REDIS_PASSWORD}
 
 mediask:
+  ai:
+    service:
+      base-url: ${MEDIASK_AI_BASE_URL:http://localhost:8000}
+      api-key: ${MEDIASK_AI_API_KEY:dev-api-key}
   cors:
     allowed-origins:
       - http://localhost:3000

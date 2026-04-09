@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Objects;
 import me.jianwen.mediask.domain.ai.model.AiChatInvocation;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
+import me.jianwen.mediask.domain.ai.model.AiChatTriageResult;
 import me.jianwen.mediask.domain.ai.model.AiCitation;
 import me.jianwen.mediask.domain.ai.model.AiExecutionMetadata;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
@@ -16,6 +17,35 @@ import me.jianwen.mediask.infra.ai.client.dto.PythonChatResponse;
 public final class PythonAiChatMapper {
 
     public PythonChatRequest toRequest(AiChatInvocation invocation) {
+        return toRequest(invocation, false);
+    }
+
+    public PythonChatRequest toStreamRequest(AiChatInvocation invocation) {
+        return toRequest(invocation, true);
+    }
+
+    public AiChatTriageResult toStreamMetaDomain(PythonChatResponse response) {
+        return new AiChatTriageResult(
+                firstNonBlank(response.chiefComplaintSummary(), response.summary()),
+                toRiskLevel(response.riskLevel()),
+                toGuardrailAction(response.guardrailAction()),
+                mapRecommendedDepartments(response.recommendedDepartments()),
+                response.careAdvice(),
+                mapCitations(response.citations()),
+                new AiExecutionMetadata(
+                        response.providerRunId(),
+                        response.matchedRuleCodes(),
+                        response.tokensInput(),
+                        response.tokensOutput(),
+                        response.latencyMs(),
+                        Boolean.TRUE.equals(response.degraded())));
+    }
+
+    public AiChatReply toDomain(PythonChatResponse response) {
+        return toReply(response, true);
+    }
+
+    private PythonChatRequest toRequest(AiChatInvocation invocation, boolean stream) {
         return new PythonChatRequest(
                 invocation.modelRunId(),
                 invocation.turnId(),
@@ -25,12 +55,13 @@ public final class PythonAiChatMapper {
                 invocation.message(),
                 invocation.contextSummary(),
                 invocation.useRag(),
-                false);
+                stream);
     }
 
-    public AiChatReply toDomain(PythonChatResponse response) {
+    private AiChatReply toReply(PythonChatResponse response, boolean answerRequired) {
+        String answer = answerRequired ? requireAnswer(response.answer()) : response.answer();
         return new AiChatReply(
-                response.answer(),
+                answer,
                 firstNonBlank(response.chiefComplaintSummary(), response.summary()),
                 toRiskLevel(response.riskLevel()),
                 toGuardrailAction(response.guardrailAction()),
@@ -100,5 +131,12 @@ public final class PythonAiChatMapper {
             return first;
         }
         return second;
+    }
+
+    private String requireAnswer(String answer) {
+        if (answer == null || answer.isBlank()) {
+            throw new IllegalArgumentException("answer must not be blank");
+        }
+        return answer;
     }
 }

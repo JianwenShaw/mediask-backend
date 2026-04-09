@@ -1,13 +1,19 @@
 package me.jianwen.mediask.infra.ai.client.mapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
+import me.jianwen.mediask.domain.ai.model.AiChatInvocation;
+import me.jianwen.mediask.domain.ai.model.AiChatTriageResult;
+import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
+import me.jianwen.mediask.infra.ai.client.dto.PythonChatRequest;
 import me.jianwen.mediask.infra.ai.client.dto.PythonChatResponse;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +48,35 @@ class PythonAiChatMapperTest {
         assertEquals(1, reply.recommendedDepartments().size());
         assertEquals(1, reply.citations().size());
         assertEquals("provider-run-001", reply.executionMetadata().providerRunId());
+    }
+
+    @Test
+    void toStreamMetaDomain_WhenAnswerMissing_MapStructuredReply() {
+        PythonChatResponse response = new PythonChatResponse(
+                1L,
+                "provider-run-001",
+                null,
+                "Headache with low fever",
+                null,
+                List.of(new PythonChatResponse.PythonRecommendedDepartment(101L, "Neurology", 1, "Evaluate headache causes first")),
+                "Seek offline care soon and avoid self-diagnosis.",
+                List.of(new PythonChatResponse.PythonCitation(7003001L, 1, 0.82D, "Persistent headache with fever should be assessed offline")),
+                "medium",
+                "caution",
+                List.of("medical_triage_only"),
+                100,
+                60,
+                1800,
+                false);
+
+        AiChatTriageResult triageResult = mapper.toStreamMetaDomain(response);
+
+        assertEquals(RiskLevel.MEDIUM, triageResult.riskLevel());
+        assertEquals(GuardrailAction.CAUTION, triageResult.guardrailAction());
+        assertEquals("Headache with low fever", triageResult.chiefComplaintSummary());
+        assertEquals(1, triageResult.recommendedDepartments().size());
+        assertEquals(1, triageResult.citations().size());
+        assertEquals("provider-run-001", triageResult.executionMetadata().providerRunId());
     }
 
     @Test
@@ -102,6 +137,20 @@ class PythonAiChatMapperTest {
         assertEquals("citations contains null element", exception.getMessage());
     }
 
+    @Test
+    void toRequest_WhenNonStreamInvocation_StreamFlagFalse() {
+        PythonChatRequest request = mapper.toRequest(invocation());
+
+        assertFalse(request.stream());
+    }
+
+    @Test
+    void toStreamRequest_WhenStreamInvocation_StreamFlagTrue() {
+        PythonChatRequest request = mapper.toStreamRequest(invocation());
+
+        assertTrue(request.stream());
+    }
+
     private List<PythonChatResponse.PythonRecommendedDepartment> departmentsWithNullElement() {
         List<PythonChatResponse.PythonRecommendedDepartment> departments = new ArrayList<>();
         departments.add(new PythonChatResponse.PythonRecommendedDepartment(101L, "Neurology", 1, "reason"));
@@ -114,5 +163,9 @@ class PythonAiChatMapperTest {
         citations.add(new PythonChatResponse.PythonCitation(1L, 1, 0.1D, "snippet"));
         citations.add(null);
         return citations;
+    }
+
+    private AiChatInvocation invocation() {
+        return new AiChatInvocation(1L, 2L, "session-uuid", "头痛三天", AiSceneType.PRE_CONSULTATION, 101L, null, true);
     }
 }
