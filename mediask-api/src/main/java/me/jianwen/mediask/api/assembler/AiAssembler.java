@@ -4,7 +4,9 @@ import java.util.Locale;
 import me.jianwen.mediask.api.dto.AiChatStreamMetaResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
 import me.jianwen.mediask.api.dto.AiTriageResultResponse;
+import me.jianwen.mediask.api.dto.ImportKnowledgeDocumentResponse;
 import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
+import me.jianwen.mediask.application.ai.usecase.ImportKnowledgeDocumentResult;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
@@ -26,6 +28,11 @@ public final class AiAssembler {
     public static AiChatStreamMetaResponse toStreamMetaResponse(
             Long sessionId, Long turnId, AiChatTriageResult triageResult) {
         return new AiChatStreamMetaResponse(sessionId, turnId, toTriageResultResponse(triageResult));
+    }
+
+    public static ImportKnowledgeDocumentResponse toImportKnowledgeDocumentResponse(ImportKnowledgeDocumentResult result) {
+        return new ImportKnowledgeDocumentResponse(
+                result.documentId(), result.documentUuid(), result.chunkCount(), result.documentStatus());
     }
 
     public static AiTriageResultResponse toTriageResultResponse(AiChatReply reply) {

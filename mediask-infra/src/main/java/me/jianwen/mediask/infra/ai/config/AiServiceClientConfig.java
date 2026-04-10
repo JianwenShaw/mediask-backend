@@ -3,10 +3,14 @@ package me.jianwen.mediask.infra.ai.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import me.jianwen.mediask.domain.ai.port.AiChatPort;
 import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
+import me.jianwen.mediask.domain.ai.port.KnowledgeIndexPort;
+import me.jianwen.mediask.domain.ai.port.KnowledgePreparePort;
 import me.jianwen.mediask.infra.ai.adapter.PythonAiChatPortAdapter;
 import me.jianwen.mediask.infra.ai.adapter.PythonAiChatStreamPortAdapter;
+import me.jianwen.mediask.infra.ai.adapter.PythonKnowledgePortAdapter;
 import me.jianwen.mediask.infra.ai.client.PythonAiChatClient;
 import me.jianwen.mediask.infra.ai.client.PythonAiChatStreamClient;
+import me.jianwen.mediask.infra.ai.client.PythonKnowledgeClient;
 import me.jianwen.mediask.infra.ai.client.mapper.PythonAiChatMapper;
 import me.jianwen.mediask.infra.ai.client.support.AiServiceErrorDecoder;
 import me.jianwen.mediask.infra.ai.client.support.AiServiceSseEventReader;
@@ -102,6 +106,17 @@ public class AiServiceClientConfig {
     }
 
     @Bean
+    public PythonKnowledgeClient pythonKnowledgeClient(
+            @Qualifier("aiServiceRestClient") RestClient aiServiceRestClient) {
+        return new PythonKnowledgeClient(aiServiceRestClient);
+    }
+
+    @Bean
+    public PythonKnowledgePortAdapter pythonKnowledgePortAdapter(PythonKnowledgeClient pythonKnowledgeClient) {
+        return new PythonKnowledgePortAdapter(pythonKnowledgeClient);
+    }
+
+    @Bean
     public AiChatPort aiChatPort(PythonAiChatClient pythonAiChatClient, PythonAiChatMapper pythonAiChatMapper) {
         return new PythonAiChatPortAdapter(pythonAiChatClient, pythonAiChatMapper);
     }
@@ -110,6 +125,16 @@ public class AiServiceClientConfig {
     public AiChatStreamPort aiChatStreamPort(
             PythonAiChatStreamClient pythonAiChatStreamClient, PythonAiChatMapper pythonAiChatMapper) {
         return new PythonAiChatStreamPortAdapter(pythonAiChatStreamClient, pythonAiChatMapper);
+    }
+
+    @Bean
+    public KnowledgePreparePort knowledgePreparePort(PythonKnowledgePortAdapter pythonKnowledgePortAdapter) {
+        return pythonKnowledgePortAdapter;
+    }
+
+    @Bean
+    public KnowledgeIndexPort knowledgeIndexPort(PythonKnowledgePortAdapter pythonKnowledgePortAdapter) {
+        return pythonKnowledgePortAdapter;
     }
 
     private ClientHttpRequestFactory aiServiceRequestFactory(

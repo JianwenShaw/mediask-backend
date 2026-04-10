@@ -6,6 +6,7 @@ public enum ScenarioCode {
     ADMIN_PATIENT_CREATE(ActionType.CREATE, CombinationMode.ALL, "admin:patient:create", false, false),
     ADMIN_PATIENT_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "admin:patient:update", false, false),
     ADMIN_PATIENT_DELETE(ActionType.DELETE, CombinationMode.ALL, "admin:patient:delete", false, false),
+    ADMIN_KNOWLEDGE_DOCUMENT_IMPORT(ActionType.CREATE, CombinationMode.ALL, "admin:knowledge:document:import", false, false),
     DOCTOR_SELF_PROFILE_VIEW(ActionType.READ, CombinationMode.ALL, "doctor:profile:view:self", false, false),
     DOCTOR_SELF_PROFILE_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "doctor:profile:update:self", false, false),
     PATIENT_SELF_PROFILE_VIEW(ActionType.READ, CombinationMode.ALL, "patient:profile:view:self", false, false),
