@@ -18,6 +18,7 @@
 - `todo` 知识文档导入流程虽然已将重复校验前移，但 `store()` 仍早于最终持久化成功；并发重复导入或后续 `save/prepare/index` 失败时，仍可能留下孤儿文件。
 - `todo` 当前类型识别支持通过 `Content-Type` 推断 `MARKDOWN/DOCX/PDF`，但本地存储适配器仍要求原始文件名必须带扩展名，扩展名缺失时会在存储阶段报错。
 - `todo` 领域模型当前要求 `KnowledgeDocument.sourceUri` 非空，但数据库表结构仍允许 `knowledge_document.source_uri` 为 `NULL`，旧数据或手工写入数据在仓储回填时可能失败。
+- `todo` 当前知识库/知识文档软删除不能继续依赖 `updateById(toDelete)` 写 `deleted_at`。实际 SQL 日志已证明该路径会只更新 `version/updated_at` 而漏掉 `deleted_at`，导致接口返回 `200` 但记录未被软删。当前解决方案是改为显式 `lambdaUpdate().set(DeletedAt, ...).set(UpdatedAt, ...)`；待查证问题是 MyBatis-Plus 在本项目现有配置下为何会在 `updateById(...)` 场景漏掉 `deleted_at`，以及这是否与字段策略、自动填充或其它插件行为有关。
 
 ## Phase 1 - 门诊挂号最小闭环
 

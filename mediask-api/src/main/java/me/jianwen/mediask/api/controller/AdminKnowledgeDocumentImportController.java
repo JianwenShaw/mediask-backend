@@ -7,7 +7,6 @@ import me.jianwen.mediask.application.ai.usecase.ImportKnowledgeDocumentUseCase;
 import me.jianwen.mediask.application.authz.AuthorizeScenario;
 import me.jianwen.mediask.application.authz.ScenarioCode;
 import me.jianwen.mediask.common.result.Result;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,7 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/admin/knowledge-documents")
 @ConditionalOnProperty(prefix = "mediask.ai.service", name = {"base-url", "api-key"})
-@ConditionalOnBean(ImportKnowledgeDocumentUseCase.class)
 public class AdminKnowledgeDocumentImportController {
 
     private final ImportKnowledgeDocumentUseCase importKnowledgeDocumentUseCase;

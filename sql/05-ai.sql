@@ -140,11 +140,14 @@ CREATE TABLE knowledge_document (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ DEFAULT NULL,
     CONSTRAINT uk_knowledge_document_uuid UNIQUE (document_uuid),
-    CONSTRAINT uk_knowledge_document_base_hash UNIQUE (knowledge_base_id, content_hash),
     CONSTRAINT fk_knowledge_document_base FOREIGN KEY (knowledge_base_id) REFERENCES knowledge_base (id),
     CONSTRAINT ck_knowledge_document_source_type CHECK (source_type IN ('MARKDOWN', 'DOCX', 'PDF', 'MANUAL', 'WEB')),
     CONSTRAINT ck_knowledge_document_status CHECK (document_status IN ('DRAFT', 'UPLOADED', 'PARSING', 'CHUNKED', 'INDEXING', 'ACTIVE', 'FAILED', 'ARCHIVED'))
 );
+
+CREATE UNIQUE INDEX uk_knowledge_document_base_hash_active
+    ON knowledge_document (knowledge_base_id, content_hash)
+    WHERE deleted_at IS NULL AND content_hash IS NOT NULL;
 
 CREATE TABLE knowledge_chunk (
     id BIGINT PRIMARY KEY,

@@ -2,6 +2,7 @@ package me.jianwen.mediask.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -132,30 +133,31 @@ public class KnowledgeBaseRepositoryAdapter implements KnowledgeBaseRepository {
         }
 
         OffsetDateTime deletedAt = OffsetDateTime.now();
-
-        KnowledgeBaseDO toDelete = new KnowledgeBaseDO();
-        toDelete.setId(existing.getId());
-        toDelete.setVersion(existing.getVersion());
-        toDelete.setDeletedAt(deletedAt);
-        if (knowledgeBaseMapper.updateById(toDelete) != 1) {
+        LambdaUpdateWrapper<KnowledgeBaseDO> deleteKnowledgeBase = Wrappers.<KnowledgeBaseDO>lambdaUpdate()
+                .eq(KnowledgeBaseDO::getId, existing.getId())
+                .eq(KnowledgeBaseDO::getVersion, existing.getVersion())
+                .isNull(KnowledgeBaseDO::getDeletedAt)
+                .set(KnowledgeBaseDO::getDeletedAt, deletedAt)
+                .set(KnowledgeBaseDO::getUpdatedAt, deletedAt)
+                .set(KnowledgeBaseDO::getVersion, existing.getVersion() + 1);
+        int updatedKnowledgeBases = knowledgeBaseMapper.update(null, deleteKnowledgeBase);
+        if (updatedKnowledgeBases != 1) {
             throw new BizException(AiErrorCode.KNOWLEDGE_BASE_DELETE_CONFLICT);
         }
 
-        KnowledgeDocumentDO documentToDelete = new KnowledgeDocumentDO();
-        documentToDelete.setDeletedAt(deletedAt);
-        knowledgeDocumentMapper.update(
-                documentToDelete,
-                Wrappers.lambdaUpdate(KnowledgeDocumentDO.class)
-                        .eq(KnowledgeDocumentDO::getKnowledgeBaseId, knowledgeBaseId)
-                        .isNull(KnowledgeDocumentDO::getDeletedAt));
+        LambdaUpdateWrapper<KnowledgeDocumentDO> deleteDocuments = Wrappers.<KnowledgeDocumentDO>lambdaUpdate()
+                .eq(KnowledgeDocumentDO::getKnowledgeBaseId, knowledgeBaseId)
+                .isNull(KnowledgeDocumentDO::getDeletedAt)
+                .set(KnowledgeDocumentDO::getDeletedAt, deletedAt)
+                .set(KnowledgeDocumentDO::getUpdatedAt, deletedAt);
+        knowledgeDocumentMapper.update(null, deleteDocuments);
 
-        KnowledgeChunkDO chunkToDelete = new KnowledgeChunkDO();
-        chunkToDelete.setDeletedAt(deletedAt);
-        knowledgeChunkMapper.update(
-                chunkToDelete,
-                Wrappers.lambdaUpdate(KnowledgeChunkDO.class)
-                        .eq(KnowledgeChunkDO::getKnowledgeBaseId, knowledgeBaseId)
-                        .isNull(KnowledgeChunkDO::getDeletedAt));
+        LambdaUpdateWrapper<KnowledgeChunkDO> deleteChunks = Wrappers.<KnowledgeChunkDO>lambdaUpdate()
+                .eq(KnowledgeChunkDO::getKnowledgeBaseId, knowledgeBaseId)
+                .isNull(KnowledgeChunkDO::getDeletedAt)
+                .set(KnowledgeChunkDO::getDeletedAt, deletedAt)
+                .set(KnowledgeChunkDO::getUpdatedAt, deletedAt);
+        knowledgeChunkMapper.update(null, deleteChunks);
     }
 
     private KnowledgeBaseDO toDataObject(KnowledgeBase knowledgeBase) {

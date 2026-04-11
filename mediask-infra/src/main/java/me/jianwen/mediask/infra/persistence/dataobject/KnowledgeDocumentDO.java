@@ -2,7 +2,6 @@ package me.jianwen.mediask.infra.persistence.dataobject;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,7 +14,7 @@ import me.jianwen.mediask.infra.persistence.base.BaseDO;
 public class KnowledgeDocumentDO extends BaseDO {
 
     private Long knowledgeBaseId;
-    private UUID documentUuid;
+    private String documentUuid;
     private String title;
     private String sourceType;
     private String sourceUri;

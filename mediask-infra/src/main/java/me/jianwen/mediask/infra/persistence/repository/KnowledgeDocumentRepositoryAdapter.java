@@ -2,8 +2,10 @@ package me.jianwen.mediask.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.UUID;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.pagination.PageData;
 import me.jianwen.mediask.common.pagination.PageQuery;
@@ -37,7 +39,7 @@ public class KnowledgeDocumentRepositoryAdapter implements KnowledgeDocumentRepo
     public void save(KnowledgeDocument knowledgeDocument) {
         KnowledgeDocumentDO dataObject = toDataObject(knowledgeDocument);
         try {
-            knowledgeDocumentMapper.insert(dataObject);
+            knowledgeDocumentMapper.insertKnowledgeDocument(dataObject);
         } catch (DuplicateKeyException exception) {
             throw mapDuplicateKeyOnSave(exception);
         }
@@ -107,29 +109,31 @@ public class KnowledgeDocumentRepositoryAdapter implements KnowledgeDocumentRepo
         }
 
         OffsetDateTime deletedAt = OffsetDateTime.now();
-
-        KnowledgeDocumentDO toDelete = new KnowledgeDocumentDO();
-        toDelete.setId(existing.getId());
-        toDelete.setVersion(existing.getVersion());
-        toDelete.setDeletedAt(deletedAt);
-        if (knowledgeDocumentMapper.updateById(toDelete) != 1) {
+        LambdaUpdateWrapper<KnowledgeDocumentDO> deleteDocument = Wrappers.<KnowledgeDocumentDO>lambdaUpdate()
+                .eq(KnowledgeDocumentDO::getId, existing.getId())
+                .eq(KnowledgeDocumentDO::getVersion, existing.getVersion())
+                .isNull(KnowledgeDocumentDO::getDeletedAt)
+                .set(KnowledgeDocumentDO::getDeletedAt, deletedAt)
+                .set(KnowledgeDocumentDO::getUpdatedAt, deletedAt)
+                .set(KnowledgeDocumentDO::getVersion, existing.getVersion() + 1);
+        int updatedDocuments = knowledgeDocumentMapper.update(null, deleteDocument);
+        if (updatedDocuments != 1) {
             throw new BizException(AiErrorCode.KNOWLEDGE_DOCUMENT_DELETE_CONFLICT);
         }
 
-        KnowledgeChunkDO chunkToDelete = new KnowledgeChunkDO();
-        chunkToDelete.setDeletedAt(deletedAt);
-        knowledgeChunkMapper.update(
-                chunkToDelete,
-                Wrappers.lambdaUpdate(KnowledgeChunkDO.class)
-                        .eq(KnowledgeChunkDO::getDocumentId, documentId)
-                        .isNull(KnowledgeChunkDO::getDeletedAt));
+        LambdaUpdateWrapper<KnowledgeChunkDO> deleteChunks = Wrappers.<KnowledgeChunkDO>lambdaUpdate()
+                .eq(KnowledgeChunkDO::getDocumentId, documentId)
+                .isNull(KnowledgeChunkDO::getDeletedAt)
+                .set(KnowledgeChunkDO::getDeletedAt, deletedAt)
+                .set(KnowledgeChunkDO::getUpdatedAt, deletedAt);
+        knowledgeChunkMapper.update(null, deleteChunks);
     }
 
     private KnowledgeDocumentDO toDataObject(KnowledgeDocument knowledgeDocument) {
         KnowledgeDocumentDO dataObject = new KnowledgeDocumentDO();
         dataObject.setId(knowledgeDocument.id());
         dataObject.setKnowledgeBaseId(knowledgeDocument.knowledgeBaseId());
-        dataObject.setDocumentUuid(knowledgeDocument.documentUuid());
+        dataObject.setDocumentUuid(knowledgeDocument.documentUuid().toString());
         dataObject.setTitle(knowledgeDocument.title());
         dataObject.setSourceType(knowledgeDocument.sourceType().name());
         dataObject.setSourceUri(knowledgeDocument.sourceUri());
@@ -146,7 +150,7 @@ public class KnowledgeDocumentRepositoryAdapter implements KnowledgeDocumentRepo
         return KnowledgeDocument.rehydrate(
                 dataObject.getId(),
                 dataObject.getKnowledgeBaseId(),
-                dataObject.getDocumentUuid(),
+                UUID.fromString(dataObject.getDocumentUuid()),
                 dataObject.getTitle(),
                 KnowledgeSourceType.valueOf(dataObject.getSourceType()),
                 dataObject.getSourceUri(),
@@ -160,7 +164,7 @@ public class KnowledgeDocumentRepositoryAdapter implements KnowledgeDocumentRepo
 
     private BizException mapDuplicateKeyOnSave(DuplicateKeyException exception) {
         String message = exception.getMessage();
-        if (message != null && message.contains("uk_knowledge_document_base_hash")) {
+        if (message != null && message.contains("uk_knowledge_document_base_hash_active")) {
             return new BizException(AiErrorCode.KNOWLEDGE_DOCUMENT_DUPLICATE);
         }
         throw exception;
@@ -169,7 +173,7 @@ public class KnowledgeDocumentRepositoryAdapter implements KnowledgeDocumentRepo
     private KnowledgeDocumentSummary toSummary(KnowledgeDocumentListRow row) {
         return new KnowledgeDocumentSummary(
                 row.getId(),
-                row.getDocumentUuid().toString(),
+                row.getDocumentUuid(),
                 row.getTitle(),
                 KnowledgeSourceType.valueOf(row.getSourceType()),
                 KnowledgeDocumentStatus.valueOf(row.getDocumentStatus()),

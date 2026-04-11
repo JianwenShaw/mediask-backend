@@ -1,11 +1,9 @@
 package me.jianwen.mediask.infra.persistence.row;
 
-import java.util.UUID;
-
 public class KnowledgeDocumentListRow {
 
     private Long id;
-    private UUID documentUuid;
+    private String documentUuid;
     private String title;
     private String sourceType;
     private String documentStatus;
@@ -19,11 +17,11 @@ public class KnowledgeDocumentListRow {
         this.id = id;
     }
 
-    public UUID getDocumentUuid() {
+    public String getDocumentUuid() {
         return documentUuid;
     }
 
-    public void setDocumentUuid(UUID documentUuid) {
+    public void setDocumentUuid(String documentUuid) {
         this.documentUuid = documentUuid;
     }
 
