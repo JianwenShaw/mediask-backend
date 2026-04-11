@@ -12,6 +12,13 @@
 - `doing`: 开发中
 - `done`: 已完成并通过自查
 
+## Known Issues
+
+- `todo` 知识文档存储配置当前默认 `mode=LOCAL`，但非 `dev` 环境若未显式配置 `mediask.ai.knowledge-storage.local.base-dir`，AI 相关 Bean 可能在启动阶段失败。
+- `todo` 知识文档导入流程虽然已将重复校验前移，但 `store()` 仍早于最终持久化成功；并发重复导入或后续 `save/prepare/index` 失败时，仍可能留下孤儿文件。
+- `todo` 当前类型识别支持通过 `Content-Type` 推断 `MARKDOWN/DOCX/PDF`，但本地存储适配器仍要求原始文件名必须带扩展名，扩展名缺失时会在存储阶段报错。
+- `todo` 领域模型当前要求 `KnowledgeDocument.sourceUri` 非空，但数据库表结构仍允许 `knowledge_document.source_uri` 为 `NULL`，旧数据或手工写入数据在仓储回填时可能失败。
+
 ## Phase 1 - 门诊挂号最小闭环
 
 ### T1 门诊场次列表查询

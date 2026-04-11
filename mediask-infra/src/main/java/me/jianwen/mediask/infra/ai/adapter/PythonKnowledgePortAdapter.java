@@ -1,7 +1,6 @@
 package me.jianwen.mediask.infra.ai.adapter;
 
 import java.util.List;
-import me.jianwen.mediask.domain.ai.model.KnowledgeChunk;
 import me.jianwen.mediask.domain.ai.model.KnowledgeDocument;
 import me.jianwen.mediask.domain.ai.model.KnowledgePrepareInvocation;
 import me.jianwen.mediask.domain.ai.model.PreparedKnowledgeChunk;
@@ -28,8 +27,7 @@ public final class PythonKnowledgePortAdapter implements KnowledgePreparePort, K
                         invocation.knowledgeBaseId(),
                         invocation.title(),
                         invocation.sourceType().name(),
-                        invocation.sourceUri(),
-                        invocation.inlineContent()))
+                        invocation.sourceUri()))
                 .chunks()
                 .stream()
                 .map(chunk -> new PreparedKnowledgeChunk(
@@ -46,13 +44,8 @@ public final class PythonKnowledgePortAdapter implements KnowledgePreparePort, K
     }
 
     @Override
-    public void index(KnowledgeDocument knowledgeDocument, List<KnowledgeChunk> knowledgeChunks) {
+    public void index(KnowledgeDocument knowledgeDocument) {
         pythonKnowledgeClient.index(new PythonKnowledgeIndexRequest(
-                knowledgeDocument.id(),
-                knowledgeDocument.knowledgeBaseId(),
-                knowledgeChunks.stream()
-                        .map(chunk ->
-                                new PythonKnowledgeIndexRequest.PythonKnowledgeChunk(chunk.id(), chunk.chunkIndex(), chunk.content()))
-                        .toList()));
+                knowledgeDocument.id(), knowledgeDocument.knowledgeBaseId()));
     }
 }

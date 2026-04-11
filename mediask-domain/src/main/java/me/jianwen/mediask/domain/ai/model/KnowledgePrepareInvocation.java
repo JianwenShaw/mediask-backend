@@ -8,5 +8,4 @@ public record KnowledgePrepareInvocation(
         Long knowledgeBaseId,
         String title,
         KnowledgeSourceType sourceType,
-        String sourceUri,
-        String inlineContent) {}
+        String sourceUri) {}

@@ -1,13 +1,11 @@
 package me.jianwen.mediask.application.ai.usecase;
 
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Locale;
 import java.util.List;
+import me.jianwen.mediask.common.exception.ErrorCode;
 import me.jianwen.mediask.application.ai.command.ImportKnowledgeDocumentCommand;
 import me.jianwen.mediask.common.exception.BizException;
-import me.jianwen.mediask.common.exception.ErrorCode;
 import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
 import me.jianwen.mediask.domain.ai.model.KnowledgeChunk;
 import me.jianwen.mediask.domain.ai.model.KnowledgeDocument;
@@ -17,6 +15,7 @@ import me.jianwen.mediask.domain.ai.model.PreparedKnowledgeChunk;
 import me.jianwen.mediask.domain.ai.port.KnowledgeBaseRepository;
 import me.jianwen.mediask.domain.ai.port.KnowledgeChunkRepository;
 import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentRepository;
+import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentStoragePort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeIndexPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgePreparePort;
 import org.springframework.transaction.support.TransactionOperations;
@@ -26,6 +25,7 @@ public class ImportKnowledgeDocumentUseCase {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final KnowledgeDocumentRepository knowledgeDocumentRepository;
     private final KnowledgeChunkRepository knowledgeChunkRepository;
+    private final KnowledgeDocumentStoragePort knowledgeDocumentStoragePort;
     private final KnowledgePreparePort knowledgePreparePort;
     private final KnowledgeIndexPort knowledgeIndexPort;
     private final TransactionOperations transactionOperations;
@@ -34,12 +34,14 @@ public class ImportKnowledgeDocumentUseCase {
             KnowledgeBaseRepository knowledgeBaseRepository,
             KnowledgeDocumentRepository knowledgeDocumentRepository,
             KnowledgeChunkRepository knowledgeChunkRepository,
+            KnowledgeDocumentStoragePort knowledgeDocumentStoragePort,
             KnowledgePreparePort knowledgePreparePort,
             KnowledgeIndexPort knowledgeIndexPort,
             TransactionOperations transactionOperations) {
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.knowledgeDocumentRepository = knowledgeDocumentRepository;
         this.knowledgeChunkRepository = knowledgeChunkRepository;
+        this.knowledgeDocumentStoragePort = knowledgeDocumentStoragePort;
         this.knowledgePreparePort = knowledgePreparePort;
         this.knowledgeIndexPort = knowledgeIndexPort;
         this.transactionOperations = transactionOperations;
@@ -47,24 +49,23 @@ public class ImportKnowledgeDocumentUseCase {
 
     public ImportKnowledgeDocumentResult handle(ImportKnowledgeDocumentCommand command) {
         validate(command);
-        KnowledgeSourceType sourceType = toSourceType(command.sourceType());
         if (!knowledgeBaseRepository.existsEnabled(command.knowledgeBaseId())) {
             throw new BizException(AiErrorCode.KNOWLEDGE_BASE_NOT_FOUND);
         }
 
-        String contentHash = contentHashOf(sourceType, command.sourceUri(), command.inlineContent());
+        KnowledgeSourceType sourceType = detectSourceType(command.originalFilename(), command.contentType());
+        String title = titleOf(command.originalFilename());
+        String contentHash = sha256(command.fileContent());
         if (knowledgeDocumentRepository.existsEffectiveByKnowledgeBaseIdAndContentHash(
                 command.knowledgeBaseId(), contentHash)) {
             throw new BizException(AiErrorCode.KNOWLEDGE_DOCUMENT_DUPLICATE);
         }
+        String sourceUri = knowledgeDocumentStoragePort.store(
+                command.knowledgeBaseId(), command.originalFilename(), sourceType, command.fileContent());
 
         KnowledgeDocument knowledgeDocument = transactionOperations.execute(status -> {
             KnowledgeDocument created = KnowledgeDocument.createUploaded(
-                    command.knowledgeBaseId(),
-                    command.title(),
-                    sourceType,
-                    command.sourceUri(),
-                    contentHash);
+                    command.knowledgeBaseId(), title, sourceType, sourceUri, contentHash);
             knowledgeDocumentRepository.save(created);
             return created;
         });
@@ -85,8 +86,7 @@ public class ImportKnowledgeDocumentUseCase {
                     knowledgeDocument.knowledgeBaseId(),
                     knowledgeDocument.title(),
                     knowledgeDocument.sourceType(),
-                    knowledgeDocument.sourceUri(),
-                    command.inlineContent()));
+                    knowledgeDocument.sourceUri()));
             if (preparedChunks.isEmpty()) {
                 throw new BizException(AiErrorCode.INVALID_RESPONSE);
             }
@@ -123,7 +123,7 @@ public class ImportKnowledgeDocumentUseCase {
                 throw new IllegalStateException("failed to update indexing status");
             }
 
-            knowledgeIndexPort.index(indexingDocument, knowledgeChunks);
+            knowledgeIndexPort.index(indexingDocument);
 
             KnowledgeDocument activeDocument = transactionOperations.execute(status -> {
                 KnowledgeDocument current = getRequiredDocument(knowledgeDocument.id());
@@ -170,37 +170,52 @@ public class ImportKnowledgeDocumentUseCase {
         if (command.knowledgeBaseId() == null) {
             throw new IllegalArgumentException("knowledgeBaseId is required");
         }
-        if (command.title() == null || command.title().isBlank()) {
-            throw new IllegalArgumentException("title is required");
+        if (command.originalFilename() == null || command.originalFilename().isBlank()) {
+            throw new IllegalArgumentException("originalFilename is required");
         }
-        if (command.sourceType() == null || command.sourceType().isBlank()) {
-            throw new IllegalArgumentException("sourceType is required");
-        }
-        if ((command.sourceUri() == null || command.sourceUri().isBlank())
-                && (command.inlineContent() == null || command.inlineContent().isBlank())) {
-            throw new IllegalArgumentException("sourceUri or inlineContent is required");
+        if (command.fileContent() == null || command.fileContent().length == 0) {
+            throw new IllegalArgumentException("fileContent is required");
         }
     }
 
-    private KnowledgeSourceType toSourceType(String sourceType) {
-        try {
-            return KnowledgeSourceType.valueOf(sourceType.trim().toUpperCase(Locale.ROOT));
-        } catch (RuntimeException exception) {
-            throw new BizException(ErrorCode.INVALID_PARAMETER, "sourceType is invalid");
+    private KnowledgeSourceType detectSourceType(String originalFilename, String contentType) {
+        String normalizedFilename = originalFilename.trim().toLowerCase(java.util.Locale.ROOT);
+        if (normalizedFilename.endsWith(".md") || normalizedFilename.endsWith(".markdown")) {
+            return KnowledgeSourceType.MARKDOWN;
         }
+        if (normalizedFilename.endsWith(".docx")) {
+            return KnowledgeSourceType.DOCX;
+        }
+        if (normalizedFilename.endsWith(".pdf")) {
+            return KnowledgeSourceType.PDF;
+        }
+        if ("text/markdown".equalsIgnoreCase(contentType)) {
+            return KnowledgeSourceType.MARKDOWN;
+        }
+        if ("application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(contentType)) {
+            return KnowledgeSourceType.DOCX;
+        }
+        if ("application/pdf".equalsIgnoreCase(contentType)) {
+            return KnowledgeSourceType.PDF;
+        }
+        throw new BizException(ErrorCode.INVALID_PARAMETER, "unsupported knowledge document file type");
     }
 
-    private String contentHashOf(KnowledgeSourceType sourceType, String sourceUri, String inlineContent) {
-        if (inlineContent != null && !inlineContent.isBlank()) {
-            return sha256(inlineContent);
+    private String titleOf(String originalFilename) {
+        String trimmed = originalFilename.trim();
+        int lastSlash = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'));
+        String basename = lastSlash >= 0 ? trimmed.substring(lastSlash + 1) : trimmed;
+        int extensionIndex = basename.lastIndexOf('.');
+        if (extensionIndex <= 0) {
+            return basename;
         }
-        return sha256(sourceType.name() + "\n" + sourceUri.trim());
+        return basename.substring(0, extensionIndex);
     }
 
-    private String sha256(String rawContent) {
+    private String sha256(byte[] rawContent) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(rawContent.getBytes(StandardCharsets.UTF_8));
+            byte[] hashBytes = digest.digest(rawContent);
             StringBuilder builder = new StringBuilder(hashBytes.length * 2);
             for (byte hashByte : hashBytes) {
                 builder.append(Character.forDigit((hashByte >> 4) & 0xF, 16));

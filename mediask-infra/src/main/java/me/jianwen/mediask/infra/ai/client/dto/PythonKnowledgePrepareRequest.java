@@ -8,5 +8,4 @@ public record PythonKnowledgePrepareRequest(
         Long knowledgeBaseId,
         String title,
         String sourceType,
-        String sourceUri,
-        String inlineContent) {}
+        String sourceUri) {}

@@ -19,6 +19,10 @@ mediask:
     service:
       base-url: ${MEDIASK_AI_BASE_URL:http://localhost:8000}
       api-key: ${MEDIASK_AI_API_KEY:dev-api-key}
+    knowledge-storage:
+      mode: LOCAL
+      local:
+        base-dir: ${MEDIASK_AI_KNOWLEDGE_STORAGE_LOCAL_BASE_DIR:${user.dir}/var/knowledge-storage}
   cors:
     allowed-origins:
       - http://localhost:3000

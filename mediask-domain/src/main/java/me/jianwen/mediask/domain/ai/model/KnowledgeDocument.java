@@ -8,8 +8,6 @@ import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
 
 public final class KnowledgeDocument {
 
-    private static final String INLINE_SOURCE_URI_PREFIX = "inline://admin-knowledge-document/";
-
     private final Long id;
     private final Long knowledgeBaseId;
     private final UUID documentUuid;
@@ -41,7 +39,7 @@ public final class KnowledgeDocument {
         this.documentUuid = Objects.requireNonNull(documentUuid, "documentUuid must not be null");
         this.title = requireNonBlank(title, "title");
         this.sourceType = Objects.requireNonNull(sourceType, "sourceType must not be null");
-        this.sourceUri = normalize(sourceUri);
+        this.sourceUri = requireNonBlank(sourceUri, "sourceUri");
         this.contentHash = requireNonBlank(contentHash, "contentHash");
         this.languageCode = requireNonBlank(languageCode, "languageCode");
         this.versionNo = Objects.requireNonNull(versionNo, "versionNo must not be null");
@@ -59,7 +57,7 @@ public final class KnowledgeDocument {
                 documentUuid,
                 title,
                 sourceType,
-                resolveSourceUri(sourceUri, documentUuid),
+                sourceUri,
                 contentHash,
                 "zh-CN",
                 1,
@@ -172,18 +170,6 @@ public final class KnowledgeDocument {
 
     public Integer version() {
         return version;
-    }
-
-    private static String resolveSourceUri(String sourceUri, UUID documentUuid) {
-        String normalizedSourceUri = normalize(sourceUri);
-        if (normalizedSourceUri != null) {
-            return normalizedSourceUri;
-        }
-        return INLINE_SOURCE_URI_PREFIX + documentUuid;
-    }
-
-    private static String normalize(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private static String requireNonBlank(String value, String field) {

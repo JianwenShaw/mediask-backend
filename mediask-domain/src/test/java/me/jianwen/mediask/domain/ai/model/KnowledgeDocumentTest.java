@@ -1,7 +1,6 @@
 package me.jianwen.mediask.domain.ai.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.UUID;
@@ -19,7 +18,7 @@ class KnowledgeDocumentTest {
                 UUID.randomUUID(),
                 "高血压指南",
                 KnowledgeSourceType.MARKDOWN,
-                null,
+                "oss://mediask/knowledge-documents/htn-guide-v1.md",
                 "hash-1",
                 "zh-CN",
                 1,
@@ -43,7 +42,7 @@ class KnowledgeDocumentTest {
                 UUID.randomUUID(),
                 "高血压指南",
                 KnowledgeSourceType.MARKDOWN,
-                null,
+                "oss://mediask/knowledge-documents/htn-guide-v1.md",
                 "hash-1",
                 "zh-CN",
                 1,
@@ -64,7 +63,7 @@ class KnowledgeDocumentTest {
                 UUID.randomUUID(),
                 "高血压指南",
                 KnowledgeSourceType.MARKDOWN,
-                null,
+                "oss://mediask/knowledge-documents/htn-guide-v1.md",
                 "hash-1",
                 "zh-CN",
                 1,
@@ -78,12 +77,12 @@ class KnowledgeDocumentTest {
     }
 
     @Test
-    void createUploaded_WhenSourceUriMissing_ShouldGenerateInlineSourceUri() {
-        KnowledgeDocument document =
-                KnowledgeDocument.createUploaded(2L, "高血压指南", KnowledgeSourceType.MARKDOWN, null, "hash-1");
+    void createUploaded_WhenSourceUriMissing_ShouldThrowIllegalArgumentException() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> KnowledgeDocument.createUploaded(2L, "高血压指南", KnowledgeSourceType.MARKDOWN, null, "hash-1"));
 
-        assertTrue(document.sourceUri().startsWith("inline://admin-knowledge-document/"));
-        assertTrue(document.sourceUri().endsWith(document.documentUuid().toString()));
+        assertEquals("sourceUri must not be blank", exception.getMessage());
     }
 
     @Test

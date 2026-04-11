@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +21,7 @@ import me.jianwen.mediask.domain.ai.model.PreparedKnowledgeChunk;
 import me.jianwen.mediask.domain.ai.port.KnowledgeBaseRepository;
 import me.jianwen.mediask.domain.ai.port.KnowledgeChunkRepository;
 import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentRepository;
+import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentStoragePort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeIndexPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgePreparePort;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,7 @@ class ImportKnowledgeDocumentUseCaseTest {
         InMemoryKnowledgeBaseRepository knowledgeBaseRepository = new InMemoryKnowledgeBaseRepository(true);
         InMemoryKnowledgeDocumentRepository knowledgeDocumentRepository = new InMemoryKnowledgeDocumentRepository();
         CapturingKnowledgeChunkRepository knowledgeChunkRepository = new CapturingKnowledgeChunkRepository();
+        CapturingKnowledgeDocumentStoragePort knowledgeDocumentStoragePort = new CapturingKnowledgeDocumentStoragePort();
         StubKnowledgePreparePort knowledgePreparePort = new StubKnowledgePreparePort(List.of(
                 new PreparedKnowledgeChunk(0, "第一段", "第1节", null, 0, 10, 5, "第一段", "引用1"),
                 new PreparedKnowledgeChunk(1, "第二段", "第2节", null, 11, 20, 5, "第二段", "引用2")));
@@ -43,25 +46,27 @@ class ImportKnowledgeDocumentUseCaseTest {
                 knowledgeBaseRepository,
                 knowledgeDocumentRepository,
                 knowledgeChunkRepository,
+                knowledgeDocumentStoragePort,
                 knowledgePreparePort,
                 knowledgeIndexPort,
                 transactionOperations);
 
         ImportKnowledgeDocumentResult result =
-                useCase.handle(new ImportKnowledgeDocumentCommand(10L, "指南", "MARKDOWN", null, "# 内容"));
+                useCase.handle(new ImportKnowledgeDocumentCommand(
+                        10L, "htn-guide.md", "text/markdown", "# 内容".getBytes(StandardCharsets.UTF_8)));
 
         assertEquals(2, result.chunkCount());
         assertEquals("ACTIVE", result.documentStatus());
         assertEquals(KnowledgeDocumentStatus.ACTIVE, knowledgeDocumentRepository.getRequired(result.documentId()).status());
-        assertTrue(knowledgeDocumentRepository.getRequired(result.documentId())
-                .sourceUri()
-                .startsWith("inline://admin-knowledge-document/"));
+        assertEquals("oss://mediask/knowledge-documents/htn-guide.md", knowledgeDocumentRepository.getRequired(result.documentId())
+                .sourceUri());
         assertEquals(2, knowledgeChunkRepository.savedChunks.size());
         assertTrue(knowledgeIndexPort.called);
-        assertEquals(2, knowledgeIndexPort.indexedChunks.size());
+        assertEquals(result.documentId(), knowledgeIndexPort.indexedDocument.id());
         assertEquals(
                 knowledgeDocumentRepository.getRequired(result.documentId()).sourceUri(),
                 knowledgePreparePort.lastInvocation.sourceUri());
+        assertEquals("htn-guide.md", knowledgeDocumentStoragePort.originalFilename);
     }
 
     @Test
@@ -70,13 +75,15 @@ class ImportKnowledgeDocumentUseCaseTest {
                 new InMemoryKnowledgeBaseRepository(false),
                 new InMemoryKnowledgeDocumentRepository(),
                 knowledgeChunks -> {},
+                (knowledgeBaseId, originalFilename, sourceType, fileContent) -> "oss://mediask/knowledge-documents/" + originalFilename,
                 invocation -> List.of(),
-                (knowledgeDocument, knowledgeChunks) -> {},
+                knowledgeDocument -> {},
                 transactionOperations);
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new ImportKnowledgeDocumentCommand(10L, "指南", "MARKDOWN", null, "# 内容")));
+                () -> useCase.handle(new ImportKnowledgeDocumentCommand(
+                        10L, "guide.md", "text/markdown", "# 内容".getBytes(StandardCharsets.UTF_8))));
 
         assertEquals(AiErrorCode.KNOWLEDGE_BASE_NOT_FOUND, exception.getErrorCode());
     }
@@ -85,19 +92,23 @@ class ImportKnowledgeDocumentUseCaseTest {
     void handle_WhenDocumentDuplicate_ShouldThrowBizException() {
         InMemoryKnowledgeDocumentRepository knowledgeDocumentRepository = new InMemoryKnowledgeDocumentRepository();
         knowledgeDocumentRepository.existingDuplicate = true;
+        CapturingKnowledgeDocumentStoragePort knowledgeDocumentStoragePort = new CapturingKnowledgeDocumentStoragePort();
         ImportKnowledgeDocumentUseCase useCase = new ImportKnowledgeDocumentUseCase(
                 new InMemoryKnowledgeBaseRepository(true),
                 knowledgeDocumentRepository,
                 knowledgeChunks -> {},
+                knowledgeDocumentStoragePort,
                 invocation -> List.of(),
-                (knowledgeDocument, knowledgeChunks) -> {},
+                knowledgeDocument -> {},
                 transactionOperations);
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new ImportKnowledgeDocumentCommand(10L, "指南", "MARKDOWN", null, "# 内容")));
+                () -> useCase.handle(new ImportKnowledgeDocumentCommand(
+                        10L, "guide.md", "text/markdown", "# 内容".getBytes(StandardCharsets.UTF_8))));
 
         assertEquals(AiErrorCode.KNOWLEDGE_DOCUMENT_DUPLICATE, exception.getErrorCode());
+        assertEquals(0, knowledgeDocumentStoragePort.storeCallCount);
     }
 
     @Test
@@ -107,44 +118,72 @@ class ImportKnowledgeDocumentUseCaseTest {
                 new InMemoryKnowledgeBaseRepository(true),
                 knowledgeDocumentRepository,
                 new CapturingKnowledgeChunkRepository(),
+                (knowledgeBaseId, originalFilename, sourceType, fileContent) -> "oss://mediask/knowledge-documents/" + originalFilename,
                 new StubKnowledgePreparePort(List.of(new PreparedKnowledgeChunk(0, "第一段", null, null, 0, 10, 5, null, null))),
-                (knowledgeDocument, knowledgeChunks) -> {
+                knowledgeDocument -> {
                     throw new BizException(AiErrorCode.SERVICE_UNAVAILABLE);
                 },
                 transactionOperations);
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new ImportKnowledgeDocumentCommand(10L, "指南", "MARKDOWN", null, "# 内容")));
+                () -> useCase.handle(new ImportKnowledgeDocumentCommand(
+                        10L, "guide.md", "text/markdown", "# 内容".getBytes(StandardCharsets.UTF_8))));
 
         assertEquals(AiErrorCode.SERVICE_UNAVAILABLE, exception.getErrorCode());
         assertEquals(KnowledgeDocumentStatus.FAILED, knowledgeDocumentRepository.lastSavedDocument.status());
     }
 
     @Test
-    void handle_WhenSourceUriProvided_ShouldPersistAndForwardSourceUri() {
+    void handle_WhenMarkdownFileUploaded_ShouldPersistAndForwardGeneratedSourceUri() {
         InMemoryKnowledgeDocumentRepository knowledgeDocumentRepository = new InMemoryKnowledgeDocumentRepository();
+        CapturingKnowledgeDocumentStoragePort knowledgeDocumentStoragePort = new CapturingKnowledgeDocumentStoragePort();
         StubKnowledgePreparePort knowledgePreparePort =
                 new StubKnowledgePreparePort(List.of(new PreparedKnowledgeChunk(0, "第一段", null, null, 0, 10, 5, null, null)));
         ImportKnowledgeDocumentUseCase useCase = new ImportKnowledgeDocumentUseCase(
                 new InMemoryKnowledgeBaseRepository(true),
                 knowledgeDocumentRepository,
                 new CapturingKnowledgeChunkRepository(),
+                knowledgeDocumentStoragePort,
                 knowledgePreparePort,
                 new CapturingKnowledgeIndexPort(),
                 transactionOperations);
 
         ImportKnowledgeDocumentResult result = useCase.handle(new ImportKnowledgeDocumentCommand(
-                10L, "指南", "MARKDOWN", "oss://mediask/kb/htn-guide-v1.md", "# 内容"));
+                10L, "htn-guide-v1.md", "text/markdown", "# 内容".getBytes(StandardCharsets.UTF_8)));
 
         assertEquals(
-                "oss://mediask/kb/htn-guide-v1.md",
+                "oss://mediask/knowledge-documents/htn-guide-v1.md",
                 knowledgeDocumentRepository.getRequired(result.documentId()).sourceUri());
-        assertEquals("oss://mediask/kb/htn-guide-v1.md", knowledgePreparePort.lastInvocation.sourceUri());
+        assertEquals("oss://mediask/knowledge-documents/htn-guide-v1.md", knowledgePreparePort.lastInvocation.sourceUri());
+        assertEquals("htn-guide-v1.md", knowledgeDocumentStoragePort.originalFilename);
     }
 
     @Test
-    void handle_WhenPdfSourceProvided_ShouldForwardSourceTypeAndSourceUri() {
+    void handle_WhenPdfFileUploaded_ShouldForwardSourceTypeAndSourceUri() {
+        InMemoryKnowledgeDocumentRepository knowledgeDocumentRepository = new InMemoryKnowledgeDocumentRepository();
+        CapturingKnowledgeDocumentStoragePort knowledgeDocumentStoragePort = new CapturingKnowledgeDocumentStoragePort();
+        StubKnowledgePreparePort knowledgePreparePort =
+                new StubKnowledgePreparePort(List.of(new PreparedKnowledgeChunk(0, "第一段", null, null, 0, 10, 5, null, null)));
+        ImportKnowledgeDocumentUseCase useCase = new ImportKnowledgeDocumentUseCase(
+                new InMemoryKnowledgeBaseRepository(true),
+                knowledgeDocumentRepository,
+                new CapturingKnowledgeChunkRepository(),
+                knowledgeDocumentStoragePort,
+                knowledgePreparePort,
+                new CapturingKnowledgeIndexPort(),
+                transactionOperations);
+
+        ImportKnowledgeDocumentResult result = useCase.handle(new ImportKnowledgeDocumentCommand(
+                10L, "htn-guide-v1.pdf", "application/pdf", "PDF 内容".getBytes(StandardCharsets.UTF_8)));
+
+        assertEquals("PDF", knowledgeDocumentRepository.getRequired(result.documentId()).sourceType().name());
+        assertEquals("PDF", knowledgePreparePort.lastInvocation.sourceType().name());
+        assertEquals("oss://mediask/knowledge-documents/htn-guide-v1.pdf", knowledgePreparePort.lastInvocation.sourceUri());
+    }
+
+    @Test
+    void handle_WhenDocxFileUploaded_ShouldDetectDocxSourceType() {
         InMemoryKnowledgeDocumentRepository knowledgeDocumentRepository = new InMemoryKnowledgeDocumentRepository();
         StubKnowledgePreparePort knowledgePreparePort =
                 new StubKnowledgePreparePort(List.of(new PreparedKnowledgeChunk(0, "第一段", null, null, 0, 10, 5, null, null)));
@@ -152,17 +191,19 @@ class ImportKnowledgeDocumentUseCaseTest {
                 new InMemoryKnowledgeBaseRepository(true),
                 knowledgeDocumentRepository,
                 new CapturingKnowledgeChunkRepository(),
+                new CapturingKnowledgeDocumentStoragePort(),
                 knowledgePreparePort,
                 new CapturingKnowledgeIndexPort(),
                 transactionOperations);
 
         ImportKnowledgeDocumentResult result = useCase.handle(new ImportKnowledgeDocumentCommand(
-                10L, "指南", "PDF", "oss://mediask/kb/htn-guide-v1.pdf", null));
+                10L,
+                "htn-guide-v1.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "DOCX 内容".getBytes(StandardCharsets.UTF_8)));
 
-        assertEquals("PDF", knowledgeDocumentRepository.getRequired(result.documentId()).sourceType().name());
-        assertEquals("PDF", knowledgePreparePort.lastInvocation.sourceType().name());
-        assertEquals("oss://mediask/kb/htn-guide-v1.pdf", knowledgePreparePort.lastInvocation.sourceUri());
-        assertEquals(null, knowledgePreparePort.lastInvocation.inlineContent());
+        assertEquals("DOCX", knowledgeDocumentRepository.getRequired(result.documentId()).sourceType().name());
+        assertEquals("DOCX", knowledgePreparePort.lastInvocation.sourceType().name());
     }
 
     private static final class ImmediateTransactionOperations implements TransactionOperations {
@@ -220,6 +261,23 @@ class ImportKnowledgeDocumentUseCaseTest {
         }
     }
 
+    private static final class CapturingKnowledgeDocumentStoragePort implements KnowledgeDocumentStoragePort {
+
+        private String originalFilename;
+        private int storeCallCount;
+
+        @Override
+        public String store(
+                Long knowledgeBaseId,
+                String originalFilename,
+                me.jianwen.mediask.domain.ai.model.KnowledgeSourceType sourceType,
+                byte[] fileContent) {
+            storeCallCount++;
+            this.originalFilename = originalFilename;
+            return "oss://mediask/knowledge-documents/" + originalFilename;
+        }
+    }
+
     private static final class CapturingKnowledgeChunkRepository implements KnowledgeChunkRepository {
 
         private final List<KnowledgeChunk> savedChunks = new ArrayList<>();
@@ -249,12 +307,12 @@ class ImportKnowledgeDocumentUseCaseTest {
     private static final class CapturingKnowledgeIndexPort implements KnowledgeIndexPort {
 
         private boolean called;
-        private List<KnowledgeChunk> indexedChunks = List.of();
+        private KnowledgeDocument indexedDocument;
 
         @Override
-        public void index(KnowledgeDocument knowledgeDocument, List<KnowledgeChunk> knowledgeChunks) {
+        public void index(KnowledgeDocument knowledgeDocument) {
             called = true;
-            indexedChunks = knowledgeChunks;
+            indexedDocument = knowledgeDocument;
         }
     }
 }

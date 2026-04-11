@@ -6,6 +6,7 @@ import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeBaseRepository;
 import me.jianwen.mediask.domain.ai.port.KnowledgeChunkRepository;
 import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentRepository;
+import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentStoragePort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeIndexPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgePreparePort;
 import me.jianwen.mediask.infra.observability.MdcTaskDecorator;
@@ -31,6 +32,7 @@ public class AiModuleConfig {
             KnowledgeBaseRepository knowledgeBaseRepository,
             KnowledgeDocumentRepository knowledgeDocumentRepository,
             KnowledgeChunkRepository knowledgeChunkRepository,
+            KnowledgeDocumentStoragePort knowledgeDocumentStoragePort,
             KnowledgePreparePort knowledgePreparePort,
             KnowledgeIndexPort knowledgeIndexPort,
             PlatformTransactionManager transactionManager) {
@@ -38,6 +40,7 @@ public class AiModuleConfig {
                 knowledgeBaseRepository,
                 knowledgeDocumentRepository,
                 knowledgeChunkRepository,
+                knowledgeDocumentStoragePort,
                 knowledgePreparePort,
                 knowledgeIndexPort,
                 new TransactionTemplate(transactionManager));

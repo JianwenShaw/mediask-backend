@@ -5,8 +5,11 @@ import me.jianwen.mediask.domain.ai.port.AiChatPort;
 import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeIndexPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgePreparePort;
+import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentStoragePort;
 import me.jianwen.mediask.infra.ai.adapter.PythonAiChatPortAdapter;
 import me.jianwen.mediask.infra.ai.adapter.PythonAiChatStreamPortAdapter;
+import me.jianwen.mediask.infra.ai.adapter.LocalKnowledgeDocumentStorageAdapter;
+import me.jianwen.mediask.infra.ai.adapter.OssKnowledgeDocumentStorageAdapter;
 import me.jianwen.mediask.infra.ai.adapter.PythonKnowledgePortAdapter;
 import me.jianwen.mediask.infra.ai.client.PythonAiChatClient;
 import me.jianwen.mediask.infra.ai.client.PythonAiChatStreamClient;
@@ -28,7 +31,7 @@ import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestClient;
 
 @Configuration
-@EnableConfigurationProperties(AiServiceProperties.class)
+@EnableConfigurationProperties({AiServiceProperties.class, KnowledgeDocumentStorageProperties.class})
 @ConditionalOnProperty(prefix = "mediask.ai.service", name = {"base-url", "api-key"})
 public class AiServiceClientConfig {
 
@@ -114,6 +117,15 @@ public class AiServiceClientConfig {
     @Bean
     public PythonKnowledgePortAdapter pythonKnowledgePortAdapter(PythonKnowledgeClient pythonKnowledgeClient) {
         return new PythonKnowledgePortAdapter(pythonKnowledgeClient);
+    }
+
+    @Bean
+    public KnowledgeDocumentStoragePort knowledgeDocumentStoragePort(
+            KnowledgeDocumentStorageProperties knowledgeDocumentStorageProperties) {
+        return switch (knowledgeDocumentStorageProperties.mode()) {
+            case LOCAL -> new LocalKnowledgeDocumentStorageAdapter(knowledgeDocumentStorageProperties);
+            case OSS -> new OssKnowledgeDocumentStorageAdapter(knowledgeDocumentStorageProperties.oss());
+        };
     }
 
     @Bean
