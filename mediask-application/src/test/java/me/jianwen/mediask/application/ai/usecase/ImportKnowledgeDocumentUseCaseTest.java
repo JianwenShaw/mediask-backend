@@ -12,10 +12,15 @@ import java.util.Map;
 import java.util.Optional;
 import me.jianwen.mediask.application.ai.command.ImportKnowledgeDocumentCommand;
 import me.jianwen.mediask.common.exception.BizException;
+import me.jianwen.mediask.common.pagination.PageData;
+import me.jianwen.mediask.common.pagination.PageQuery;
 import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
+import me.jianwen.mediask.domain.ai.model.KnowledgeBase;
+import me.jianwen.mediask.domain.ai.model.KnowledgeBaseSummary;
 import me.jianwen.mediask.domain.ai.model.KnowledgeChunk;
 import me.jianwen.mediask.domain.ai.model.KnowledgeDocument;
 import me.jianwen.mediask.domain.ai.model.KnowledgeDocumentStatus;
+import me.jianwen.mediask.domain.ai.model.KnowledgeDocumentSummary;
 import me.jianwen.mediask.domain.ai.model.KnowledgePrepareInvocation;
 import me.jianwen.mediask.domain.ai.model.PreparedKnowledgeChunk;
 import me.jianwen.mediask.domain.ai.port.KnowledgeBaseRepository;
@@ -226,6 +231,37 @@ class ImportKnowledgeDocumentUseCaseTest {
         public boolean existsEnabled(Long knowledgeBaseId) {
             return existsEnabled;
         }
+
+        @Override
+        public PageData<me.jianwen.mediask.domain.ai.model.KnowledgeBaseSummary> pageByKeyword(
+                String keyword, PageQuery pageQuery) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void save(KnowledgeBase knowledgeBase) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<KnowledgeBase> findById(Long knowledgeBaseId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<KnowledgeBaseSummary> findSummaryById(Long knowledgeBaseId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void update(KnowledgeBase knowledgeBase) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void deleteById(Long knowledgeBaseId) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final class InMemoryKnowledgeDocumentRepository implements KnowledgeDocumentRepository {
@@ -254,6 +290,16 @@ class ImportKnowledgeDocumentUseCaseTest {
         public void update(KnowledgeDocument knowledgeDocument) {
             documents.put(knowledgeDocument.id(), knowledgeDocument);
             lastSavedDocument = knowledgeDocument;
+        }
+
+        @Override
+        public PageData<KnowledgeDocumentSummary> pageByKnowledgeBaseId(Long knowledgeBaseId, PageQuery pageQuery) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void deleteById(Long documentId) {
+            throw new UnsupportedOperationException();
         }
 
         private KnowledgeDocument getRequired(Long documentId) {

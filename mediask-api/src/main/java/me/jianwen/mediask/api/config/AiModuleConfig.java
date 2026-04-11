@@ -10,6 +10,7 @@ import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentStoragePort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeIndexPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgePreparePort;
 import me.jianwen.mediask.infra.observability.MdcTaskDecorator;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,6 +29,15 @@ public class AiModuleConfig {
     }
 
     @Bean
+    @ConditionalOnBean({
+        KnowledgeBaseRepository.class,
+        KnowledgeDocumentRepository.class,
+        KnowledgeChunkRepository.class,
+        KnowledgeDocumentStoragePort.class,
+        KnowledgePreparePort.class,
+        KnowledgeIndexPort.class,
+        PlatformTransactionManager.class
+    })
     public ImportKnowledgeDocumentUseCase importKnowledgeDocumentUseCase(
             KnowledgeBaseRepository knowledgeBaseRepository,
             KnowledgeDocumentRepository knowledgeDocumentRepository,

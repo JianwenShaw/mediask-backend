@@ -22,7 +22,13 @@ VALUES
     (1114, 'admin:patient:create', '后台新增患者', 'API', 'ACTIVE', 140),
     (1115, 'admin:patient:update', '后台修改患者', 'API', 'ACTIVE', 150),
     (1116, 'admin:patient:delete', '后台删除患者', 'API', 'ACTIVE', 160),
-    (1117, 'admin:knowledge:document:import', '后台导入知识文档', 'API', 'ACTIVE', 170)
+    (1117, 'admin:knowledge:document:import', '后台导入知识文档', 'API', 'ACTIVE', 170),
+    (1118, 'admin:knowledge:base:list', '后台知识库列表', 'API', 'ACTIVE', 180),
+    (1119, 'admin:knowledge:base:create', '后台新增知识库', 'API', 'ACTIVE', 190),
+    (1120, 'admin:knowledge:base:update', '后台修改知识库', 'API', 'ACTIVE', 200),
+    (1121, 'admin:knowledge:base:delete', '后台删除知识库', 'API', 'ACTIVE', 210),
+    (1122, 'admin:knowledge:document:list', '后台知识文档列表', 'API', 'ACTIVE', 220),
+    (1123, 'admin:knowledge:document:delete', '后台删除知识文档', 'API', 'ACTIVE', 230)
 ON CONFLICT (permission_code) DO NOTHING;
 
 INSERT INTO role_permissions (id, role_id, permission_id)
@@ -44,7 +50,13 @@ VALUES
     (1218, 1003, 1114),
     (1219, 1003, 1115),
     (1220, 1003, 1116),
-    (1221, 1003, 1117)
+    (1221, 1003, 1117),
+    (1222, 1003, 1118),
+    (1223, 1003, 1119),
+    (1224, 1003, 1120),
+    (1225, 1003, 1121),
+    (1226, 1003, 1122),
+    (1227, 1003, 1123)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- admin / admin123

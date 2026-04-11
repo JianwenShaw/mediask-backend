@@ -5,6 +5,8 @@ import me.jianwen.mediask.api.dto.AiChatStreamMetaResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
 import me.jianwen.mediask.api.dto.AiTriageResultResponse;
 import me.jianwen.mediask.api.dto.ImportKnowledgeDocumentResponse;
+import me.jianwen.mediask.api.dto.KnowledgeBaseResponse;
+import me.jianwen.mediask.api.dto.KnowledgeDocumentListItemResponse;
 import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
 import me.jianwen.mediask.application.ai.usecase.ImportKnowledgeDocumentResult;
 import me.jianwen.mediask.common.exception.BizException;
@@ -13,6 +15,8 @@ import me.jianwen.mediask.domain.ai.model.AiChatReply;
 import me.jianwen.mediask.domain.ai.model.AiChatTriageResult;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
+import me.jianwen.mediask.domain.ai.model.KnowledgeBaseSummary;
+import me.jianwen.mediask.domain.ai.model.KnowledgeDocumentSummary;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
 
 public final class AiAssembler {
@@ -33,6 +37,28 @@ public final class AiAssembler {
     public static ImportKnowledgeDocumentResponse toImportKnowledgeDocumentResponse(ImportKnowledgeDocumentResult result) {
         return new ImportKnowledgeDocumentResponse(
                 result.documentId(), result.documentUuid(), result.chunkCount(), result.documentStatus());
+    }
+
+    public static KnowledgeBaseResponse toKnowledgeBaseResponse(KnowledgeBaseSummary summary) {
+        return new KnowledgeBaseResponse(
+                summary.id(),
+                summary.kbCode(),
+                summary.name(),
+                summary.ownerType().name(),
+                summary.ownerDeptId(),
+                summary.visibility().name(),
+                summary.status().name(),
+                summary.docCount());
+    }
+
+    public static KnowledgeDocumentListItemResponse toKnowledgeDocumentListItemResponse(KnowledgeDocumentSummary summary) {
+        return new KnowledgeDocumentListItemResponse(
+                summary.id(),
+                summary.documentUuid(),
+                summary.title(),
+                summary.sourceType().name(),
+                summary.documentStatus().name(),
+                summary.chunkCount());
     }
 
     public static AiTriageResultResponse toTriageResultResponse(AiChatReply reply) {

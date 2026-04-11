@@ -11,7 +11,12 @@ public enum AiErrorCode implements ErrorCodeType {
     KNOWLEDGE_DOCUMENT_DUPLICATE(6005, "knowledge document duplicate", ErrorCodeCategory.CONFLICT),
     KNOWLEDGE_DOCUMENT_NOT_FOUND(6006, "knowledge document not found", ErrorCodeCategory.NOT_FOUND),
     KNOWLEDGE_DOCUMENT_STATUS_INVALID(6007, "knowledge document status invalid", ErrorCodeCategory.CONFLICT),
-    KNOWLEDGE_DOCUMENT_UPDATE_CONFLICT(6008, "knowledge document update conflict", ErrorCodeCategory.CONFLICT);
+    KNOWLEDGE_DOCUMENT_UPDATE_CONFLICT(6008, "knowledge document update conflict", ErrorCodeCategory.CONFLICT),
+    KNOWLEDGE_BASE_CODE_CONFLICT(6009, "knowledge base code conflict", ErrorCodeCategory.CONFLICT),
+    KNOWLEDGE_BASE_UPDATE_CONFLICT(6010, "knowledge base update conflict", ErrorCodeCategory.CONFLICT),
+    KNOWLEDGE_BASE_DELETE_CONFLICT(6011, "knowledge base delete conflict", ErrorCodeCategory.CONFLICT),
+    KNOWLEDGE_BASE_STATUS_INVALID(6012, "knowledge base status invalid", ErrorCodeCategory.CONFLICT),
+    KNOWLEDGE_DOCUMENT_DELETE_CONFLICT(6013, "knowledge document delete conflict", ErrorCodeCategory.CONFLICT);
 
     private final int code;
     private final String message;
