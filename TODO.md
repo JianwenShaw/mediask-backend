@@ -82,13 +82,15 @@
 ### T2 流式 AI 问诊接口
 
 - ID: `T2`
-- 状态: `todo`
+- 状态: `done`
 - 目标: 完成 `POST /api/v1/ai/chat/stream`，由 Java 对外统一暴露 SSE。
 - Java 完成标准:
   - Java 继续作为浏览器唯一 AI 入口。
   - 流式协议稳定输出 `message / meta / end / error`。
   - `meta` 中带 `sessionId`、`turnId`、`triageResult`。
   - 异常结束时仍可通过 `requestId` 串联日志。
+  - Java 预创建并持久化 `ai_session`、`ai_turn`、`ai_turn_content`、`ai_model_run`。
+  - 流式成功结束后回填 `ai_guardrail_event`、会话摘要与运行状态。
 - 依赖 Python 提供:
   - `POST /api/v1/chat/stream`
   - 稳定的流式消息与结束事件
@@ -99,6 +101,7 @@
   - `ai_turn`
   - `ai_turn_content`
   - `ai_model_run`
+  - `ai_guardrail_event`
 
 ### T3 AI 会话回看与导诊结果
 

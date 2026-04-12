@@ -41,8 +41,22 @@ public class AiModuleConfig {
     }
 
     @Bean
-    public StreamAiChatUseCase streamAiChatUseCase(AiChatStreamPort aiChatStreamPort) {
-        return new StreamAiChatUseCase(aiChatStreamPort);
+    public StreamAiChatUseCase streamAiChatUseCase(
+            AiChatStreamPort aiChatStreamPort,
+            AiSessionRepository aiSessionRepository,
+            AiTurnRepository aiTurnRepository,
+            AiTurnContentRepository aiTurnContentRepository,
+            AiModelRunRepository aiModelRunRepository,
+            AiGuardrailEventRepository aiGuardrailEventRepository,
+            AiContentEncryptorPort aiContentEncryptorPort) {
+        return new StreamAiChatUseCase(
+                aiChatStreamPort,
+                aiSessionRepository,
+                aiTurnRepository,
+                aiTurnContentRepository,
+                aiModelRunRepository,
+                aiGuardrailEventRepository,
+                aiContentEncryptorPort);
     }
 
     @Bean(name = "aiSseTaskExecutor")

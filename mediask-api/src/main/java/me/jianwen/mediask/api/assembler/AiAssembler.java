@@ -39,9 +39,14 @@ public final class AiAssembler {
                 ApiRequestContext.currentRequestIdOrGenerate());
     }
 
-    public static StreamAiChatCommand toStreamAiChatCommand(AiChatStreamRequest request) {
+    public static StreamAiChatCommand toStreamAiChatCommand(Long patientUserId, AiChatStreamRequest request) {
         return new StreamAiChatCommand(
-                request.sessionId(), request.message(), request.departmentId(), toSceneType(request.sceneType()));
+                patientUserId,
+                request.sessionId(),
+                request.message(),
+                request.departmentId(),
+                toSceneType(request.sceneType()),
+                ApiRequestContext.currentRequestIdOrGenerate());
     }
 
     public static AiChatResponse toChatResponse(ChatAiResult result) {

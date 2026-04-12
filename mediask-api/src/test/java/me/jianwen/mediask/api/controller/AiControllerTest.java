@@ -74,7 +74,7 @@ class AiControllerTest {
         chatAiUseCase = new StubChatAiUseCase();
         AiController controller = new AiController(
                 chatAiUseCase,
-                new StreamAiChatUseCase(aiChatStreamPort),
+                streamAiChatUseCase(),
                 new SyncTaskExecutor());
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler(), new ResultResponseBodyAdvice())
@@ -257,9 +257,12 @@ class AiControllerTest {
 
     @Test
     void stream_WhenEndFrameWriteFails_CompleteEmitterWithError() {
-        aiChatStreamPort.eventPublisher = consumer -> consumer.accept(new AiChatStreamEvent.End());
+        aiChatStreamPort.eventPublisher = consumer -> {
+            consumer.accept(new AiChatStreamEvent.Meta(successTriageResult()));
+            consumer.accept(new AiChatStreamEvent.End());
+        };
         TestSseEmitter emitter = new TestSseEmitter(true, false);
-        TestAiController controller = new TestAiController(new StreamAiChatUseCase(aiChatStreamPort), emitter);
+        TestAiController controller = new TestAiController(streamAiChatUseCase(), emitter);
 
         controller.stream(new AiChatStreamRequest(null, "头痛三天", null, "PRE_CONSULTATION", true), patientPrincipal());
 
@@ -273,7 +276,7 @@ class AiControllerTest {
         aiChatStreamPort.eventPublisher =
                 consumer -> consumer.accept(new AiChatStreamEvent.Error(6001, "ai service unavailable"));
         TestSseEmitter emitter = new TestSseEmitter(false, true);
-        TestAiController controller = new TestAiController(new StreamAiChatUseCase(aiChatStreamPort), emitter);
+        TestAiController controller = new TestAiController(streamAiChatUseCase(), emitter);
 
         controller.stream(new AiChatStreamRequest(null, "头痛三天", null, "PRE_CONSULTATION", true), patientPrincipal());
 
@@ -286,7 +289,7 @@ class AiControllerTest {
     void stream_WhenExecutorRejects_ReturnErrorEvent() throws Exception {
         AiController controller = new AiController(
                 chatAiUseCase,
-                new StreamAiChatUseCase(aiChatStreamPort),
+                streamAiChatUseCase(),
                 task -> {
                     throw new TaskRejectedException("executor saturated");
                 });
@@ -394,6 +397,17 @@ class AiControllerTest {
                 "建议尽快就医",
                 List.of(new AiCitation(7003001L, 1, 0.82, "持续头痛伴发热应线下评估。")),
                 AiExecutionMetadata.empty());
+    }
+
+    private StreamAiChatUseCase streamAiChatUseCase() {
+        return new StreamAiChatUseCase(
+                aiChatStreamPort,
+                new NoopAiSessionRepository(),
+                new NoopAiTurnRepository(),
+                content -> {},
+                new NoopAiModelRunRepository(),
+                event -> {},
+                plainText -> plainText);
     }
 
     private static final class StubAiChatStreamPort implements AiChatStreamPort {

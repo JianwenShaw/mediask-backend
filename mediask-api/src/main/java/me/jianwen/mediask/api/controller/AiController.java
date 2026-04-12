@@ -83,7 +83,7 @@ public class AiController {
         if (principal.patientId() == null) {
             throw new BizException(UserErrorCode.ROLE_MISMATCH);
         }
-        StreamAiChatCommand command = AiAssembler.toStreamAiChatCommand(request);
+        StreamAiChatCommand command = AiAssembler.toStreamAiChatCommand(principal.userId(), request);
         SseEmitter emitter = createEmitter();
         try {
             aiSseTaskExecutor.execute(() -> streamInternal(command, emitter));

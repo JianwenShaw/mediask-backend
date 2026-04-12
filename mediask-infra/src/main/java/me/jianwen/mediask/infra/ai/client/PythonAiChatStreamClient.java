@@ -69,6 +69,7 @@ public final class PythonAiChatStreamClient {
             Consumer<PythonChatStreamEvent> eventConsumer)
             throws IOException {
         boolean[] terminal = {false};
+        boolean[] metaSeen = {false};
         HttpStatusCode statusCode = response.getStatusCode();
         String upstreamRequestId = response.getHeaders().getFirst(RequestConstants.REQUEST_ID_HEADER);
         aiServiceSseEventReader.read(response.getBody(), frame -> {
@@ -76,25 +77,43 @@ public final class PythonAiChatStreamClient {
                 throw AiServiceTransportException.invalidResponse(
                         statusCode, upstreamRequestId, "ai stream contains events after terminal event", null);
             }
-            terminal[0] = handleFrame(frame, eventConsumer);
+            terminal[0] = handleFrame(frame, eventConsumer, statusCode, upstreamRequestId, metaSeen);
         });
         if (!terminal[0]) {
             throw AiServiceTransportException.invalidResponse(
                     statusCode, upstreamRequestId, "ai stream ended without terminal event", null);
         }
+        if (!metaSeen[0]) {
+            throw AiServiceTransportException.invalidResponse(
+                    statusCode, upstreamRequestId, "ai stream ended without meta event", null);
+        }
     }
 
-    private boolean handleFrame(SseEventFrame frame, Consumer<PythonChatStreamEvent> eventConsumer) {
+    private boolean handleFrame(
+            SseEventFrame frame,
+            Consumer<PythonChatStreamEvent> eventConsumer,
+            HttpStatusCode statusCode,
+            String upstreamRequestId,
+            boolean[] metaSeen) {
         return switch (frame.eventName()) {
             case "message" -> {
                 eventConsumer.accept(new PythonChatStreamEvent.Message(frame.data()));
                 yield false;
             }
             case "meta" -> {
+                if (metaSeen[0]) {
+                    throw AiServiceTransportException.invalidResponse(
+                            statusCode, upstreamRequestId, "ai stream contains duplicate meta event", null);
+                }
+                metaSeen[0] = true;
                 eventConsumer.accept(new PythonChatStreamEvent.Meta(readRequired(frame.data(), PythonChatResponse.class)));
                 yield false;
             }
             case "end" -> {
+                if (!metaSeen[0]) {
+                    throw AiServiceTransportException.invalidResponse(
+                            statusCode, upstreamRequestId, "ai stream ended before meta event", null);
+                }
                 eventConsumer.accept(new PythonChatStreamEvent.End());
                 yield true;
             }

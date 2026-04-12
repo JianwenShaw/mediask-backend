@@ -1,6 +1,7 @@
 package me.jianwen.mediask.api.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.DispatcherType;
 import java.util.ArrayList;
 import java.util.List;
 import me.jianwen.mediask.domain.user.port.AccessTokenCodec;
@@ -106,6 +107,8 @@ public class SecurityConfig {
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(jsonAuthenticationEntryPoint)
                         .accessDeniedHandler(jsonAccessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
+                        .permitAll()
                         .requestMatchers(CorsUtils::isPreFlightRequest)
                         .permitAll()
                         .requestMatchers(publicRequestMatcher).permitAll()
