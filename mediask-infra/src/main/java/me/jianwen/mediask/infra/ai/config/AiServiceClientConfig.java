@@ -1,7 +1,9 @@
 package me.jianwen.mediask.infra.ai.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Base64;
 import me.jianwen.mediask.domain.ai.port.AiChatPort;
+import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
 import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeIndexPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgePreparePort;
@@ -11,6 +13,7 @@ import me.jianwen.mediask.infra.ai.adapter.PythonAiChatStreamPortAdapter;
 import me.jianwen.mediask.infra.ai.adapter.LocalKnowledgeDocumentStorageAdapter;
 import me.jianwen.mediask.infra.ai.adapter.OssKnowledgeDocumentStorageAdapter;
 import me.jianwen.mediask.infra.ai.adapter.PythonKnowledgePortAdapter;
+import me.jianwen.mediask.infra.ai.adapter.AesGcmAiContentEncryptor;
 import me.jianwen.mediask.infra.ai.client.PythonAiChatClient;
 import me.jianwen.mediask.infra.ai.client.PythonAiChatStreamClient;
 import me.jianwen.mediask.infra.ai.client.PythonKnowledgeClient;
@@ -31,7 +34,7 @@ import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestClient;
 
 @Configuration
-@EnableConfigurationProperties({AiServiceProperties.class, KnowledgeDocumentStorageProperties.class})
+@EnableConfigurationProperties({AiServiceProperties.class, KnowledgeDocumentStorageProperties.class, AiEncryptionProperties.class})
 @ConditionalOnProperty(prefix = "mediask.ai.service", name = {"base-url", "api-key"})
 public class AiServiceClientConfig {
 
@@ -89,6 +92,11 @@ public class AiServiceClientConfig {
     @Bean
     public PythonAiChatMapper pythonAiChatMapper() {
         return new PythonAiChatMapper();
+    }
+
+    @Bean
+    public AiContentEncryptorPort aiContentEncryptorPort(AiEncryptionProperties aiEncryptionProperties) {
+        return new AesGcmAiContentEncryptor(Base64.getDecoder().decode(aiEncryptionProperties.key()));
     }
 
     @Bean

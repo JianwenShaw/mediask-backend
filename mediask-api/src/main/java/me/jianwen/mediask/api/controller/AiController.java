@@ -4,9 +4,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import me.jianwen.mediask.api.assembler.AiAssembler;
+import me.jianwen.mediask.api.dto.AiChatRequest;
+import me.jianwen.mediask.api.dto.AiChatResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamErrorResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
+import me.jianwen.mediask.application.ai.command.ChatAiCommand;
+import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
+import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
 import me.jianwen.mediask.application.ai.usecase.AiChatStreamResultEvent;
 import me.jianwen.mediask.application.ai.usecase.StreamAiChatUseCase;
@@ -28,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import me.jianwen.mediask.common.result.Result;
 
 @RestController
 @RequestMapping("/api/v1/ai")
@@ -38,13 +44,33 @@ public class AiController {
     private static final String TEXT_EVENT_STREAM_UTF8 = "text/event-stream;charset=UTF-8";
     private static final MediaType TEXT_PLAIN_UTF8 = new MediaType("text", "plain", StandardCharsets.UTF_8);
 
+    private final ChatAiUseCase chatAiUseCase;
     private final StreamAiChatUseCase streamAiChatUseCase;
     private final TaskExecutor aiSseTaskExecutor;
 
     public AiController(
+            ChatAiUseCase chatAiUseCase,
             StreamAiChatUseCase streamAiChatUseCase, @Qualifier("aiSseTaskExecutor") TaskExecutor aiSseTaskExecutor) {
+        this.chatAiUseCase = chatAiUseCase;
         this.streamAiChatUseCase = streamAiChatUseCase;
         this.aiSseTaskExecutor = aiSseTaskExecutor;
+    }
+
+    @PostMapping("/chat")
+    public Result<AiChatResponse> chat(
+            @RequestBody AiChatRequest request, @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        if (principal == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        if (principal.patientId() == null) {
+            throw new BizException(UserErrorCode.ROLE_MISMATCH);
+        }
+        if (Boolean.TRUE.equals(request.useStream())) {
+            throw new BizException(ErrorCode.INVALID_PARAMETER, "useStream must be false for /api/v1/ai/chat");
+        }
+        ChatAiCommand command = AiAssembler.toChatAiCommand(principal.userId(), request);
+        ChatAiResult result = chatAiUseCase.handle(command);
+        return Result.ok(AiAssembler.toChatResponse(result));
     }
 
     @PostMapping(path = "/chat/stream", produces = TEXT_EVENT_STREAM_UTF8)

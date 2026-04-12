@@ -4,267 +4,353 @@
 
 - 一次只执行一个 `CURRENT` 任务。
 - 当前任务未审查确认前，不进入下一个任务。
-- 当前阶段不做 AI、SSE、排班增强、通知、字典。
+- 本文件只记录当前 `Java` 仓库需要完成的任务。
+- 若某个 Java 任务依赖 Python AI 服务，本文件只注明“依赖 Python 提供什么”，不把 Python 实现本身当作本仓库任务。
+- 只围绕 `P0` 主线推进：`认证 -> AI 问诊 -> RAG 引用 -> 导诊结果 -> 挂号 -> 接诊 -> 病历/处方 -> 对象级授权 -> 审计留痕`。
+- 不进入 `P1/P2`：不做排班增强、通知、字典、复杂观测、事件总线、治理型能力。
 
 ## Status Legend
 
 - `todo`: 未开始
 - `doing`: 开发中
 - `done`: 已完成并通过自查
+- `blocked`: 当前 Java 任务已明确，但被外部依赖阻塞
 
-## Known Issues
+## Current Position
 
-- `todo` 知识文档存储配置当前默认 `mode=LOCAL`，但非 `dev` 环境若未显式配置 `mediask.ai.knowledge-storage.local.base-dir`，AI 相关 Bean 可能在启动阶段失败。
-- `todo` 知识文档导入流程虽然已将重复校验前移，但 `store()` 仍早于最终持久化成功；并发重复导入或后续 `save/prepare/index` 失败时，仍可能留下孤儿文件。
-- `todo` 当前类型识别支持通过 `Content-Type` 推断 `MARKDOWN/DOCX/PDF`，但本地存储适配器仍要求原始文件名必须带扩展名，扩展名缺失时会在存储阶段报错。
-- `todo` 领域模型当前要求 `KnowledgeDocument.sourceUri` 非空，但数据库表结构仍允许 `knowledge_document.source_uri` 为 `NULL`，旧数据或手工写入数据在仓储回填时可能失败。
-- `todo` 当前知识库/知识文档软删除不能继续依赖 `updateById(toDelete)` 写 `deleted_at`。实际 SQL 日志已证明该路径会只更新 `version/updated_at` 而漏掉 `deleted_at`，导致接口返回 `200` 但记录未被软删。当前解决方案是改为显式 `lambdaUpdate().set(DeletedAt, ...).set(UpdatedAt, ...)`；待查证问题是 MyBatis-Plus 在本项目现有配置下为何会在 `updateById(...)` 场景漏掉 `deleted_at`，以及这是否与字段策略、自动填充或其它插件行为有关。
+- `done` 公共协议与请求上下文：`Result<T>`、全局异常、`requestId`、JWT、Java `health/readiness/liveness`、对外 `SSE` 转发骨架、结构化日志。
+- `done` 基础业务底座：管理员患者管理、患者/医生本人资料、门诊场次查询、挂号创建、我的挂号、挂号后预创建 `visit_encounter`、医生接诊列表。
+- `done` 知识库 Java 侧底座：知识库管理、知识文档导入/列表/删除、Java 调 Python `prepare`、`knowledge_document`/`knowledge_chunk` 持久化、Java 调 Python `index`。
+- `todo` AI 问诊 Java 对外主链：`/api/v1/ai/chat`、`/api/v1/ai/chat/stream`、会话回看、导诊结果、挂号承接。
+- `todo` 医生接诊闭环：接诊详情、AI 摘要、病历、处方。
+- `todo` 安全合规闭环：`AI_SESSION` / `EMR_RECORD` 对象级授权、`audit_event`、`data_access_log`、最小审计查询。
 
-## Phase 1 - 门诊挂号最小闭环
+## External Dependency Notes
 
-### T1 门诊场次列表查询
+- `blocked` 当前 `6001` 属于 Java -> Python AI 联调问题。在 Python `/health`、`/ready`、`/api/v1/chat` 未稳定前，Java AI 主链无法完成验收。
+- `todo` Java 侧知识文档导入链路已具备，但最终 RAG 可用性仍依赖 Python 侧 `prepare/index/search` 的真实可用性。
+- `todo` Java 侧会话、引用、导诊结果可以先按契约落地，但最终联调仍依赖 Python 返回稳定的 `risk_level`、`guardrail_action`、`citations` 等字段。
+
+## Phase 0 - 已完成基础能力
+
+### B0 公共协议与认证基线
+
+- ID: `B0`
+- 状态: `done`
+- 说明: `Result<T>`、错误处理、`requestId`、JWT 登录/刷新/登出/当前用户、Java 健康检查、`SSE` 转发骨架、结构化日志基线已完成。
+
+### B1 挂号与接诊最小底座
+
+- ID: `B1`
+- 状态: `done`
+- 说明: `GET /api/v1/clinic-sessions`、`POST /api/v1/registrations`、`GET /api/v1/registrations`、`GET /api/v1/encounters` 已完成，且挂号成功后预创建 `visit_encounter`。
+
+### B2 知识库 Java 侧底座
+
+- ID: `B2`
+- 状态: `done`
+- 说明: 知识库/知识文档后台接口已完成，Java 已具备 `prepare -> chunk 持久化 -> index` 的调用链骨架。
+
+## Phase 1 - Java AI 问诊主链
+
+### CURRENT - T1 非流式 AI 问诊接口
 
 - ID: `T1`
 - 状态: `done`
-- 目标: 完成 `GET /api/v1/clinic-sessions`，提供最小可挂号的门诊场次列表。
-- 完成标准:
-  - 新增门诊场次查询用例与控制器接口。
-  - 返回字段至少覆盖 `clinicSessionId`、`departmentId`、`departmentName`、`doctorId`、`doctorName`、`sessionDate`、`periodCode`、`clinicType`、`remainingCount`、`fee`。
-  - 查询仅返回已开放挂号的 `OPEN` 场次。
-  - 有主成功路径测试。
+- 目标: 完成 `POST /api/v1/ai/chat`，让 Java 对外提供 AI 问诊主入口。
+- Java 完成标准:
+  - 完成 Controller / UseCase / DTO / 持久化链路。
+  - Java 预创建 `ai_model_run`。
+  - Java 持久化 `ai_session`、`ai_turn`、`ai_turn_content`。
+  - Java 调 Python 时透传 `model_run_id` 与 `requestId`。
+  - 返回 `sessionId`、`turnId`、`answer`、`triageResult`。
+  - `triageResult` 至少包含 `riskLevel`、`guardrailAction`、`nextAction`、`recommendedDepartments`、`careAdvice`、`citations`。
+- 依赖 Python 提供:
+  - `POST /api/v1/chat`
+  - 稳定返回 `answer`、`risk_level`、`guardrail_action`、`chief_complaint_summary`、`recommended_departments`、`care_advice`、`citations`
+  - 失败时稳定返回 `code`、`msg`、`requestId`、`timestamp`
+  - 基于 `model_run_id` 写入 `ai_run_citation`
 - 涉及接口/表:
-  - `GET /api/v1/clinic-sessions`
-  - `clinic_session`
-  - `clinic_slot`
+  - `POST /api/v1/ai/chat`
+  - `ai_session`
+  - `ai_turn`
+  - `ai_turn_content`
+  - `ai_model_run`
+  - `ai_guardrail_event`
+  - `ai_run_citation`
 
-### T2 创建挂号订单
+### T2 流式 AI 问诊接口
 
 - ID: `T2`
-- 状态: `done`
-- 目标: 完成 `POST /api/v1/registrations`，创建最小挂号订单。
-- 完成标准:
-  - 写入 `registration_order`。
-  - 校验所选场次与号源关系正确。
-  - 返回 `registrationId`、`orderNo`、`status`。
-  - 有主成功路径测试。
+- 状态: `todo`
+- 目标: 完成 `POST /api/v1/ai/chat/stream`，由 Java 对外统一暴露 SSE。
+- Java 完成标准:
+  - Java 继续作为浏览器唯一 AI 入口。
+  - 流式协议稳定输出 `message / meta / end / error`。
+  - `meta` 中带 `sessionId`、`turnId`、`triageResult`。
+  - 异常结束时仍可通过 `requestId` 串联日志。
+- 依赖 Python 提供:
+  - `POST /api/v1/chat/stream`
+  - 稳定的流式消息与结束事件
+  - 流式异常时可映射为稳定错误
 - 涉及接口/表:
-  - `POST /api/v1/registrations`
-  - `registration_order`
-  - `clinic_session`
-  - `clinic_slot`
+  - `POST /api/v1/ai/chat/stream`
+  - `ai_session`
+  - `ai_turn`
+  - `ai_turn_content`
+  - `ai_model_run`
 
-### T3 患者查看我的挂号
+### T3 AI 会话回看与导诊结果
 
 - ID: `T3`
-- 状态: `done`
-- 目标: 完成 `GET /api/v1/registrations`，支持患者查看自己的挂号记录。
-- 完成标准:
-  - 只返回当前患者自己的挂号记录。
-  - 返回最小列表字段与状态。
-  - 有主成功路径测试。
+- 状态: `todo`
+- 目标: 完成会话详情与导诊结果查询，支撑患者结果页和后续挂号承接。
+- Java 完成标准:
+  - 完成 `GET /api/v1/ai/sessions/{sessionId}`。
+  - 完成 `GET /api/v1/ai/sessions/{sessionId}/triage-result`。
+  - 导诊结果可展示 `riskLevel`、`nextAction`、`recommendedDepartments`、`citations`。
+  - 高风险分支不继续普通问答，返回明确下一步动作。
+- 依赖 Python 提供:
+  - 已在问诊阶段返回并写入可回放的 `risk_level`、`guardrail_action`、`citations`
+  - `ai_run_citation` 数据完整可查
 - 涉及接口/表:
-  - `GET /api/v1/registrations`
-  - `registration_order`
+  - `GET /api/v1/ai/sessions/{sessionId}`
+  - `GET /api/v1/ai/sessions/{sessionId}/triage-result`
+  - `ai_session`
+  - `ai_turn`
+  - `ai_turn_content`
+  - `ai_guardrail_event`
+  - `ai_run_citation`
 
-### T4 医生接诊列表
+### T4 验证 Java 侧 RAG 接入闭环
 
 - ID: `T4`
-- 状态: `done`
-- 目标: 完成 `GET /api/v1/encounters`，支持医生查看待接诊/已接诊列表。
-- 完成标准:
-  - 基于已预创建的 `visit_encounter` 返回最小列表信息。
-  - 仅返回当前医生可见的接诊记录。
-  - 挂号创建成功后预创建 `visit_encounter`，初始状态为 `SCHEDULED`。
-  - 有主成功路径测试。
+- 状态: `todo`
+- 目标: 验证当前 Java 知识导入链路与 AI 问诊链路已能实际接入可检索知识。
+- Java 完成标准:
+  - 至少一套知识文档可通过现有后台导入接口入库。
+  - `knowledge_document`、`knowledge_chunk` 数据完整。
+  - Java 侧可完成 `prepare -> chunk 持久化 -> index` 整体调用。
+  - 有最小联调验证记录。
+- 依赖 Python 提供:
+  - `POST /api/v1/knowledge/prepare`
+  - `POST /api/v1/knowledge/index`
+  - `POST /api/v1/knowledge/search`
+  - `knowledge_chunk_index` 真实写入并可检索命中
 - 涉及接口/表:
-  - `GET /api/v1/encounters`
-  - `visit_encounter`
-  - `registration_order`
+  - `POST /api/v1/admin/knowledge-documents/import`
+  - `knowledge_document`
+  - `knowledge_chunk`
+  - `knowledge_chunk_index`
 
-### CURRENT - T5 接诊详情
+## Phase 2 - Java AI 到挂号承接
+
+### T5 导诊结果承接挂号
 
 - ID: `T5`
 - 状态: `todo`
-- 目标: 完成 `GET /api/v1/encounters/{id}`，支持医生查看单个接诊详情。
-- 完成标准:
-  - 返回 `encounterId`、`registrationId`、`patientSummary` 等最小字段。
-  - 仅允许当前医生查看自己的接诊记录。
-  - 有主成功路径测试。
+- 目标: 完成 `POST /api/v1/ai/sessions/{sessionId}/registration-handoff`，由 Java 把 AI 结果转换成挂号入口参数。
+- Java 完成标准:
+  - 返回推荐科室、主诉摘要、建议就诊类型、挂号查询参数。
+  - AI 结果可直接带出挂号检索所需 `departmentId` 等最小信息。
+  - 仅允许当前患者访问自己的 AI 会话承接结果。
+- 依赖 Python 提供:
+  - 在问诊结果中稳定返回推荐科室与主诉摘要
 - 涉及接口/表:
-  - `GET /api/v1/encounters/{id}`
-  - `visit_encounter`
+  - `POST /api/v1/ai/sessions/{sessionId}/registration-handoff`
+  - `ai_session`
   - `registration_order`
 
-## Phase 2 - 病历与处方闭环
-
-### T6 保存病历
+### T6 挂号写入 AI 来源
 
 - ID: `T6`
 - 状态: `todo`
-- 目标: 完成 `POST /api/v1/emr`，保存病历头、正文和诊断。
-- 完成标准:
-  - 写入 `emr_record`、`emr_record_content`、`emr_diagnosis`。
-  - 请求和响应字段对齐文档最小 DTO。
-  - 有主成功路径测试。
+- 目标: 让 Java 挂号链路具备 AI 来源追溯能力。
+- Java 完成标准:
+  - 从 AI 导诊结果进入挂号时真实写入 `registration_order.source_ai_session_id`。
+  - 现有 `POST /api/v1/registrations` 保持最小入参，不引入额外复杂度。
+  - AI 来源可在后续接诊与审计链路中追溯。
+- 依赖 Python 提供:
+  - 无新增接口依赖，仅依赖前置 AI 会话已创建成功
 - 涉及接口/表:
-  - `POST /api/v1/emr`
-  - `emr_record`
-  - `emr_record_content`
-  - `emr_diagnosis`
+  - `POST /api/v1/registrations`
+  - `registration_order`
+  - `ai_session`
 
-### T7 查看病历
+## Phase 3 - Java 医生接诊、病历、处方闭环
+
+### T7 接诊详情
 
 - ID: `T7`
 - 状态: `todo`
+- 目标: 完成 `GET /api/v1/encounters/{encounterId}`，支持医生查看单个接诊详情。
+- Java 完成标准:
+  - 返回 `encounterId`、`registrationId`、`patientSummary` 等最小字段。
+  - 仅允许当前医生查看自己的接诊记录。
+  - 有主成功路径测试。
+- 依赖 Python 提供:
+  - 无
+- 涉及接口/表:
+  - `GET /api/v1/encounters/{encounterId}`
+  - `visit_encounter`
+  - `registration_order`
+
+### T8 医生侧 AI 摘要
+
+- ID: `T8`
+- 状态: `todo`
+- 目标: 完成 `GET /api/v1/encounters/{encounterId}/ai-summary`，让医生接诊前看到 AI 摘要而非原文。
+- Java 完成标准:
+  - 返回 `encounterId`、`sessionId`、`chiefComplaintSummary`、`structuredSummary`、`riskLevel`、`latestCitations`。
+  - 默认不暴露 AI 原文。
+  - 能从 `source_ai_session_id` 或等价链路追溯到 AI 会话。
+- 依赖 Python 提供:
+  - 前置 AI 问诊结果中有稳定的摘要、风险等级、引用数据
+- 涉及接口/表:
+  - `GET /api/v1/encounters/{encounterId}/ai-summary`
+  - `visit_encounter`
+  - `registration_order`
+  - `ai_session`
+  - `ai_turn`
+
+### T9 保存病历
+
+- ID: `T9`
+- 状态: `todo`
+- 目标: 完成 `POST /api/v1/emr`，保存病历头、正文和诊断。
+- Java 完成标准:
+  - 写入 `emr_record`、`emr_record_content`、`emr_diagnosis`。
+  - 请求和响应字段对齐最小 DTO。
+  - 有主成功路径测试。
+- 依赖 Python 提供:
+  - 无
+- 涉及接口/表:
+  - `POST /api/v1/emr`
+  - `emr_record`
+  - `emr_record_content`
+  - `emr_diagnosis`
+
+### T10 查看病历
+
+- ID: `T10`
+- 状态: `todo`
 - 目标: 完成 `GET /api/v1/emr/{encounterId}`，查看单次接诊对应病历。
-- 完成标准:
+- Java 完成标准:
   - 返回病历正文和诊断列表。
+  - 正文查询与索引查询分层，列表不直接暴露正文。
   - 只允许有权限的患者/医生访问。
   - 有主成功路径测试和拒绝路径测试。
+- 依赖 Python 提供:
+  - 无
 - 涉及接口/表:
   - `GET /api/v1/emr/{encounterId}`
   - `emr_record`
   - `emr_record_content`
   - `emr_diagnosis`
 
-### T8 保存处方
-
-- ID: `T8`
-- 状态: `todo`
-- 目标: 完成 `POST /api/v1/prescriptions`，保存处方头和处方项。
-- 完成标准:
-  - 写入 `prescription_order`、`prescription_item`。
-  - 返回 `prescriptionOrderId`、`status`。
-  - 有主成功路径测试。
-- 涉及接口/表:
-  - `POST /api/v1/prescriptions`
-  - `prescription_order`
-  - `prescription_item`
-
-### T9 查看处方
-
-- ID: `T9`
-- 状态: `todo`
-- 目标: 完成 `GET /api/v1/prescriptions/{encounterId}`，查看单次接诊对应处方。
-- 完成标准:
-  - 返回处方头和处方项列表。
-  - 只允许有权限的患者/医生访问。
-  - 有主成功路径测试和拒绝路径测试。
-- 涉及接口/表:
-  - `GET /api/v1/prescriptions/{encounterId}`
-  - `prescription_order`
-  - `prescription_item`
-
-## Phase 3 - 对象级授权
-
-### T10 患者侧对象级授权
-
-- ID: `T10`
-- 状态: `todo`
-- 目标: 患者只能访问自己的挂号、病历、处方。
-- 完成标准:
-  - 相关接口统一接入对象级授权。
-  - 至少覆盖病历和处方读取拒绝路径。
-  - 有授权失败测试。
-- 涉及接口/表:
-  - `GET /api/v1/registrations`
-  - `GET /api/v1/emr/{encounterId}`
-  - `GET /api/v1/prescriptions/{encounterId}`
-  - `data_scope_rules`
-
-### T11 医生侧对象级授权
+### T11 保存处方
 
 - ID: `T11`
 - 状态: `todo`
-- 目标: 医生只能访问自己接诊范围内的数据。
-- 完成标准:
-  - 接诊、病历、处方接口接入授权判断。
-  - 非本人接诊记录访问被拒绝。
-  - 有授权失败测试。
+- 目标: 完成 `POST /api/v1/prescriptions`，保存处方头和处方项。
+- Java 完成标准:
+  - 写入 `prescription_order`、`prescription_item`。
+  - 返回 `prescriptionOrderId`、`status`。
+  - 有主成功路径测试。
+- 依赖 Python 提供:
+  - 无
 - 涉及接口/表:
-  - `GET /api/v1/encounters`
-  - `GET /api/v1/encounters/{id}`
+  - `POST /api/v1/prescriptions`
+  - `prescription_order`
+  - `prescription_item`
+
+### T12 查看处方
+
+- ID: `T12`
+- 状态: `todo`
+- 目标: 完成 `GET /api/v1/prescriptions/{encounterId}`，查看单次接诊对应处方。
+- Java 完成标准:
+  - 返回处方头和处方项列表。
+  - 只允许有权限的患者/医生访问。
+  - 有主成功路径测试和拒绝路径测试。
+- 依赖 Python 提供:
+  - 无
+- 涉及接口/表:
+  - `GET /api/v1/prescriptions/{encounterId}`
+  - `prescription_order`
+  - `prescription_item`
+
+## Phase 4 - Java 对象级授权与审计
+
+### T13 AI 会话与病历对象级授权
+
+- ID: `T13`
+- 状态: `todo`
+- 目标: 补齐 `EMR_RECORD` / `AI_SESSION` 的对象级资源解析与授权闭环。
+- Java 完成标准:
+  - `ResourceReferenceAssemblerPort` / `ResourceAccessResolverPort` 有实际实现。
+  - 患者不能读取他人病历与 AI 会话。
+  - 医生不能读取超出本人接诊范围的病历与 AI 会话。
+  - 有拒绝路径测试。
+- 依赖 Python 提供:
+  - 无新增依赖，仅依赖前置 AI 会话数据存在
+- 涉及接口/表:
+  - `GET /api/v1/ai/sessions/{sessionId}`
+  - `GET /api/v1/ai/sessions/{sessionId}/triage-result`
   - `GET /api/v1/emr/{encounterId}`
   - `GET /api/v1/prescriptions/{encounterId}`
   - `data_scope_rules`
 
-### T12 管理员最小审计查询授权
-
-- ID: `T12`
-- 状态: `todo`
-- 目标: 管理员只开放最小审计查询能力。
-- 完成标准:
-  - 审计查询接口仅管理员可访问。
-  - 普通患者和医生访问被拒绝。
-  - 有授权失败测试。
-- 涉及接口/表:
-  - `GET /api/v1/audit/events`
-  - `GET /api/v1/audit/data-access`
-
-## Phase 4 - 审计与访问留痕
-
-### T13 挂号写审计事件
-
-- ID: `T13`
-- 状态: `todo`
-- 目标: 挂号创建成功时写入 `audit.audit_event`。
-- 完成标准:
-  - `POST /api/v1/registrations` 成功后写审计。
-  - 审计记录包含 `requestId`、操作人、动作码、资源类型。
-  - 有测试覆盖。
-- 涉及接口/表:
-  - `POST /api/v1/registrations`
-  - `audit.audit_event`
-
-### T14 病历保存写审计事件
+### T14 敏感访问留痕
 
 - ID: `T14`
 - 状态: `todo`
-- 目标: 病历保存成功时写入 `audit.audit_event`。
-- 完成标准:
-  - `POST /api/v1/emr` 成功后写审计。
+- 目标: 查看病历正文和 AI 会话敏感内容时写入 `data_access_log`。
+- Java 完成标准:
+  - `GET /api/v1/emr/{encounterId}` 查看正文时写 `data_access_log`。
+  - AI 会话敏感查看链路写 `data_access_log`。
+  - 记录访问人、资源类型、资源标识、访问结果、`requestId`。
   - 有测试覆盖。
+- 依赖 Python 提供:
+  - 无
 - 涉及接口/表:
-  - `POST /api/v1/emr`
-  - `audit.audit_event`
+  - `GET /api/v1/emr/{encounterId}`
+  - `GET /api/v1/ai/sessions/{sessionId}`
+  - `data_access_log`
 
-### T15 处方保存写审计事件
+### T15 关键业务动作审计
 
 - ID: `T15`
 - 状态: `todo`
-- 目标: 处方保存成功时写入 `audit.audit_event`。
-- 完成标准:
-  - `POST /api/v1/prescriptions` 成功后写审计。
+- 目标: 关键业务成功动作写入 `audit_event`。
+- Java 完成标准:
+  - 登录、挂号、病历保存、处方保存至少写审计事件。
+  - 记录稳定的 `requestId`、操作人、动作码、资源类型、资源标识。
   - 有测试覆盖。
+- 依赖 Python 提供:
+  - 无
 - 涉及接口/表:
+  - `POST /api/v1/auth/login`
+  - `POST /api/v1/registrations`
+  - `POST /api/v1/emr`
   - `POST /api/v1/prescriptions`
-  - `audit.audit_event`
+  - `audit_event`
 
-### T16 查看病历正文写访问日志
+### T16 最小审计查询接口
 
 - ID: `T16`
 - 状态: `todo`
-- 目标: 查看病历正文时写入 `audit.data_access_log`。
-- 完成标准:
-  - `GET /api/v1/emr/{encounterId}` 读取正文时写访问日志。
-  - 记录访问结果和资源标识。
-  - 有测试覆盖。
-- 涉及接口/表:
-  - `GET /api/v1/emr/{encounterId}`
-  - `audit.data_access_log`
-
-### T17 审计查询接口
-
-- ID: `T17`
-- 状态: `todo`
-- 目标: 完成最小审计查询接口。
-- 完成标准:
+- 目标: 完成管理员最小审计查询能力。
+- Java 完成标准:
   - 完成 `GET /api/v1/audit/events`。
   - 完成 `GET /api/v1/audit/data-access`。
+  - 仅管理员可访问。
   - 返回最小列表字段。
-  - 有主成功路径测试。
+  - 有主成功路径测试和拒绝路径测试。
+- 依赖 Python 提供:
+  - 无
 - 涉及接口/表:
   - `GET /api/v1/audit/events`
   - `GET /api/v1/audit/data-access`
-  - `audit.audit_event`
-  - `audit.data_access_log`
+  - `audit_event`
+  - `data_access_log`

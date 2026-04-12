@@ -21,6 +21,8 @@ import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
+import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
+import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.usecase.StreamAiChatUseCase;
 import me.jianwen.mediask.common.request.RequestConstants;
 import me.jianwen.mediask.domain.user.model.DataScopeRule;
@@ -32,7 +34,14 @@ import me.jianwen.mediask.domain.ai.model.AiExecutionMetadata;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RecommendedDepartment;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
+import me.jianwen.mediask.domain.ai.port.AiChatPort;
+import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
+import me.jianwen.mediask.domain.ai.port.AiGuardrailEventRepository;
+import me.jianwen.mediask.domain.ai.port.AiModelRunRepository;
+import me.jianwen.mediask.domain.ai.port.AiSessionRepository;
 import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
+import me.jianwen.mediask.domain.ai.port.AiTurnContentRepository;
+import me.jianwen.mediask.domain.ai.port.AiTurnRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.SyncTaskExecutor;
@@ -57,11 +66,14 @@ class AiControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private StubAiChatStreamPort aiChatStreamPort;
+    private StubChatAiUseCase chatAiUseCase;
 
     @BeforeEach
     void setUp() {
         aiChatStreamPort = new StubAiChatStreamPort();
+        chatAiUseCase = new StubChatAiUseCase();
         AiController controller = new AiController(
+                chatAiUseCase,
                 new StreamAiChatUseCase(aiChatStreamPort),
                 new SyncTaskExecutor());
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -112,6 +124,55 @@ class AiControllerTest {
         assertTrue(body.contains("\"turnId\":"));
         assertTrue(body.contains("event:end"));
         assertFalse(body.contains("\"code\":0"));
+    }
+
+    @Test
+    void chat_WhenSuccessful_ReturnJsonResult() throws Exception {
+        chatAiUseCase.result = new ChatAiResult(
+                90001L, 90011L, "建议尽快线下就医", new me.jianwen.mediask.domain.ai.model.AiChatReply(
+                        "建议尽快线下就医",
+                        "头痛三天",
+                        RiskLevel.MEDIUM,
+                        GuardrailAction.CAUTION,
+                        List.of(new RecommendedDepartment(101L, "神经内科", 1, "头痛持续")),
+                        "建议挂号",
+                        List.of(new AiCitation(7001L, 1, 0.82D, "引用片段")),
+                        AiExecutionMetadata.empty()));
+
+        mockMvc.perform(post("/api/v1/ai/chat")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message": "头痛三天",
+                                  "sceneType": "PRE_CONSULTATION",
+                                  "useStream": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.sessionId").value("90001"))
+                .andExpect(jsonPath("$.data.turnId").value("90011"))
+                .andExpect(jsonPath("$.data.answer").value("建议尽快线下就医"))
+                .andExpect(jsonPath("$.data.triageResult.nextAction").value("GO_REGISTRATION"));
+    }
+
+    @Test
+    void chat_WhenUseStreamTrue_ReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/api/v1/ai/chat")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message": "头痛三天",
+                                  "sceneType": "PRE_CONSULTATION",
+                                  "useStream": true
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(1002))
+                .andExpect(jsonPath("$.msg").value("useStream must be false for /api/v1/ai/chat"));
     }
 
     @Test
@@ -224,6 +285,7 @@ class AiControllerTest {
     @Test
     void stream_WhenExecutorRejects_ReturnErrorEvent() throws Exception {
         AiController controller = new AiController(
+                chatAiUseCase,
                 new StreamAiChatUseCase(aiChatStreamPort),
                 task -> {
                     throw new TaskRejectedException("executor saturated");
@@ -355,7 +417,7 @@ class AiControllerTest {
         private final SseEmitter emitter;
 
         private TestAiController(StreamAiChatUseCase streamAiChatUseCase, SseEmitter emitter) {
-            super(streamAiChatUseCase, new SyncTaskExecutor());
+            super(new StubChatAiUseCase(), streamAiChatUseCase, new SyncTaskExecutor());
             this.emitter = emitter;
         }
 
@@ -399,5 +461,68 @@ class AiControllerTest {
             completeWithErrorCalled = true;
             completionError = ex;
         }
+    }
+
+    private static final class StubChatAiUseCase extends ChatAiUseCase {
+
+        private ChatAiResult result;
+
+        private StubChatAiUseCase() {
+            super(
+                    new NoopAiChatPort(),
+                    new NoopAiSessionRepository(),
+                    new NoopAiTurnRepository(),
+                    content -> {},
+                    new NoopAiModelRunRepository(),
+                    event -> {},
+                    plainText -> plainText);
+        }
+
+        @Override
+        public ChatAiResult handle(me.jianwen.mediask.application.ai.command.ChatAiCommand command) {
+            return result;
+        }
+    }
+
+    private static final class NoopAiChatPort implements AiChatPort {
+        @Override
+        public me.jianwen.mediask.domain.ai.model.AiChatReply chat(
+                me.jianwen.mediask.domain.ai.model.AiChatInvocation invocation) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class NoopAiSessionRepository implements AiSessionRepository {
+        @Override
+        public void save(me.jianwen.mediask.domain.ai.model.AiSession aiSession) {}
+
+        @Override
+        public java.util.Optional<me.jianwen.mediask.domain.ai.model.AiSession> findById(Long sessionId) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public void update(me.jianwen.mediask.domain.ai.model.AiSession aiSession) {}
+    }
+
+    private static final class NoopAiTurnRepository implements AiTurnRepository {
+        @Override
+        public void save(me.jianwen.mediask.domain.ai.model.AiTurn aiTurn) {}
+
+        @Override
+        public int findMaxTurnNoBySessionId(Long sessionId) {
+            return 0;
+        }
+
+        @Override
+        public void update(me.jianwen.mediask.domain.ai.model.AiTurn aiTurn) {}
+    }
+
+    private static final class NoopAiModelRunRepository implements AiModelRunRepository {
+        @Override
+        public void save(me.jianwen.mediask.domain.ai.model.AiModelRun aiModelRun) {}
+
+        @Override
+        public void update(me.jianwen.mediask.domain.ai.model.AiModelRun aiModelRun) {}
     }
 }

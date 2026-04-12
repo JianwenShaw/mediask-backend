@@ -50,6 +50,8 @@ mybatis-plus:
       logic-delete-value: "now()"
 
 mediask:
+  encryption:
+    key: ${MEDIASK_ENCRYPTION_KEY}
   jwt:
     secret: ${MEDIASK_JWT_SECRET}
     issuer: ${MEDIASK_JWT_ISSUER:mediask}

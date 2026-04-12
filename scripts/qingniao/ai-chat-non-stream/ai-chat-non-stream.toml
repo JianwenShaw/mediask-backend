@@ -1,0 +1,209 @@
+[output]
+full_body = true
+
+[[requests]]
+name = "login patient"
+method = "POST"
+url = "{{env.base_url}}/api/v1/auth/login"
+body = """
+{
+  "username": "{{env.username}}",
+  "password": "{{env.password}}"
+}
+"""
+
+[requests.save]
+token = "body.data.accessToken"
+refreshToken = "body.data.refreshToken"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.data.accessToken"
+op = "exists"
+
+[[requests]]
+name = "create ai chat session"
+method = "POST"
+url = "{{env.base_url}}/api/v1/ai/chat"
+depends_on = ["login patient"]
+body = """
+{
+  "sessionId": null,
+  "message": "头痛三天，伴有低烧，应该先看什么科？",
+  "departmentId": {{env.department_id}},
+  "sceneType": "PRE_CONSULTATION",
+  "useStream": false
+}
+"""
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+X-Request-Id = "req_qingniao_ai_chat_001"
+
+[requests.save]
+sessionId = "body.data.sessionId"
+turnId = "body.data.turnId"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.requestId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.sessionId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.turnId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.answer"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.triageResult.riskLevel"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.triageResult.guardrailAction"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.triageResult.nextAction"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.triageResult.citations"
+op = "exists"
+
+[[requests]]
+name = "continue ai chat session"
+method = "POST"
+url = "{{env.base_url}}/api/v1/ai/chat"
+depends_on = ["login patient", "create ai chat session"]
+body = """
+{
+  "sessionId": {{run.sessionId}},
+  "message": "另外还有点恶心，需要挂急诊吗？",
+  "departmentId": {{env.department_id}},
+  "sceneType": "PRE_CONSULTATION",
+  "useStream": false
+}
+"""
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+X-Request-Id = "req_qingniao_ai_chat_002"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0
+
+[[requests.assert]]
+left = "body.requestId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.sessionId"
+op = "eq"
+right = "{{run.sessionId}}"
+
+[[requests.assert]]
+left = "body.data.turnId"
+op = "exists"
+
+[[requests.assert]]
+left = "body.data.answer"
+op = "exists"
+
+[[requests]]
+name = "reject useStream true on chat"
+method = "POST"
+url = "{{env.base_url}}/api/v1/ai/chat"
+depends_on = ["login patient"]
+body = """
+{
+  "sessionId": null,
+  "message": "这个请求应该被拒绝",
+  "departmentId": {{env.department_id}},
+  "sceneType": "PRE_CONSULTATION",
+  "useStream": true
+}
+"""
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+X-Request-Id = "req_qingniao_ai_chat_003"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 400
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 1002
+
+[[requests.assert]]
+left = "body.msg"
+op = "eq"
+right = "useStream must be false for /api/v1/ai/chat"
+
+[[requests.assert]]
+left = "body.requestId"
+op = "exists"
+
+[[requests]]
+name = "logout patient"
+method = "POST"
+url = "{{env.base_url}}/api/v1/auth/logout"
+depends_on = [
+  "login patient",
+  "create ai chat session",
+  "continue ai chat session",
+  "reject useStream true on chat"
+]
+body = """
+{
+  "refreshToken": "{{run.refreshToken}}"
+}
+"""
+
+[requests.headers]
+Authorization = "Bearer {{run.token}}"
+
+[[requests.assert]]
+left = "status"
+op = "eq"
+right = 200
+
+[[requests.assert]]
+left = "body.code"
+op = "eq"
+right = 0

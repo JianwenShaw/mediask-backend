@@ -16,7 +16,12 @@ public enum AiErrorCode implements ErrorCodeType {
     KNOWLEDGE_BASE_UPDATE_CONFLICT(6010, "knowledge base update conflict", ErrorCodeCategory.CONFLICT),
     KNOWLEDGE_BASE_DELETE_CONFLICT(6011, "knowledge base delete conflict", ErrorCodeCategory.CONFLICT),
     KNOWLEDGE_BASE_STATUS_INVALID(6012, "knowledge base status invalid", ErrorCodeCategory.CONFLICT),
-    KNOWLEDGE_DOCUMENT_DELETE_CONFLICT(6013, "knowledge document delete conflict", ErrorCodeCategory.CONFLICT);
+    KNOWLEDGE_DOCUMENT_DELETE_CONFLICT(6013, "knowledge document delete conflict", ErrorCodeCategory.CONFLICT),
+    AI_SESSION_NOT_FOUND(6014, "ai session not found", ErrorCodeCategory.NOT_FOUND),
+    AI_SESSION_ACCESS_DENIED(6015, "ai session access denied", ErrorCodeCategory.FORBIDDEN),
+    AI_SESSION_UPDATE_CONFLICT(6016, "ai session update conflict", ErrorCodeCategory.CONFLICT),
+    AI_TURN_UPDATE_CONFLICT(6017, "ai turn update conflict", ErrorCodeCategory.CONFLICT),
+    AI_MODEL_RUN_UPDATE_CONFLICT(6018, "ai model run update conflict", ErrorCodeCategory.CONFLICT);
 
     private final int code;
     private final String message;

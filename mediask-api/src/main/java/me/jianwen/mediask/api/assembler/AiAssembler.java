@@ -1,13 +1,18 @@
 package me.jianwen.mediask.api.assembler;
 
 import java.util.Locale;
+import me.jianwen.mediask.api.context.ApiRequestContext;
+import me.jianwen.mediask.api.dto.AiChatRequest;
+import me.jianwen.mediask.api.dto.AiChatResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamMetaResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
 import me.jianwen.mediask.api.dto.AiTriageResultResponse;
 import me.jianwen.mediask.api.dto.ImportKnowledgeDocumentResponse;
 import me.jianwen.mediask.api.dto.KnowledgeBaseResponse;
 import me.jianwen.mediask.api.dto.KnowledgeDocumentListItemResponse;
+import me.jianwen.mediask.application.ai.command.ChatAiCommand;
 import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
+import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
 import me.jianwen.mediask.application.ai.usecase.ImportKnowledgeDocumentResult;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
@@ -24,9 +29,23 @@ public final class AiAssembler {
     private AiAssembler() {
     }
 
+    public static ChatAiCommand toChatAiCommand(Long patientUserId, AiChatRequest request) {
+        return new ChatAiCommand(
+                patientUserId,
+                request.sessionId(),
+                request.message(),
+                request.departmentId(),
+                toSceneType(request.sceneType()),
+                ApiRequestContext.currentRequestIdOrGenerate());
+    }
+
     public static StreamAiChatCommand toStreamAiChatCommand(AiChatStreamRequest request) {
         return new StreamAiChatCommand(
                 request.sessionId(), request.message(), request.departmentId(), toSceneType(request.sceneType()));
+    }
+
+    public static AiChatResponse toChatResponse(ChatAiResult result) {
+        return new AiChatResponse(result.sessionId(), result.turnId(), result.answer(), toTriageResultResponse(result.reply()));
     }
 
     public static AiChatStreamMetaResponse toStreamMetaResponse(
