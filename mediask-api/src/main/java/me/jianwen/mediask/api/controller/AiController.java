@@ -6,10 +6,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import me.jianwen.mediask.api.assembler.AiAssembler;
 import me.jianwen.mediask.api.dto.AiChatRequest;
 import me.jianwen.mediask.api.dto.AiChatResponse;
+import me.jianwen.mediask.api.dto.AiSessionDetailResponse;
+import me.jianwen.mediask.api.dto.AiSessionTriageResultResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamErrorResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.application.ai.command.ChatAiCommand;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
 import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
@@ -28,6 +32,8 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,25 +52,27 @@ public class AiController {
 
     private final ChatAiUseCase chatAiUseCase;
     private final StreamAiChatUseCase streamAiChatUseCase;
+    private final GetAiSessionDetailUseCase getAiSessionDetailUseCase;
+    private final GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase;
     private final TaskExecutor aiSseTaskExecutor;
 
     public AiController(
             ChatAiUseCase chatAiUseCase,
-            StreamAiChatUseCase streamAiChatUseCase, @Qualifier("aiSseTaskExecutor") TaskExecutor aiSseTaskExecutor) {
+            StreamAiChatUseCase streamAiChatUseCase,
+            GetAiSessionDetailUseCase getAiSessionDetailUseCase,
+            GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase,
+            @Qualifier("aiSseTaskExecutor") TaskExecutor aiSseTaskExecutor) {
         this.chatAiUseCase = chatAiUseCase;
         this.streamAiChatUseCase = streamAiChatUseCase;
+        this.getAiSessionDetailUseCase = getAiSessionDetailUseCase;
+        this.getAiSessionTriageResultUseCase = getAiSessionTriageResultUseCase;
         this.aiSseTaskExecutor = aiSseTaskExecutor;
     }
 
     @PostMapping("/chat")
     public Result<AiChatResponse> chat(
             @RequestBody AiChatRequest request, @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
-        if (principal == null) {
-            throw new BizException(ErrorCode.UNAUTHORIZED);
-        }
-        if (principal.patientId() == null) {
-            throw new BizException(UserErrorCode.ROLE_MISMATCH);
-        }
+        requirePatientPrincipal(principal);
         if (Boolean.TRUE.equals(request.useStream())) {
             throw new BizException(ErrorCode.INVALID_PARAMETER, "useStream must be false for /api/v1/ai/chat");
         }
@@ -73,16 +81,27 @@ public class AiController {
         return Result.ok(AiAssembler.toChatResponse(result));
     }
 
+    @GetMapping("/sessions/{sessionId}")
+    public Result<AiSessionDetailResponse> getSession(
+            @PathVariable Long sessionId, @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        requirePatientPrincipal(principal);
+        return Result.ok(AiAssembler.toAiSessionDetailResponse(
+                getAiSessionDetailUseCase.handle(AiAssembler.toGetAiSessionDetailQuery(principal.userId(), sessionId))));
+    }
+
+    @GetMapping("/sessions/{sessionId}/triage-result")
+    public Result<AiSessionTriageResultResponse> getTriageResult(
+            @PathVariable Long sessionId, @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        requirePatientPrincipal(principal);
+        return Result.ok(AiAssembler.toSessionTriageResultResponse(getAiSessionTriageResultUseCase.handle(
+                AiAssembler.toGetAiSessionTriageResultQuery(principal.userId(), sessionId))));
+    }
+
     @PostMapping(path = "/chat/stream", produces = TEXT_EVENT_STREAM_UTF8)
     public SseEmitter stream(
             @RequestBody AiChatStreamRequest request,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
-        if (principal == null) {
-            throw new BizException(ErrorCode.UNAUTHORIZED);
-        }
-        if (principal.patientId() == null) {
-            throw new BizException(UserErrorCode.ROLE_MISMATCH);
-        }
+        requirePatientPrincipal(principal);
         StreamAiChatCommand command = AiAssembler.toStreamAiChatCommand(principal.userId(), request);
         SseEmitter emitter = createEmitter();
         try {
@@ -164,5 +183,14 @@ public class AiController {
             return baseException.getErrorCode();
         }
         return ErrorCode.SYSTEM_ERROR;
+    }
+
+    private void requirePatientPrincipal(AuthenticatedUserPrincipal principal) {
+        if (principal == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        if (principal.patientId() == null) {
+            throw new BizException(UserErrorCode.ROLE_MISMATCH);
+        }
     }
 }

@@ -11,6 +11,7 @@ import me.jianwen.mediask.domain.ai.port.AiChatPort;
 import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
 import me.jianwen.mediask.domain.ai.port.AiGuardrailEventRepository;
 import me.jianwen.mediask.domain.ai.port.AiModelRunRepository;
+import me.jianwen.mediask.domain.ai.port.AiSessionQueryRepository;
 import me.jianwen.mediask.domain.ai.port.AiSessionRepository;
 import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
 import me.jianwen.mediask.domain.ai.port.AiTurnContentRepository;
@@ -97,7 +98,22 @@ class AiModuleConfigTest {
 
         @Bean
         AiContentEncryptorPort aiContentEncryptorPort() {
-            return plainText -> plainText;
+            return new AiContentEncryptorPort() {
+                @Override
+                public String encrypt(String plainText) {
+                    return plainText;
+                }
+
+                @Override
+                public String decrypt(String encryptedText) {
+                    return encryptedText;
+                }
+            };
+        }
+
+        @Bean
+        AiSessionQueryRepository aiSessionQueryRepository() {
+            return new NoopAiSessionQueryRepository();
         }
     }
 
@@ -139,5 +155,18 @@ class AiModuleConfigTest {
 
         @Override
         public void update(me.jianwen.mediask.domain.ai.model.AiModelRun aiModelRun) {}
+    }
+
+    static class NoopAiSessionQueryRepository implements AiSessionQueryRepository {
+        @Override
+        public java.util.Optional<me.jianwen.mediask.domain.ai.model.AiSessionDetail> findSessionDetailById(Long sessionId) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public java.util.Optional<me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView> findLatestTriageResultBySessionId(
+                Long sessionId) {
+            return java.util.Optional.empty();
+        }
     }
 }

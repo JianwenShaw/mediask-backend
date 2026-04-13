@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -21,8 +22,12 @@ import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
+import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
+import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
 import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
 import me.jianwen.mediask.application.ai.usecase.StreamAiChatUseCase;
 import me.jianwen.mediask.common.request.RequestConstants;
 import me.jianwen.mediask.domain.user.model.DataScopeRule;
@@ -30,7 +35,15 @@ import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
 import me.jianwen.mediask.domain.ai.model.AiChatStreamEvent;
 import me.jianwen.mediask.domain.ai.model.AiChatTriageResult;
 import me.jianwen.mediask.domain.ai.model.AiCitation;
+import me.jianwen.mediask.domain.ai.model.AiContentRole;
 import me.jianwen.mediask.domain.ai.model.AiExecutionMetadata;
+import me.jianwen.mediask.domain.ai.model.AiSceneType;
+import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
+import me.jianwen.mediask.domain.ai.model.AiSessionStatus;
+import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
+import me.jianwen.mediask.domain.ai.model.AiSessionTurnDetail;
+import me.jianwen.mediask.domain.ai.model.AiTurnStatus;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RecommendedDepartment;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
@@ -67,14 +80,20 @@ class AiControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private StubAiChatStreamPort aiChatStreamPort;
     private StubChatAiUseCase chatAiUseCase;
+    private StubGetAiSessionDetailUseCase getAiSessionDetailUseCase;
+    private StubGetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase;
 
     @BeforeEach
     void setUp() {
         aiChatStreamPort = new StubAiChatStreamPort();
         chatAiUseCase = new StubChatAiUseCase();
+        getAiSessionDetailUseCase = new StubGetAiSessionDetailUseCase();
+        getAiSessionTriageResultUseCase = new StubGetAiSessionTriageResultUseCase();
         AiController controller = new AiController(
                 chatAiUseCase,
                 streamAiChatUseCase(),
+                getAiSessionDetailUseCase,
+                getAiSessionTriageResultUseCase,
                 new SyncTaskExecutor());
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler(), new ResultResponseBodyAdvice())
@@ -173,6 +192,68 @@ class AiControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(1002))
                 .andExpect(jsonPath("$.msg").value("useStream must be false for /api/v1/ai/chat"));
+    }
+
+    @Test
+    void getSession_WhenSuccessful_ReturnJsonResult() throws Exception {
+        getAiSessionDetailUseCase.result = new AiSessionDetail(
+                90001L,
+                1L,
+                101L,
+                AiSceneType.PRE_CONSULTATION,
+                AiSessionStatus.ACTIVE,
+                "头痛三天",
+                "头痛三天伴低烧",
+                java.time.OffsetDateTime.parse("2026-04-12T09:30:00+08:00"),
+                null,
+                List.of(new AiSessionTurnDetail(
+                        90011L,
+                        1,
+                        AiTurnStatus.COMPLETED,
+                        java.time.OffsetDateTime.parse("2026-04-12T09:30:00+08:00"),
+                        java.time.OffsetDateTime.parse("2026-04-12T09:31:00+08:00"),
+                        null,
+                        null,
+                        List.of(
+                                new AiSessionMessage(
+                                        AiContentRole.USER,
+                                        "头痛三天",
+                                        java.time.OffsetDateTime.parse("2026-04-12T09:30:00+08:00")),
+                                new AiSessionMessage(
+                                        AiContentRole.ASSISTANT,
+                                        "建议挂神经内科",
+                                        java.time.OffsetDateTime.parse("2026-04-12T09:31:00+08:00"))))));
+
+        mockMvc.perform(get("/api/v1/ai/sessions/90001").header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.sessionId").value("90001"))
+                .andExpect(jsonPath("$.data.sceneType").value("PRE_CONSULTATION"))
+                .andExpect(jsonPath("$.data.turns[0].messages[0].content").value("头痛三天"))
+                .andExpect(jsonPath("$.data.turns[0].messages[1].content").value("建议挂神经内科"));
+    }
+
+    @Test
+    void getTriageResult_WhenSuccessful_ReturnJsonResult() throws Exception {
+        getAiSessionTriageResultUseCase.result = new AiSessionTriageResultView(
+                90001L,
+                1L,
+                "头痛三天",
+                RiskLevel.MEDIUM,
+                GuardrailAction.CAUTION,
+                List.of(new RecommendedDepartment(101L, "神经内科", 1, "头痛持续")),
+                "建议挂号",
+                List.of(new AiCitation(7001L, 1, 0.82D, "引用片段")));
+
+        mockMvc.perform(get("/api/v1/ai/sessions/90001/triage-result").header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.sessionId").value("90001"))
+                .andExpect(jsonPath("$.data.riskLevel").value("medium"))
+                .andExpect(jsonPath("$.data.nextAction").value("GO_REGISTRATION"))
+                .andExpect(jsonPath("$.data.citations[0].chunkId").value("7001"));
     }
 
     @Test
@@ -290,6 +371,8 @@ class AiControllerTest {
         AiController controller = new AiController(
                 chatAiUseCase,
                 streamAiChatUseCase(),
+                getAiSessionDetailUseCase,
+                getAiSessionTriageResultUseCase,
                 task -> {
                     throw new TaskRejectedException("executor saturated");
                 });
@@ -407,7 +490,7 @@ class AiControllerTest {
                 content -> {},
                 new NoopAiModelRunRepository(),
                 event -> {},
-                plainText -> plainText);
+                new NoopAiContentEncryptorPort());
     }
 
     private static final class StubAiChatStreamPort implements AiChatStreamPort {
@@ -431,7 +514,12 @@ class AiControllerTest {
         private final SseEmitter emitter;
 
         private TestAiController(StreamAiChatUseCase streamAiChatUseCase, SseEmitter emitter) {
-            super(new StubChatAiUseCase(), streamAiChatUseCase, new SyncTaskExecutor());
+            super(
+                    new StubChatAiUseCase(),
+                    streamAiChatUseCase,
+                    new StubGetAiSessionDetailUseCase(),
+                    new StubGetAiSessionTriageResultUseCase(),
+                    new SyncTaskExecutor());
             this.emitter = emitter;
         }
 
@@ -489,7 +577,7 @@ class AiControllerTest {
                     content -> {},
                     new NoopAiModelRunRepository(),
                     event -> {},
-                    plainText -> plainText);
+                    new NoopAiContentEncryptorPort());
         }
 
         @Override
@@ -538,5 +626,55 @@ class AiControllerTest {
 
         @Override
         public void update(me.jianwen.mediask.domain.ai.model.AiModelRun aiModelRun) {}
+    }
+
+    private static final class NoopAiContentEncryptorPort implements AiContentEncryptorPort {
+        @Override
+        public String encrypt(String plainText) {
+            return plainText;
+        }
+
+        @Override
+        public String decrypt(String encryptedText) {
+            return encryptedText;
+        }
+    }
+
+    private static final class StubGetAiSessionDetailUseCase extends GetAiSessionDetailUseCase {
+        private AiSessionDetail result;
+
+        private StubGetAiSessionDetailUseCase() {
+            super(new NoopAiSessionQueryRepository(), new NoopAiContentEncryptorPort());
+        }
+
+        @Override
+        public AiSessionDetail handle(GetAiSessionDetailQuery query) {
+            return result;
+        }
+    }
+
+    private static final class StubGetAiSessionTriageResultUseCase extends GetAiSessionTriageResultUseCase {
+        private AiSessionTriageResultView result;
+
+        private StubGetAiSessionTriageResultUseCase() {
+            super(new NoopAiSessionQueryRepository());
+        }
+
+        @Override
+        public AiSessionTriageResultView handle(GetAiSessionTriageResultQuery query) {
+            return result;
+        }
+    }
+
+    private static final class NoopAiSessionQueryRepository implements me.jianwen.mediask.domain.ai.port.AiSessionQueryRepository {
+        @Override
+        public java.util.Optional<AiSessionDetail> findSessionDetailById(Long sessionId) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public java.util.Optional<AiSessionTriageResultView> findLatestTriageResultBySessionId(Long sessionId) {
+            return java.util.Optional.empty();
+        }
     }
 }

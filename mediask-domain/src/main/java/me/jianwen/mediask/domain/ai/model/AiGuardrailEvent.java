@@ -10,6 +10,9 @@ public record AiGuardrailEvent(
         RiskLevel riskLevel,
         GuardrailAction actionTaken,
         List<String> matchedRuleCodes,
+        String chiefComplaintSummary,
+        List<RecommendedDepartment> recommendedDepartments,
+        String careAdvice,
         String inputHash,
         String outputHash) {
 
@@ -17,6 +20,9 @@ public record AiGuardrailEvent(
         id = ArgumentChecks.requirePositive(id, "id");
         runId = ArgumentChecks.requirePositive(runId, "runId");
         matchedRuleCodes = matchedRuleCodes == null ? List.of() : List.copyOf(matchedRuleCodes);
+        chiefComplaintSummary = ArgumentChecks.blankToNull(chiefComplaintSummary);
+        recommendedDepartments = recommendedDepartments == null ? List.of() : List.copyOf(recommendedDepartments);
+        careAdvice = ArgumentChecks.blankToNull(careAdvice);
         inputHash = ArgumentChecks.blankToNull(inputHash);
         outputHash = ArgumentChecks.blankToNull(outputHash);
     }
@@ -26,6 +32,9 @@ public record AiGuardrailEvent(
             RiskLevel riskLevel,
             GuardrailAction actionTaken,
             List<String> matchedRuleCodes,
+            String chiefComplaintSummary,
+            List<RecommendedDepartment> recommendedDepartments,
+            String careAdvice,
             String inputHash,
             String outputHash) {
         return new AiGuardrailEvent(
@@ -34,6 +43,9 @@ public record AiGuardrailEvent(
                 riskLevel,
                 actionTaken,
                 matchedRuleCodes,
+                chiefComplaintSummary,
+                recommendedDepartments,
+                careAdvice,
                 inputHash,
                 outputHash);
     }

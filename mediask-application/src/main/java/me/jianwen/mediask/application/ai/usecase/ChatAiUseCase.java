@@ -90,6 +90,9 @@ public class ChatAiUseCase {
                     reply.riskLevel(),
                     reply.guardrailAction(),
                     reply.executionMetadata().matchedRuleCodes(),
+                    reply.chiefComplaintSummary(),
+                    reply.recommendedDepartments(),
+                    reply.careAdvice(),
                     inputHash,
                     outputHash));
 

@@ -47,7 +47,7 @@ class ChatAiUseCaseTest {
                 turnContentRepository,
                 modelRunRepository,
                 guardrailEventRepository,
-                plainText -> "enc<" + plainText + ">");
+                encryptor());
 
         ChatAiResult result = useCase.handle(new ChatAiCommand(
                 1001L, null, "头痛三天", 2001L, AiSceneType.PRE_CONSULTATION, "req_chat_001"));
@@ -60,6 +60,8 @@ class ChatAiUseCaseTest {
         assertEquals("enc<建议挂神经内科>", turnContentRepository.savedContents.get(1).encryptedContent());
         assertEquals(1, modelRunRepository.store.size());
         assertEquals(1, guardrailEventRepository.savedEvents.size());
+        assertEquals("头痛三天", guardrailEventRepository.savedEvents.getFirst().chiefComplaintSummary());
+        assertEquals("建议线下就诊", guardrailEventRepository.savedEvents.getFirst().careAdvice());
     }
 
     @Test
@@ -74,7 +76,7 @@ class ChatAiUseCaseTest {
                 new InMemoryAiTurnContentRepository(),
                 new InMemoryAiModelRunRepository(),
                 new InMemoryAiGuardrailEventRepository(),
-                plainText -> plainText);
+                encryptor());
 
         BizException exception = assertThrows(
                 BizException.class,
@@ -98,7 +100,7 @@ class ChatAiUseCaseTest {
                 new InMemoryAiTurnContentRepository(),
                 modelRunRepository,
                 new InMemoryAiGuardrailEventRepository(),
-                plainText -> plainText);
+                encryptor());
 
         BizException exception = assertThrows(
                 BizException.class,
@@ -120,6 +122,23 @@ class ChatAiUseCaseTest {
                 "建议线下就诊",
                 java.util.List.of(new AiCitation(7001L, 1, 0.82D, "持续头痛建议线下评估")),
                 new AiExecutionMetadata("provider-run-1", java.util.List.of("RISK_HEADACHE"), 100, 200, 1234, false));
+    }
+
+    private AiContentEncryptorPort encryptor() {
+        return new AiContentEncryptorPort() {
+            @Override
+            public String encrypt(String plainText) {
+                return "enc<" + plainText + ">";
+            }
+
+            @Override
+            public String decrypt(String encryptedText) {
+                if (encryptedText != null && encryptedText.startsWith("enc<") && encryptedText.endsWith(">")) {
+                    return encryptedText.substring(4, encryptedText.length() - 1);
+                }
+                return encryptedText;
+            }
+        };
     }
 
     private static final class InMemoryAiSessionRepository implements AiSessionRepository {

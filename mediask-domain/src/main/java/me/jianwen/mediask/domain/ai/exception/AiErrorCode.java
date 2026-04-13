@@ -21,7 +21,8 @@ public enum AiErrorCode implements ErrorCodeType {
     AI_SESSION_ACCESS_DENIED(6015, "ai session access denied", ErrorCodeCategory.FORBIDDEN),
     AI_SESSION_UPDATE_CONFLICT(6016, "ai session update conflict", ErrorCodeCategory.CONFLICT),
     AI_TURN_UPDATE_CONFLICT(6017, "ai turn update conflict", ErrorCodeCategory.CONFLICT),
-    AI_MODEL_RUN_UPDATE_CONFLICT(6018, "ai model run update conflict", ErrorCodeCategory.CONFLICT);
+    AI_MODEL_RUN_UPDATE_CONFLICT(6018, "ai model run update conflict", ErrorCodeCategory.CONFLICT),
+    AI_SESSION_TRIAGE_RESULT_NOT_FOUND(6019, "ai session triage result not found", ErrorCodeCategory.NOT_FOUND);
 
     private final int code;
     private final String message;

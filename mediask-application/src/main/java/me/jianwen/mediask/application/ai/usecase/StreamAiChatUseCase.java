@@ -225,6 +225,9 @@ public class StreamAiChatUseCase {
                     triageResult.riskLevel(),
                     triageResult.guardrailAction(),
                     triageResult.executionMetadata().matchedRuleCodes(),
+                    triageResult.chiefComplaintSummary(),
+                    triageResult.recommendedDepartments(),
+                    triageResult.careAdvice(),
                     inputHash,
                     outputHash));
 

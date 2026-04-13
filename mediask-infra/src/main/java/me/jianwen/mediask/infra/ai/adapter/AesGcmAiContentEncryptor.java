@@ -39,4 +39,21 @@ public final class AesGcmAiContentEncryptor implements AiContentEncryptorPort {
             throw new IllegalStateException("failed to encrypt ai turn content", exception);
         }
     }
+
+    @Override
+    public String decrypt(String encryptedText) {
+        try {
+            byte[] payload = Base64.getDecoder().decode(encryptedText);
+            ByteBuffer buffer = ByteBuffer.wrap(payload);
+            byte[] iv = new byte[IV_LENGTH];
+            buffer.get(iv);
+            byte[] cipherText = new byte[buffer.remaining()];
+            buffer.get(cipherText);
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
+            cipher.init(Cipher.DECRYPT_MODE, secretKeySpec, new GCMParameterSpec(TAG_LENGTH, iv));
+            return new String(cipher.doFinal(cipherText), StandardCharsets.UTF_8);
+        } catch (GeneralSecurityException | IllegalArgumentException exception) {
+            throw new IllegalStateException("failed to decrypt ai turn content", exception);
+        }
+    }
 }

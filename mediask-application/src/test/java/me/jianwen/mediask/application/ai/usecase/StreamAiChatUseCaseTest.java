@@ -72,6 +72,8 @@ class StreamAiChatUseCaseTest {
         assertEquals("enc<建议挂神经内科>", turnContentRepository.savedContents.get(1).encryptedContent());
         assertEquals(1, modelRunRepository.store.size());
         assertEquals(1, guardrailEventRepository.savedEvents.size());
+        assertEquals("头痛三天", guardrailEventRepository.savedEvents.getFirst().chiefComplaintSummary());
+        assertEquals("建议线下就诊", guardrailEventRepository.savedEvents.getFirst().careAdvice());
         assertEquals(4, events.size());
         assertInstanceOf(AiChatStreamResultEvent.Message.class, events.get(0));
         assertInstanceOf(AiChatStreamResultEvent.Message.class, events.get(1));
@@ -209,7 +211,20 @@ class StreamAiChatUseCaseTest {
     }
 
     private static AiContentEncryptorPort encryptor() {
-        return plainText -> "enc<" + plainText + ">";
+        return new AiContentEncryptorPort() {
+            @Override
+            public String encrypt(String plainText) {
+                return "enc<" + plainText + ">";
+            }
+
+            @Override
+            public String decrypt(String encryptedText) {
+                if (encryptedText != null && encryptedText.startsWith("enc<") && encryptedText.endsWith(">")) {
+                    return encryptedText.substring(4, encryptedText.length() - 1);
+                }
+                return encryptedText;
+            }
+        };
     }
 
     private AiChatTriageResult successTriageResult() {

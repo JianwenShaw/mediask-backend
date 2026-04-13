@@ -127,6 +127,9 @@
   - `ai_turn_content`
   - `ai_guardrail_event`
   - `ai_run_citation`
+- 紧急待办:
+  - 当前 `GET /api/v1/ai/sessions/{sessionId}` 已返回 AI 原文，但尚未写入 `data_access_log`
+  - 在继续推进验收或上线前，必须补齐 AI 原文查看的 `data_access_log` 写入链路和测试
 
 ### T4 验证 Java 侧 RAG 接入闭环
 

@@ -2,6 +2,7 @@ package me.jianwen.mediask.infra.persistence.repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 import me.jianwen.mediask.domain.ai.model.AiGuardrailEvent;
 import me.jianwen.mediask.domain.ai.port.AiGuardrailEventRepository;
 import me.jianwen.mediask.infra.persistence.dataobject.AiGuardrailEventDO;
@@ -31,7 +32,16 @@ public class AiGuardrailEventRepositoryAdapter implements AiGuardrailEventReposi
         dataObject.setMatchedRuleCodes(writeJson(aiGuardrailEvent.matchedRuleCodes()));
         dataObject.setInputHash(aiGuardrailEvent.inputHash());
         dataObject.setOutputHash(aiGuardrailEvent.outputHash());
-        dataObject.setEventDetailJson("{}");
+        dataObject.setEventDetailJson(writeJson(new AiGuardrailEventDetailPayload(
+                aiGuardrailEvent.chiefComplaintSummary(),
+                aiGuardrailEvent.recommendedDepartments().stream()
+                        .map(department -> new RecommendedDepartmentPayload(
+                                department.departmentId(),
+                                department.departmentName(),
+                                department.priority(),
+                                department.reason()))
+                        .toList(),
+                aiGuardrailEvent.careAdvice())));
         aiGuardrailEventMapper.insertAiGuardrailEvent(dataObject);
     }
 
@@ -42,4 +52,12 @@ public class AiGuardrailEventRepositoryAdapter implements AiGuardrailEventReposi
             throw new IllegalStateException("failed to serialize ai guardrail event", exception);
         }
     }
+
+    private record AiGuardrailEventDetailPayload(
+            String chiefComplaintSummary,
+            List<RecommendedDepartmentPayload> recommendedDepartments,
+            String careAdvice) {}
+
+    private record RecommendedDepartmentPayload(
+            Long departmentId, String departmentName, Integer priority, String reason) {}
 }
