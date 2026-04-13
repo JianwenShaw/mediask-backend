@@ -1,10 +1,12 @@
 package me.jianwen.mediask.api.assembler;
 
 import java.util.Locale;
+import java.util.List;
 import me.jianwen.mediask.api.context.ApiRequestContext;
 import me.jianwen.mediask.api.dto.AiChatRequest;
 import me.jianwen.mediask.api.dto.AiChatResponse;
 import me.jianwen.mediask.api.dto.AiSessionDetailResponse;
+import me.jianwen.mediask.api.dto.AiSessionListResponse;
 import me.jianwen.mediask.api.dto.AiSessionTriageResultResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamMetaResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
@@ -16,12 +18,14 @@ import me.jianwen.mediask.application.ai.command.ChatAiCommand;
 import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
 import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
+import me.jianwen.mediask.application.ai.query.ListAiSessionsQuery;
 import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
 import me.jianwen.mediask.application.ai.usecase.ImportKnowledgeDocumentResult;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
 import me.jianwen.mediask.domain.ai.model.AiChatTriageResult;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
@@ -61,6 +65,10 @@ public final class AiAssembler {
 
     public static GetAiSessionTriageResultQuery toGetAiSessionTriageResultQuery(Long patientUserId, Long sessionId) {
         return new GetAiSessionTriageResultQuery(patientUserId, sessionId);
+    }
+
+    public static ListAiSessionsQuery toListAiSessionsQuery(Long patientUserId) {
+        return new ListAiSessionsQuery(patientUserId);
     }
 
     public static AiChatResponse toChatResponse(ChatAiResult result) {
@@ -123,6 +131,20 @@ public final class AiAssembler {
                                                 message.role().name(), message.encryptedContent(), message.createdAt()))
                                         .toList()))
                         .toList());
+    }
+
+    public static AiSessionListResponse toAiSessionListResponse(List<AiSessionListItem> sessions) {
+        return new AiSessionListResponse(sessions.stream()
+                .map(item -> new AiSessionListResponse.AiSessionListItemResponse(
+                        item.sessionId(),
+                        item.sceneType().name(),
+                        item.status().name(),
+                        item.departmentId(),
+                        item.chiefComplaintSummary(),
+                        item.summary(),
+                        item.startedAt(),
+                        item.endedAt()))
+                .toList());
     }
 
     public static AiTriageResultResponse toTriageResultResponse(AiChatReply reply) {

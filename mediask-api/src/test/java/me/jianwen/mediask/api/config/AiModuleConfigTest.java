@@ -46,6 +46,7 @@ class AiModuleConfigTest {
                     assertThat(context).hasSingleBean(AiController.class);
                     assertThat(context).hasBean("chatAiUseCase");
                     assertThat(context).hasBean("streamAiChatUseCase");
+                    assertThat(context).hasBean("listAiSessionsUseCase");
                     assertThat(context).hasBean("aiSseTaskExecutor");
                 });
     }
@@ -158,6 +159,12 @@ class AiModuleConfigTest {
     }
 
     static class NoopAiSessionQueryRepository implements AiSessionQueryRepository {
+        @Override
+        public java.util.List<me.jianwen.mediask.domain.ai.model.AiSessionListItem> listSessionsByPatientUserId(
+                Long patientUserId) {
+            return java.util.List.of();
+        }
+
         @Override
         public java.util.Optional<me.jianwen.mediask.domain.ai.model.AiSessionDetail> findSessionDetailById(Long sessionId) {
             return java.util.Optional.empty();

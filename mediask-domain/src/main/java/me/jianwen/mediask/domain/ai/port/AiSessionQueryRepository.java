@@ -1,10 +1,14 @@
 package me.jianwen.mediask.domain.ai.port;
 
+import java.util.List;
 import java.util.Optional;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
 
 public interface AiSessionQueryRepository {
+
+    List<AiSessionListItem> listSessionsByPatientUserId(Long patientUserId);
 
     Optional<AiSessionDetail> findSessionDetailById(Long sessionId);
 

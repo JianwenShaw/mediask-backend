@@ -7,6 +7,7 @@ import me.jianwen.mediask.api.assembler.AiAssembler;
 import me.jianwen.mediask.api.dto.AiChatRequest;
 import me.jianwen.mediask.api.dto.AiChatResponse;
 import me.jianwen.mediask.api.dto.AiSessionDetailResponse;
+import me.jianwen.mediask.api.dto.AiSessionListResponse;
 import me.jianwen.mediask.api.dto.AiSessionTriageResultResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamErrorResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
@@ -14,6 +15,7 @@ import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.application.ai.command.ChatAiCommand;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
+import me.jianwen.mediask.application.ai.usecase.ListAiSessionsUseCase;
 import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
@@ -52,6 +54,7 @@ public class AiController {
 
     private final ChatAiUseCase chatAiUseCase;
     private final StreamAiChatUseCase streamAiChatUseCase;
+    private final ListAiSessionsUseCase listAiSessionsUseCase;
     private final GetAiSessionDetailUseCase getAiSessionDetailUseCase;
     private final GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase;
     private final TaskExecutor aiSseTaskExecutor;
@@ -59,11 +62,13 @@ public class AiController {
     public AiController(
             ChatAiUseCase chatAiUseCase,
             StreamAiChatUseCase streamAiChatUseCase,
+            ListAiSessionsUseCase listAiSessionsUseCase,
             GetAiSessionDetailUseCase getAiSessionDetailUseCase,
             GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase,
             @Qualifier("aiSseTaskExecutor") TaskExecutor aiSseTaskExecutor) {
         this.chatAiUseCase = chatAiUseCase;
         this.streamAiChatUseCase = streamAiChatUseCase;
+        this.listAiSessionsUseCase = listAiSessionsUseCase;
         this.getAiSessionDetailUseCase = getAiSessionDetailUseCase;
         this.getAiSessionTriageResultUseCase = getAiSessionTriageResultUseCase;
         this.aiSseTaskExecutor = aiSseTaskExecutor;
@@ -79,6 +84,13 @@ public class AiController {
         ChatAiCommand command = AiAssembler.toChatAiCommand(principal.userId(), request);
         ChatAiResult result = chatAiUseCase.handle(command);
         return Result.ok(AiAssembler.toChatResponse(result));
+    }
+
+    @GetMapping("/sessions")
+    public Result<AiSessionListResponse> getSessions(@AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        requirePatientPrincipal(principal);
+        return Result.ok(AiAssembler.toAiSessionListResponse(
+                listAiSessionsUseCase.handle(AiAssembler.toListAiSessionsQuery(principal.userId()))));
     }
 
     @GetMapping("/sessions/{sessionId}")

@@ -3,17 +3,21 @@ package me.jianwen.mediask.infra.persistence.repository;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Proxy;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.support.StaticListableBeanFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import me.jianwen.mediask.infra.persistence.dataobject.AiSessionDO;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
 import me.jianwen.mediask.infra.persistence.mapper.AiRunCitationRow;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionDetailRow;
+import me.jianwen.mediask.infra.persistence.mapper.AiSessionMapper;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionMessageRow;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionQueryMapper;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionTriageResultRow;
@@ -22,7 +26,24 @@ import me.jianwen.mediask.infra.persistence.mapper.AiSessionTurnRow;
 class AiSessionQueryRepositoryAdapterTest {
 
     @Test
+    void listSessionsByPatientUserId_ShouldMapRowsInOrder() {
+        AiSessionMapper aiSessionMapper = aiSessionMapper(List.of(
+                sessionDo(9002L, "2026-04-13T09:30:00+08:00"), sessionDo(9001L, "2026-04-12T09:30:00+08:00")));
+        StubAiSessionQueryMapper mapper = new StubAiSessionQueryMapper();
+        AiSessionQueryRepositoryAdapter adapter =
+                new AiSessionQueryRepositoryAdapter(aiSessionMapper, mapper, beanFactory().getBeanProvider(ObjectMapper.class));
+
+        List<AiSessionListItem> sessions = adapter.listSessionsByPatientUserId(1001L);
+
+        assertEquals(2, sessions.size());
+        assertEquals(9002L, sessions.getFirst().sessionId());
+        assertEquals("复诊头痛", sessions.getFirst().chiefComplaintSummary());
+        assertEquals(9001L, sessions.get(1).sessionId());
+    }
+
+    @Test
     void findSessionDetailById_ShouldAssembleTurnsAndMessagesInOrder() {
+        AiSessionMapper aiSessionMapper = aiSessionMapper(List.of());
         StubAiSessionQueryMapper mapper = new StubAiSessionQueryMapper();
         mapper.sessionDetailRow = sessionDetailRow();
         mapper.turnRows = List.of(turnRow(9101L, 1), turnRow(9102L, 2));
@@ -30,7 +51,8 @@ class AiSessionQueryRepositoryAdapterTest {
                 messageRow(9101L, "USER", "enc<头痛三天>", "2026-04-12T09:30:00+08:00"),
                 messageRow(9101L, "ASSISTANT", "enc<建议挂神经内科>", "2026-04-12T09:31:00+08:00"),
                 messageRow(9102L, "USER", "enc<仍然头痛>", "2026-04-12T09:32:00+08:00"));
-        AiSessionQueryRepositoryAdapter adapter = new AiSessionQueryRepositoryAdapter(mapper, beanFactory().getBeanProvider(ObjectMapper.class));
+        AiSessionQueryRepositoryAdapter adapter =
+                new AiSessionQueryRepositoryAdapter(aiSessionMapper, mapper, beanFactory().getBeanProvider(ObjectMapper.class));
 
         AiSessionDetail detail = adapter.findSessionDetailById(9001L).orElseThrow();
 
@@ -42,10 +64,12 @@ class AiSessionQueryRepositoryAdapterTest {
 
     @Test
     void findLatestTriageResultBySessionId_ShouldParseDetailJsonAndSortCitations() {
+        AiSessionMapper aiSessionMapper = aiSessionMapper(List.of());
         StubAiSessionQueryMapper mapper = new StubAiSessionQueryMapper();
         mapper.triageResultRow = triageResultRow();
         mapper.citationRows = List.of(citationRow(7001L, 1), citationRow(7002L, 2));
-        AiSessionQueryRepositoryAdapter adapter = new AiSessionQueryRepositoryAdapter(mapper, beanFactory().getBeanProvider(ObjectMapper.class));
+        AiSessionQueryRepositoryAdapter adapter =
+                new AiSessionQueryRepositoryAdapter(aiSessionMapper, mapper, beanFactory().getBeanProvider(ObjectMapper.class));
 
         AiSessionTriageResultView result = adapter.findLatestTriageResultBySessionId(9001L).orElseThrow();
 
@@ -60,8 +84,9 @@ class AiSessionQueryRepositoryAdapterTest {
 
     @Test
     void findSessionDetailById_WhenMapperReturnsNull_ShouldReturnEmpty() {
+        AiSessionMapper aiSessionMapper = aiSessionMapper(List.of());
         AiSessionQueryRepositoryAdapter adapter =
-                new AiSessionQueryRepositoryAdapter(new StubAiSessionQueryMapper(), beanFactory().getBeanProvider(ObjectMapper.class));
+                new AiSessionQueryRepositoryAdapter(aiSessionMapper, new StubAiSessionQueryMapper(), beanFactory().getBeanProvider(ObjectMapper.class));
 
         assertTrue(adapter.findSessionDetailById(9001L).isEmpty());
     }
@@ -70,6 +95,27 @@ class AiSessionQueryRepositoryAdapterTest {
         StaticListableBeanFactory beanFactory = new StaticListableBeanFactory();
         beanFactory.addBean("objectMapper", new ObjectMapper().findAndRegisterModules());
         return beanFactory;
+    }
+
+    private AiSessionMapper aiSessionMapper(List<AiSessionDO> sessions) {
+        return (AiSessionMapper) Proxy.newProxyInstance(
+                AiSessionMapper.class.getClassLoader(),
+                new Class<?>[] {AiSessionMapper.class},
+                (proxy, method, args) -> {
+                    if ("selectList".equals(method.getName())) {
+                        return sessions;
+                    }
+                    if (method.getReturnType().equals(boolean.class)) {
+                        return false;
+                    }
+                    if (method.getReturnType().equals(int.class)) {
+                        return 0;
+                    }
+                    if (method.getReturnType().equals(long.class)) {
+                        return 0L;
+                    }
+                    return null;
+                });
     }
 
     private AiSessionDetailRow sessionDetailRow() {
@@ -82,6 +128,19 @@ class AiSessionQueryRepositoryAdapterTest {
         row.setChiefComplaintSummary("头痛三天");
         row.setSummary("头痛三天伴低烧");
         row.setStartedAt(OffsetDateTime.parse("2026-04-12T09:30:00+08:00"));
+        return row;
+    }
+
+    private AiSessionDO sessionDo(Long sessionId, String startedAt) {
+        AiSessionDO row = new AiSessionDO();
+        row.setId(sessionId);
+        row.setDepartmentId(2001L);
+        row.setSceneType("PRE_CONSULTATION");
+        row.setSessionStatus(sessionId.equals(9002L) ? "CLOSED" : "ACTIVE");
+        row.setChiefComplaintSummary(sessionId.equals(9002L) ? "复诊头痛" : "头痛三天");
+        row.setSummary(sessionId.equals(9002L) ? "复诊头痛已缓解" : "头痛三天伴低烧");
+        row.setStartedAt(OffsetDateTime.parse(startedAt));
+        row.setEndedAt(sessionId.equals(9002L) ? OffsetDateTime.parse("2026-04-13T09:35:00+08:00") : null);
         return row;
     }
 

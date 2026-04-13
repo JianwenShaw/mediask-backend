@@ -3,6 +3,7 @@ package me.jianwen.mediask.api.config;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
+import me.jianwen.mediask.application.ai.usecase.ListAiSessionsUseCase;
 import me.jianwen.mediask.domain.ai.port.AiChatPort;
 import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
 import me.jianwen.mediask.domain.ai.port.AiGuardrailEventRepository;
@@ -66,6 +67,11 @@ public class AiModuleConfig {
     public GetAiSessionDetailUseCase getAiSessionDetailUseCase(
             AiSessionQueryRepository aiSessionQueryRepository, AiContentEncryptorPort aiContentEncryptorPort) {
         return new GetAiSessionDetailUseCase(aiSessionQueryRepository, aiContentEncryptorPort);
+    }
+
+    @Bean
+    public ListAiSessionsUseCase listAiSessionsUseCase(AiSessionQueryRepository aiSessionQueryRepository) {
+        return new ListAiSessionsUseCase(aiSessionQueryRepository);
     }
 
     @Bean

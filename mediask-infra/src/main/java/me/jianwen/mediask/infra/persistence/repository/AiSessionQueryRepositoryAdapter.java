@@ -1,5 +1,6 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +13,7 @@ import me.jianwen.mediask.domain.ai.model.AiCitation;
 import me.jianwen.mediask.domain.ai.model.AiContentRole;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
 import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
 import me.jianwen.mediask.domain.ai.model.AiSessionStatus;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
@@ -21,9 +23,11 @@ import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RecommendedDepartment;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
 import me.jianwen.mediask.domain.ai.port.AiSessionQueryRepository;
+import me.jianwen.mediask.infra.persistence.dataobject.AiSessionDO;
 import me.jianwen.mediask.infra.persistence.mapper.AiRunCitationRow;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionDetailRow;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionMessageRow;
+import me.jianwen.mediask.infra.persistence.mapper.AiSessionMapper;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionQueryMapper;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionTriageResultRow;
 import me.jianwen.mediask.infra.persistence.mapper.AiSessionTurnRow;
@@ -33,13 +37,28 @@ import org.springframework.stereotype.Component;
 @Component
 public class AiSessionQueryRepositoryAdapter implements AiSessionQueryRepository {
 
+    private final AiSessionMapper aiSessionMapper;
     private final AiSessionQueryMapper aiSessionQueryMapper;
     private final ObjectMapper objectMapper;
 
     public AiSessionQueryRepositoryAdapter(
+            AiSessionMapper aiSessionMapper,
             AiSessionQueryMapper aiSessionQueryMapper, ObjectProvider<ObjectMapper> objectMapperProvider) {
+        this.aiSessionMapper = aiSessionMapper;
         this.aiSessionQueryMapper = aiSessionQueryMapper;
         this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new).copy().findAndRegisterModules();
+    }
+
+    @Override
+    public List<AiSessionListItem> listSessionsByPatientUserId(Long patientUserId) {
+        return aiSessionMapper
+                .selectList(Wrappers.lambdaQuery(AiSessionDO.class)
+                        .eq(AiSessionDO::getPatientId, patientUserId)
+                        .isNull(AiSessionDO::getDeletedAt)
+                        .orderByDesc(AiSessionDO::getStartedAt, AiSessionDO::getId))
+                .stream()
+                .map(this::toSessionListItem)
+                .toList();
     }
 
     @Override
@@ -116,6 +135,18 @@ public class AiSessionQueryRepositoryAdapter implements AiSessionQueryRepository
 
     private AiCitation toCitation(AiRunCitationRow row) {
         return new AiCitation(row.getChunkId(), row.getRetrievalRank(), row.getFusionScore(), row.getSnippet());
+    }
+
+    private AiSessionListItem toSessionListItem(AiSessionDO row) {
+        return new AiSessionListItem(
+                row.getId(),
+                row.getDepartmentId(),
+                AiSceneType.valueOf(row.getSceneType()),
+                AiSessionStatus.valueOf(row.getSessionStatus()),
+                row.getChiefComplaintSummary(),
+                row.getSummary(),
+                row.getStartedAt(),
+                row.getEndedAt());
     }
 
     private EventDetailPayload parseEventDetail(String eventDetailJson) {

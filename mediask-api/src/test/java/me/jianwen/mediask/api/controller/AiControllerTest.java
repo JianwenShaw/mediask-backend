@@ -24,10 +24,12 @@ import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
 import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
+import me.jianwen.mediask.application.ai.query.ListAiSessionsQuery;
 import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
+import me.jianwen.mediask.application.ai.usecase.ListAiSessionsUseCase;
 import me.jianwen.mediask.application.ai.usecase.StreamAiChatUseCase;
 import me.jianwen.mediask.common.request.RequestConstants;
 import me.jianwen.mediask.domain.user.model.DataScopeRule;
@@ -39,6 +41,7 @@ import me.jianwen.mediask.domain.ai.model.AiContentRole;
 import me.jianwen.mediask.domain.ai.model.AiExecutionMetadata;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
 import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
 import me.jianwen.mediask.domain.ai.model.AiSessionStatus;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
@@ -80,6 +83,7 @@ class AiControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private StubAiChatStreamPort aiChatStreamPort;
     private StubChatAiUseCase chatAiUseCase;
+    private StubListAiSessionsUseCase listAiSessionsUseCase;
     private StubGetAiSessionDetailUseCase getAiSessionDetailUseCase;
     private StubGetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase;
 
@@ -87,11 +91,13 @@ class AiControllerTest {
     void setUp() {
         aiChatStreamPort = new StubAiChatStreamPort();
         chatAiUseCase = new StubChatAiUseCase();
+        listAiSessionsUseCase = new StubListAiSessionsUseCase();
         getAiSessionDetailUseCase = new StubGetAiSessionDetailUseCase();
         getAiSessionTriageResultUseCase = new StubGetAiSessionTriageResultUseCase();
         AiController controller = new AiController(
                 chatAiUseCase,
                 streamAiChatUseCase(),
+                listAiSessionsUseCase,
                 getAiSessionDetailUseCase,
                 getAiSessionTriageResultUseCase,
                 new SyncTaskExecutor());
@@ -192,6 +198,56 @@ class AiControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(1002))
                 .andExpect(jsonPath("$.msg").value("useStream must be false for /api/v1/ai/chat"));
+    }
+
+    @Test
+    void getSessions_WhenSuccessful_ReturnJsonResult() throws Exception {
+        listAiSessionsUseCase.result = List.of(
+                new AiSessionListItem(
+                        90002L,
+                        101L,
+                        AiSceneType.PRE_CONSULTATION,
+                        AiSessionStatus.CLOSED,
+                        "复诊头痛",
+                        "复诊头痛已缓解",
+                        java.time.OffsetDateTime.parse("2026-04-13T09:30:00+08:00"),
+                        java.time.OffsetDateTime.parse("2026-04-13T09:35:00+08:00")),
+                new AiSessionListItem(
+                        90001L,
+                        101L,
+                        AiSceneType.PRE_CONSULTATION,
+                        AiSessionStatus.ACTIVE,
+                        "头痛三天",
+                        "头痛三天伴低烧",
+                        java.time.OffsetDateTime.parse("2026-04-12T09:30:00+08:00"),
+                        null));
+
+        mockMvc.perform(get("/api/v1/ai/sessions").header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].sessionId").value("90002"))
+                .andExpect(jsonPath("$.data.items[0].status").value("CLOSED"))
+                .andExpect(jsonPath("$.data.items[1].sessionId").value("90001"))
+                .andExpect(jsonPath("$.data.items[1].endedAt").doesNotExist());
+    }
+
+    @Test
+    void getSessions_WhenUnauthenticated_ReturnUnauthorizedJson() throws Exception {
+        mockMvc.perform(get("/api/v1/ai/sessions"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(1001))
+                .andExpect(jsonPath("$.msg").value("unauthorized"));
+    }
+
+    @Test
+    void getSessions_WhenAuthenticatedUserIsNotPatient_ReturnForbiddenJson() throws Exception {
+        mockMvc.perform(get("/api/v1/ai/sessions").header("Authorization", "Bearer " + DOCTOR_TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(2008))
+                .andExpect(jsonPath("$.msg").value("role mismatch"));
     }
 
     @Test
@@ -371,6 +427,7 @@ class AiControllerTest {
         AiController controller = new AiController(
                 chatAiUseCase,
                 streamAiChatUseCase(),
+                listAiSessionsUseCase,
                 getAiSessionDetailUseCase,
                 getAiSessionTriageResultUseCase,
                 task -> {
@@ -517,6 +574,7 @@ class AiControllerTest {
             super(
                     new StubChatAiUseCase(),
                     streamAiChatUseCase,
+                    new StubListAiSessionsUseCase(),
                     new StubGetAiSessionDetailUseCase(),
                     new StubGetAiSessionTriageResultUseCase(),
                     new SyncTaskExecutor());
@@ -653,6 +711,19 @@ class AiControllerTest {
         }
     }
 
+    private static final class StubListAiSessionsUseCase extends ListAiSessionsUseCase {
+        private List<AiSessionListItem> result = List.of();
+
+        private StubListAiSessionsUseCase() {
+            super(new NoopAiSessionQueryRepository());
+        }
+
+        @Override
+        public List<AiSessionListItem> handle(ListAiSessionsQuery query) {
+            return result;
+        }
+    }
+
     private static final class StubGetAiSessionTriageResultUseCase extends GetAiSessionTriageResultUseCase {
         private AiSessionTriageResultView result;
 
@@ -667,6 +738,11 @@ class AiControllerTest {
     }
 
     private static final class NoopAiSessionQueryRepository implements me.jianwen.mediask.domain.ai.port.AiSessionQueryRepository {
+        @Override
+        public java.util.List<AiSessionListItem> listSessionsByPatientUserId(Long patientUserId) {
+            return java.util.List.of();
+        }
+
         @Override
         public java.util.Optional<AiSessionDetail> findSessionDetailById(Long sessionId) {
             return java.util.Optional.empty();

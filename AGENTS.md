@@ -34,6 +34,8 @@ Additional Maven testing note:
 - Recommended pattern:
   - `mvn -pl mediask-api -am -Dtest=SomeTest test`
   - add `-Dsurefire.failIfNoSpecifiedTests=false` when targeting a narrow test set across the reactor and upstream modules have no matching tests.
+- `mediask-infra` tests should not assume Mockito is available. Prefer manual stubs, lightweight test doubles, or JDK dynamic proxies unless the module already has the needed test dependency.
+- Do not add test dependencies just to simplify a small repository/adapter test. Stay within the repo’s existing dependency set.
 
 ### when changing AI APIs or SSE.
 `docs/docs/10A-JAVA_AI_API_CONTRACT.md` 

@@ -8,12 +8,14 @@ import java.util.List;
 import java.util.Optional;
 import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
+import me.jianwen.mediask.application.ai.query.ListAiSessionsQuery;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
 import me.jianwen.mediask.domain.ai.model.AiCitation;
 import me.jianwen.mediask.domain.ai.model.AiContentRole;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
 import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
 import me.jianwen.mediask.domain.ai.model.AiSessionStatus;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
@@ -27,6 +29,17 @@ import me.jianwen.mediask.domain.ai.port.AiSessionQueryRepository;
 import org.junit.jupiter.api.Test;
 
 class GetAiSessionReadUseCaseTest {
+
+    @Test
+    void listAiSessions_ShouldReturnRepositoryResults() {
+        ListAiSessionsUseCase useCase = new ListAiSessionsUseCase(new StubQueryRepository());
+
+        List<AiSessionListItem> sessions = useCase.handle(new ListAiSessionsQuery(1001L));
+
+        assertEquals(2, sessions.size());
+        assertEquals(9002L, sessions.getFirst().sessionId());
+        assertEquals(AiSessionStatus.CLOSED, sessions.getFirst().status());
+    }
 
     @Test
     void getSessionDetail_WhenOwnedByPatient_ShouldDecryptMessages() {
@@ -52,6 +65,11 @@ class GetAiSessionReadUseCaseTest {
     @Test
     void getSessionTriageResult_WhenMissing_ShouldReject() {
         GetAiSessionTriageResultUseCase useCase = new GetAiSessionTriageResultUseCase(new AiSessionQueryRepository() {
+            @Override
+            public List<AiSessionListItem> listSessionsByPatientUserId(Long patientUserId) {
+                return List.of();
+            }
+
             @Override
             public Optional<AiSessionDetail> findSessionDetailById(Long sessionId) {
                 return Optional.empty();
@@ -95,6 +113,29 @@ class GetAiSessionReadUseCaseTest {
     }
 
     private static final class StubQueryRepository implements AiSessionQueryRepository {
+        @Override
+        public List<AiSessionListItem> listSessionsByPatientUserId(Long patientUserId) {
+            return List.of(
+                    new AiSessionListItem(
+                            9002L,
+                            2001L,
+                            AiSceneType.PRE_CONSULTATION,
+                            AiSessionStatus.CLOSED,
+                            "复诊头痛",
+                            "复诊头痛已缓解",
+                            OffsetDateTime.parse("2026-04-13T09:30:00+08:00"),
+                            OffsetDateTime.parse("2026-04-13T09:35:00+08:00")),
+                    new AiSessionListItem(
+                            9001L,
+                            2001L,
+                            AiSceneType.PRE_CONSULTATION,
+                            AiSessionStatus.ACTIVE,
+                            "头痛三天",
+                            "头痛三天伴低烧",
+                            OffsetDateTime.parse("2026-04-12T09:30:00+08:00"),
+                            null));
+        }
+
         @Override
         public Optional<AiSessionDetail> findSessionDetailById(Long sessionId) {
             return Optional.of(new AiSessionDetail(
