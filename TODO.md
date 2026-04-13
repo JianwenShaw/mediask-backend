@@ -106,13 +106,16 @@
 ### T3 AI 会话回看与导诊结果
 
 - ID: `T3`
-- 状态: `todo`
+- 状态: `done`
 - 目标: 完成会话详情与导诊结果查询，支撑患者结果页和后续挂号承接。
 - Java 完成标准:
   - 完成 `GET /api/v1/ai/sessions/{sessionId}`。
   - 完成 `GET /api/v1/ai/sessions/{sessionId}/triage-result`。
   - 导诊结果可展示 `riskLevel`、`nextAction`、`recommendedDepartments`、`citations`。
   - 高风险分支不继续普通问答，返回明确下一步动作。
+- 当前实现边界:
+  - 当前仅支持患者本人回看自己的 AI 会话。
+  - 医生侧 AI 内容查看仍由后续 `T8` 的 `GET /api/v1/encounters/{encounterId}/ai-summary` 承接。
 - 依赖 Python 提供:
   - 已在问诊阶段返回并写入可回放的 `risk_level`、`guardrail_action`、`citations`
   - `ai_run_citation` 数据完整可查
