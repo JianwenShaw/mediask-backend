@@ -1,7 +1,9 @@
 package me.jianwen.mediask.api.config;
 
+import java.time.Clock;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionRegistrationHandoffUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
 import me.jianwen.mediask.application.ai.usecase.ListAiSessionsUseCase;
 import me.jianwen.mediask.domain.ai.port.AiChatPort;
@@ -16,6 +18,7 @@ import me.jianwen.mediask.domain.ai.port.AiTurnContentRepository;
 import me.jianwen.mediask.domain.ai.port.AiTurnRepository;
 import me.jianwen.mediask.infra.observability.MdcTaskDecorator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
@@ -78,6 +81,18 @@ public class AiModuleConfig {
     public GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase(
             AiSessionQueryRepository aiSessionQueryRepository) {
         return new GetAiSessionTriageResultUseCase(aiSessionQueryRepository);
+    }
+
+    @Bean("aiRegistrationHandoffClock")
+    public Clock aiRegistrationHandoffClock() {
+        return Clock.systemDefaultZone();
+    }
+
+    @Bean
+    public GetAiSessionRegistrationHandoffUseCase getAiSessionRegistrationHandoffUseCase(
+            AiSessionQueryRepository aiSessionQueryRepository,
+            @Qualifier("aiRegistrationHandoffClock") Clock aiRegistrationHandoffClock) {
+        return new GetAiSessionRegistrationHandoffUseCase(aiSessionQueryRepository, aiRegistrationHandoffClock);
     }
 
     @Bean(name = "aiSseTaskExecutor")

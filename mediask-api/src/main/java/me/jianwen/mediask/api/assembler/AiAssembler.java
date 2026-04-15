@@ -7,6 +7,7 @@ import me.jianwen.mediask.api.dto.AiChatRequest;
 import me.jianwen.mediask.api.dto.AiChatResponse;
 import me.jianwen.mediask.api.dto.AiSessionDetailResponse;
 import me.jianwen.mediask.api.dto.AiSessionListResponse;
+import me.jianwen.mediask.api.dto.AiSessionRegistrationHandoffResponse;
 import me.jianwen.mediask.api.dto.AiSessionTriageResultResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamMetaResponse;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
@@ -17,6 +18,7 @@ import me.jianwen.mediask.api.dto.KnowledgeDocumentListItemResponse;
 import me.jianwen.mediask.application.ai.command.ChatAiCommand;
 import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
 import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
+import me.jianwen.mediask.application.ai.query.GetAiSessionRegistrationHandoffQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
 import me.jianwen.mediask.application.ai.query.ListAiSessionsQuery;
 import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
@@ -26,6 +28,7 @@ import me.jianwen.mediask.common.exception.ErrorCode;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
 import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
+import me.jianwen.mediask.domain.ai.model.AiSessionRegistrationHandoffView;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
 import me.jianwen.mediask.domain.ai.model.AiChatTriageResult;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
@@ -65,6 +68,11 @@ public final class AiAssembler {
 
     public static GetAiSessionTriageResultQuery toGetAiSessionTriageResultQuery(Long patientUserId, Long sessionId) {
         return new GetAiSessionTriageResultQuery(patientUserId, sessionId);
+    }
+
+    public static GetAiSessionRegistrationHandoffQuery toGetAiSessionRegistrationHandoffQuery(
+            Long patientUserId, Long sessionId) {
+        return new GetAiSessionRegistrationHandoffQuery(patientUserId, sessionId);
     }
 
     public static ListAiSessionsQuery toListAiSessionsQuery(Long patientUserId) {
@@ -180,6 +188,23 @@ public final class AiAssembler {
                                 citation.fusionScore(),
                                 citation.snippet()))
                         .toList());
+    }
+
+    public static AiSessionRegistrationHandoffResponse toAiSessionRegistrationHandoffResponse(
+            AiSessionRegistrationHandoffView handoff) {
+        return new AiSessionRegistrationHandoffResponse(
+                handoff.sessionId(),
+                handoff.recommendedDepartmentId(),
+                handoff.recommendedDepartmentName(),
+                handoff.chiefComplaintSummary(),
+                handoff.suggestedVisitType(),
+                handoff.blockedReason(),
+                handoff.registrationQuery() == null
+                        ? null
+                        : new AiSessionRegistrationHandoffResponse.RegistrationQueryResponse(
+                                handoff.registrationQuery().departmentId(),
+                                handoff.registrationQuery().dateFrom(),
+                                handoff.registrationQuery().dateTo()));
     }
 
     public static AiTriageResultResponse toTriageResultResponse(AiChatTriageResult triageResult) {

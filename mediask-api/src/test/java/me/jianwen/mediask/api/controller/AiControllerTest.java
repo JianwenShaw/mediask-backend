@@ -23,11 +23,13 @@ import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.api.dto.AiChatStreamRequest;
 import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
+import me.jianwen.mediask.application.ai.query.GetAiSessionRegistrationHandoffQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
 import me.jianwen.mediask.application.ai.query.ListAiSessionsQuery;
 import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionRegistrationHandoffUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
 import me.jianwen.mediask.application.ai.usecase.ListAiSessionsUseCase;
 import me.jianwen.mediask.application.ai.usecase.StreamAiChatUseCase;
@@ -42,6 +44,7 @@ import me.jianwen.mediask.domain.ai.model.AiExecutionMetadata;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
 import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
+import me.jianwen.mediask.domain.ai.model.AiSessionRegistrationHandoffView;
 import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
 import me.jianwen.mediask.domain.ai.model.AiSessionStatus;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
@@ -86,6 +89,7 @@ class AiControllerTest {
     private StubListAiSessionsUseCase listAiSessionsUseCase;
     private StubGetAiSessionDetailUseCase getAiSessionDetailUseCase;
     private StubGetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase;
+    private StubGetAiSessionRegistrationHandoffUseCase getAiSessionRegistrationHandoffUseCase;
 
     @BeforeEach
     void setUp() {
@@ -94,12 +98,14 @@ class AiControllerTest {
         listAiSessionsUseCase = new StubListAiSessionsUseCase();
         getAiSessionDetailUseCase = new StubGetAiSessionDetailUseCase();
         getAiSessionTriageResultUseCase = new StubGetAiSessionTriageResultUseCase();
+        getAiSessionRegistrationHandoffUseCase = new StubGetAiSessionRegistrationHandoffUseCase();
         AiController controller = new AiController(
                 chatAiUseCase,
                 streamAiChatUseCase(),
                 listAiSessionsUseCase,
                 getAiSessionDetailUseCase,
                 getAiSessionTriageResultUseCase,
+                getAiSessionRegistrationHandoffUseCase,
                 new SyncTaskExecutor());
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler(), new ResultResponseBodyAdvice())
@@ -313,6 +319,71 @@ class AiControllerTest {
     }
 
     @Test
+    void getRegistrationHandoff_WhenSuccessful_ReturnJsonResult() throws Exception {
+        getAiSessionRegistrationHandoffUseCase.result = new AiSessionRegistrationHandoffView(
+                90001L,
+                1L,
+                101L,
+                "神经内科",
+                "头痛三天",
+                "OUTPATIENT",
+                null,
+                new AiSessionRegistrationHandoffView.RegistrationQuery(
+                        101L,
+                        java.time.LocalDate.parse("2026-04-15"),
+                        java.time.LocalDate.parse("2026-04-21")));
+
+        mockMvc.perform(post("/api/v1/ai/sessions/90001/registration-handoff")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.sessionId").value("90001"))
+                .andExpect(jsonPath("$.data.recommendedDepartmentId").value("101"))
+                .andExpect(jsonPath("$.data.suggestedVisitType").value("OUTPATIENT"))
+                .andExpect(jsonPath("$.data.registrationQuery.departmentId").value("101"))
+                .andExpect(jsonPath("$.data.registrationQuery.dateFrom").value("2026-04-15"))
+                .andExpect(jsonPath("$.data.registrationQuery.dateTo").value("2026-04-21"))
+                .andExpect(jsonPath("$.data.blockedReason").doesNotExist());
+    }
+
+    @Test
+    void getRegistrationHandoff_WhenEmergencyOffline_ReturnBlockedResponse() throws Exception {
+        getAiSessionRegistrationHandoffUseCase.result = new AiSessionRegistrationHandoffView(
+                90001L, 1L, null, null, "胸痛加重", null, "EMERGENCY_OFFLINE", null);
+
+        mockMvc.perform(post("/api/v1/ai/sessions/90001/registration-handoff")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.sessionId").value("90001"))
+                .andExpect(jsonPath("$.data.chiefComplaintSummary").value("胸痛加重"))
+                .andExpect(jsonPath("$.data.blockedReason").value("EMERGENCY_OFFLINE"))
+                .andExpect(jsonPath("$.data.registrationQuery").doesNotExist())
+                .andExpect(jsonPath("$.data.suggestedVisitType").doesNotExist());
+    }
+
+    @Test
+    void getRegistrationHandoff_WhenUnauthenticated_ReturnUnauthorizedJson() throws Exception {
+        mockMvc.perform(post("/api/v1/ai/sessions/90001/registration-handoff"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(1001))
+                .andExpect(jsonPath("$.msg").value("unauthorized"));
+    }
+
+    @Test
+    void getRegistrationHandoff_WhenAuthenticatedUserIsNotPatient_ReturnForbiddenJson() throws Exception {
+        mockMvc.perform(post("/api/v1/ai/sessions/90001/registration-handoff")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(header().exists(RequestConstants.REQUEST_ID_HEADER))
+                .andExpect(jsonPath("$.code").value(2008))
+                .andExpect(jsonPath("$.msg").value("role mismatch"));
+    }
+
+    @Test
     void stream_WhenUpstreamThrowsSystemException_ReturnErrorEvent() throws Exception {
         aiChatStreamPort.failure = new me.jianwen.mediask.common.exception.SysException(AiErrorCode.SERVICE_UNAVAILABLE);
 
@@ -430,6 +501,7 @@ class AiControllerTest {
                 listAiSessionsUseCase,
                 getAiSessionDetailUseCase,
                 getAiSessionTriageResultUseCase,
+                getAiSessionRegistrationHandoffUseCase,
                 task -> {
                     throw new TaskRejectedException("executor saturated");
                 });
@@ -577,6 +649,7 @@ class AiControllerTest {
                     new StubListAiSessionsUseCase(),
                     new StubGetAiSessionDetailUseCase(),
                     new StubGetAiSessionTriageResultUseCase(),
+                    new StubGetAiSessionRegistrationHandoffUseCase(),
                     new SyncTaskExecutor());
             this.emitter = emitter;
         }
@@ -733,6 +806,19 @@ class AiControllerTest {
 
         @Override
         public AiSessionTriageResultView handle(GetAiSessionTriageResultQuery query) {
+            return result;
+        }
+    }
+
+    private static final class StubGetAiSessionRegistrationHandoffUseCase extends GetAiSessionRegistrationHandoffUseCase {
+        private AiSessionRegistrationHandoffView result;
+
+        private StubGetAiSessionRegistrationHandoffUseCase() {
+            super(new NoopAiSessionQueryRepository(), java.time.Clock.systemUTC());
+        }
+
+        @Override
+        public AiSessionRegistrationHandoffView handle(GetAiSessionRegistrationHandoffQuery query) {
             return result;
         }
     }

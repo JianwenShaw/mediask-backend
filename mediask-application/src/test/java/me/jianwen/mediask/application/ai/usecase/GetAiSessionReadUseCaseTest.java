@@ -3,10 +3,14 @@ package me.jianwen.mediask.application.ai.usecase;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
+import me.jianwen.mediask.application.ai.query.GetAiSessionRegistrationHandoffQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
 import me.jianwen.mediask.application.ai.query.ListAiSessionsQuery;
 import me.jianwen.mediask.common.exception.BizException;
@@ -16,6 +20,7 @@ import me.jianwen.mediask.domain.ai.model.AiContentRole;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
 import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
+import me.jianwen.mediask.domain.ai.model.AiSessionRegistrationHandoffView;
 import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
 import me.jianwen.mediask.domain.ai.model.AiSessionStatus;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
@@ -98,6 +103,61 @@ class GetAiSessionReadUseCaseTest {
         assertEquals("持续头痛建议线下评估", result.citations().getFirst().snippet());
     }
 
+    @Test
+    void getSessionRegistrationHandoff_WhenOwnedByPatient_ShouldReturnHandoff() {
+        GetAiSessionRegistrationHandoffUseCase useCase = new GetAiSessionRegistrationHandoffUseCase(
+                new StubQueryRepository(),
+                Clock.fixed(Instant.parse("2026-04-15T00:00:00Z"), ZoneOffset.UTC));
+
+        AiSessionRegistrationHandoffView result =
+                useCase.handle(new GetAiSessionRegistrationHandoffQuery(1001L, 9001L));
+
+        assertEquals(101L, result.recommendedDepartmentId());
+        assertEquals("神经内科", result.recommendedDepartmentName());
+        assertEquals("OUTPATIENT", result.suggestedVisitType());
+        assertEquals("头痛三天", result.chiefComplaintSummary());
+        assertEquals("2026-04-15", result.registrationQuery().dateFrom().toString());
+        assertEquals("2026-04-21", result.registrationQuery().dateTo().toString());
+    }
+
+    @Test
+    void getSessionRegistrationHandoff_WhenHighRisk_ShouldReturnBlockedResponse() {
+        GetAiSessionRegistrationHandoffUseCase useCase = new GetAiSessionRegistrationHandoffUseCase(
+                new HighRiskQueryRepository(),
+                Clock.fixed(Instant.parse("2026-04-15T00:00:00Z"), ZoneOffset.UTC));
+
+        AiSessionRegistrationHandoffView result =
+                useCase.handle(new GetAiSessionRegistrationHandoffQuery(1001L, 9001L));
+
+        assertEquals("EMERGENCY_OFFLINE", result.blockedReason());
+        assertEquals(null, result.registrationQuery());
+        assertEquals(null, result.suggestedVisitType());
+    }
+
+    @Test
+    void getSessionRegistrationHandoff_WhenSessionOwnedByAnotherPatient_ShouldReject() {
+        GetAiSessionRegistrationHandoffUseCase useCase = new GetAiSessionRegistrationHandoffUseCase(
+                new StubQueryRepository(),
+                Clock.fixed(Instant.parse("2026-04-15T00:00:00Z"), ZoneOffset.UTC));
+
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(new GetAiSessionRegistrationHandoffQuery(9999L, 9001L)));
+
+        assertEquals(AiErrorCode.AI_SESSION_ACCESS_DENIED.getCode(), exception.getCode());
+    }
+
+    @Test
+    void getSessionRegistrationHandoff_WhenNoRecommendedDepartment_ShouldReject() {
+        GetAiSessionRegistrationHandoffUseCase useCase = new GetAiSessionRegistrationHandoffUseCase(
+                new NoDepartmentQueryRepository(),
+                Clock.fixed(Instant.parse("2026-04-15T00:00:00Z"), ZoneOffset.UTC));
+
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(new GetAiSessionRegistrationHandoffQuery(1001L, 9001L)));
+
+        assertEquals(AiErrorCode.AI_SESSION_REGISTRATION_HANDOFF_UNAVAILABLE.getCode(), exception.getCode());
+    }
+
     private AiContentEncryptorPort encryptor() {
         return new AiContentEncryptorPort() {
             @Override
@@ -112,7 +172,7 @@ class GetAiSessionReadUseCaseTest {
         };
     }
 
-    private static final class StubQueryRepository implements AiSessionQueryRepository {
+    private static class StubQueryRepository implements AiSessionQueryRepository {
         @Override
         public List<AiSessionListItem> listSessionsByPatientUserId(Long patientUserId) {
             return List.of(
@@ -178,6 +238,29 @@ class GetAiSessionReadUseCaseTest {
                     List.of(new RecommendedDepartment(101L, "神经内科", 1, "持续头痛")),
                     "建议线下就诊",
                     List.of(new AiCitation(7001L, 1, 0.82D, "持续头痛建议线下评估"))));
+        }
+    }
+
+    private static final class HighRiskQueryRepository extends StubQueryRepository {
+        @Override
+        public Optional<AiSessionTriageResultView> findLatestTriageResultBySessionId(Long sessionId) {
+            return Optional.of(new AiSessionTriageResultView(
+                    9001L,
+                    1001L,
+                    "胸痛一小时",
+                    RiskLevel.HIGH,
+                    GuardrailAction.CAUTION,
+                    List.of(new RecommendedDepartment(101L, "急诊科", 1, "胸痛高风险")),
+                    "立即线下就医",
+                    List.of()));
+        }
+    }
+
+    private static final class NoDepartmentQueryRepository extends StubQueryRepository {
+        @Override
+        public Optional<AiSessionTriageResultView> findLatestTriageResultBySessionId(Long sessionId) {
+            return Optional.of(new AiSessionTriageResultView(
+                    9001L, 1001L, "头痛三天", RiskLevel.MEDIUM, GuardrailAction.CAUTION, List.of(), "建议线下就诊", List.of()));
         }
     }
 }
