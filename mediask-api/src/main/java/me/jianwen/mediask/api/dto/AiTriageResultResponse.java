@@ -3,9 +3,11 @@ package me.jianwen.mediask.api.dto;
 import java.util.List;
 
 public record AiTriageResultResponse(
+        String triageStage,
         String riskLevel,
         String guardrailAction,
         String nextAction,
+        List<String> followUpQuestions,
         String chiefComplaintSummary,
         List<RecommendedDepartmentResponse> recommendedDepartments,
         String careAdvice,

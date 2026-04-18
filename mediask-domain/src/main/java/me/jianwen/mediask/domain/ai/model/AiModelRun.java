@@ -28,6 +28,7 @@ public final class AiModelRun {
     private OffsetDateTime completedAt;
     private Integer version;
     private List<String> matchedRuleCodes;
+    private AiTriageSnapshot triageSnapshot;
 
     private AiModelRun(
             Long id,
@@ -50,7 +51,8 @@ public final class AiModelRun {
             OffsetDateTime startedAt,
             OffsetDateTime completedAt,
             Integer version,
-            List<String> matchedRuleCodes) {
+            List<String> matchedRuleCodes,
+            AiTriageSnapshot triageSnapshot) {
         this.id = ArgumentChecks.requirePositive(id, "id");
         this.turnId = ArgumentChecks.requirePositive(turnId, "turnId");
         this.providerName = ArgumentChecks.requireNonBlank(providerName, "providerName");
@@ -72,6 +74,7 @@ public final class AiModelRun {
         this.completedAt = completedAt;
         this.version = version;
         this.matchedRuleCodes = matchedRuleCodes == null ? List.of() : List.copyOf(matchedRuleCodes);
+        this.triageSnapshot = triageSnapshot;
     }
 
     public static AiModelRun createRunning(Long turnId, String requestId, String requestPayloadHash, boolean ragEnabled) {
@@ -96,7 +99,8 @@ public final class AiModelRun {
                 OffsetDateTime.now(),
                 null,
                 0,
-                List.of());
+                List.of(),
+                null);
     }
 
     public static AiModelRun rehydrate(
@@ -120,7 +124,8 @@ public final class AiModelRun {
             OffsetDateTime startedAt,
             OffsetDateTime completedAt,
             Integer version,
-            List<String> matchedRuleCodes) {
+            List<String> matchedRuleCodes,
+            AiTriageSnapshot triageSnapshot) {
         return new AiModelRun(
                 id,
                 turnId,
@@ -142,10 +147,16 @@ public final class AiModelRun {
                 startedAt,
                 completedAt,
                 version,
-                matchedRuleCodes);
+                matchedRuleCodes,
+                triageSnapshot);
     }
 
     public void markSucceeded(AiExecutionMetadata metadata, String responsePayloadHash) {
+        markSucceeded(metadata, responsePayloadHash, null);
+    }
+
+    public void markSucceeded(
+            AiExecutionMetadata metadata, String responsePayloadHash, AiTriageSnapshot triageSnapshot) {
         this.providerRunId = metadata.providerRunId();
         this.status = AiModelRunStatus.SUCCEEDED;
         this.degraded = metadata.degraded();
@@ -157,6 +168,7 @@ public final class AiModelRun {
         this.errorMessage = null;
         this.completedAt = OffsetDateTime.now();
         this.matchedRuleCodes = metadata.matchedRuleCodes() == null ? List.of() : List.copyOf(metadata.matchedRuleCodes());
+        this.triageSnapshot = triageSnapshot;
     }
 
     public void markFailed(int errorCode, String errorMessage) {
@@ -248,5 +260,9 @@ public final class AiModelRun {
 
     public List<String> matchedRuleCodes() {
         return matchedRuleCodes;
+    }
+
+    public AiTriageSnapshot triageSnapshot() {
+        return triageSnapshot;
     }
 }

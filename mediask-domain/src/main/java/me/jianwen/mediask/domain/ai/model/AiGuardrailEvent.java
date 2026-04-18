@@ -10,6 +10,9 @@ public record AiGuardrailEvent(
         RiskLevel riskLevel,
         GuardrailAction actionTaken,
         List<String> matchedRuleCodes,
+        AiTriageStage triageStage,
+        AiTriageCompletionReason triageCompletionReason,
+        List<String> followUpQuestions,
         String chiefComplaintSummary,
         List<RecommendedDepartment> recommendedDepartments,
         String careAdvice,
@@ -20,6 +23,13 @@ public record AiGuardrailEvent(
         id = ArgumentChecks.requirePositive(id, "id");
         runId = ArgumentChecks.requirePositive(runId, "runId");
         matchedRuleCodes = matchedRuleCodes == null ? List.of() : List.copyOf(matchedRuleCodes);
+        triageStage = ArgumentChecks.requireNonNull(triageStage, "triageStage");
+        followUpQuestions = followUpQuestions == null
+                ? List.of()
+                : followUpQuestions.stream()
+                        .filter(question -> question != null && !question.isBlank())
+                        .map(String::trim)
+                        .toList();
         chiefComplaintSummary = ArgumentChecks.blankToNull(chiefComplaintSummary);
         recommendedDepartments = recommendedDepartments == null ? List.of() : List.copyOf(recommendedDepartments);
         careAdvice = ArgumentChecks.blankToNull(careAdvice);
@@ -32,6 +42,9 @@ public record AiGuardrailEvent(
             RiskLevel riskLevel,
             GuardrailAction actionTaken,
             List<String> matchedRuleCodes,
+            AiTriageStage triageStage,
+            AiTriageCompletionReason triageCompletionReason,
+            List<String> followUpQuestions,
             String chiefComplaintSummary,
             List<RecommendedDepartment> recommendedDepartments,
             String careAdvice,
@@ -43,6 +56,9 @@ public record AiGuardrailEvent(
                 riskLevel,
                 actionTaken,
                 matchedRuleCodes,
+                triageStage,
+                triageCompletionReason,
+                followUpQuestions,
                 chiefComplaintSummary,
                 recommendedDepartments,
                 careAdvice,

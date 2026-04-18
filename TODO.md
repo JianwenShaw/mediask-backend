@@ -29,6 +29,10 @@
 
 - `blocked` 当前 `6001` 属于 Java -> Python AI 联调问题。在 Python `/health`、`/ready`、`/api/v1/chat` 未稳定前，Java AI 主链无法完成验收。
 - `todo` Java 侧知识文档导入链路已具备，但最终 RAG 可用性仍依赖 Python 侧 `prepare/index/search` 的真实可用性。
+  - `prepare` 的职责是解析原始文档、清洗文本并返回 chunk payload，供 Java 落 `knowledge_chunk`。
+  - `index` 的职责是基于 Java 已落库的 `knowledge_chunk` 建立 `knowledge_chunk_index` 检索投影。
+  - `search` 的职责是单独验证 Python 检索链路是否可用，用来确认索引已真实可检索，而不把问题和 LLM 生成链路混在一起。
+  - 这里的 `search` 指 Python 内部检索验证接口，不是浏览器或业务侧直接依赖的对外产品接口。
 - `todo` Java 侧会话、引用、导诊结果可以先按契约落地，但最终联调仍依赖 Python 返回稳定的 `risk_level`、`guardrail_action`、`citations` 等字段。
 
 ## Phase 0 - 已完成基础能力
@@ -134,18 +138,23 @@
 ### T4 验证 Java 侧 RAG 接入闭环
 
 - ID: `T4`
-- 状态: `todo`
+- 状态: `done`
 - 目标: 验证当前 Java 知识导入链路与 AI 问诊链路已能实际接入可检索知识。
 - Java 完成标准:
   - 至少一套知识文档可通过现有后台导入接口入库。
   - `knowledge_document`、`knowledge_chunk` 数据完整。
   - Java 侧可完成 `prepare -> chunk 持久化 -> index` 整体调用。
   - 有最小联调验证记录。
+  - 联调时能用 `search` 单独证明 `knowledge_chunk_index` 已真实可命中，而不是只证明导入流程跑完。
 - 依赖 Python 提供:
   - `POST /api/v1/knowledge/prepare`
   - `POST /api/v1/knowledge/index`
   - `POST /api/v1/knowledge/search`
   - `knowledge_chunk_index` 真实写入并可检索命中
+  - 接口职责约定:
+    - `prepare`: 原始文档解析、清洗、切块，返回 chunk payload
+    - `index`: 基于 `documentId/knowledgeBaseId` 建立检索投影
+    - `search`: 检索能力验证与命中排查，不承担浏览器对外业务接口职责
 - 涉及接口/表:
   - `POST /api/v1/admin/knowledge-documents/import`
   - `knowledge_document`
@@ -157,10 +166,11 @@
 ### T5 导诊结果承接挂号
 
 - ID: `T5`
-- 状态: `todo`
+- 状态: `done`
 - 目标: 完成 `POST /api/v1/ai/sessions/{sessionId}/registration-handoff`，由 Java 把 AI 结果转换成挂号入口参数。
 - Java 完成标准:
   - 返回推荐科室、主诉摘要、建议就诊类型、挂号查询参数。
+  - 高风险分支返回显式 `blockedReason`，不生成普通挂号承接参数。
   - AI 结果可直接带出挂号检索所需 `departmentId` 等最小信息。
   - 仅允许当前患者访问自己的 AI 会话承接结果。
 - 依赖 Python 提供:
@@ -176,7 +186,7 @@
 - 状态: `todo`
 - 目标: 让 Java 挂号链路具备 AI 来源追溯能力。
 - Java 完成标准:
-  - 从 AI 导诊结果进入挂号时真实写入 `registration_order.source_ai_session_id`。
+  - 基于现有 `POST /api/v1/registrations.sourceAiSessionId` 入参与落库链路，补强 AI 来源承接后的校验与验收。
   - 现有 `POST /api/v1/registrations` 保持最小入参，不引入额外复杂度。
   - AI 来源可在后续接诊与审计链路中追溯。
 - 依赖 Python 提供:

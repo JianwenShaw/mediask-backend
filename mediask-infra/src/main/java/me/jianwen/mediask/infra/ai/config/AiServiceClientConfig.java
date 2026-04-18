@@ -4,22 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Base64;
 import me.jianwen.mediask.domain.ai.port.AiChatPort;
 import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
-import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeIndexPort;
 import me.jianwen.mediask.domain.ai.port.KnowledgePreparePort;
 import me.jianwen.mediask.domain.ai.port.KnowledgeDocumentStoragePort;
 import me.jianwen.mediask.infra.ai.adapter.PythonAiChatPortAdapter;
-import me.jianwen.mediask.infra.ai.adapter.PythonAiChatStreamPortAdapter;
 import me.jianwen.mediask.infra.ai.adapter.LocalKnowledgeDocumentStorageAdapter;
 import me.jianwen.mediask.infra.ai.adapter.OssKnowledgeDocumentStorageAdapter;
 import me.jianwen.mediask.infra.ai.adapter.PythonKnowledgePortAdapter;
 import me.jianwen.mediask.infra.ai.adapter.AesGcmAiContentEncryptor;
 import me.jianwen.mediask.infra.ai.client.PythonAiChatClient;
-import me.jianwen.mediask.infra.ai.client.PythonAiChatStreamClient;
 import me.jianwen.mediask.infra.ai.client.PythonKnowledgeClient;
 import me.jianwen.mediask.infra.ai.client.mapper.PythonAiChatMapper;
 import me.jianwen.mediask.infra.ai.client.support.AiServiceErrorDecoder;
-import me.jianwen.mediask.infra.ai.client.support.AiServiceSseEventReader;
 import me.jianwen.mediask.infra.ai.client.support.ApiKeyAuthenticationInterceptor;
 import me.jianwen.mediask.infra.observability.RequestContextPropagationInterceptor;
 import org.springframework.beans.factory.ObjectProvider;
@@ -30,6 +26,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.ResponseErrorHandler;
 import org.springframework.web.client.RestClient;
 
@@ -49,14 +46,13 @@ public class AiServiceClientConfig {
     }
 
     @Bean
-    public AiServiceErrorDecoder aiServiceErrorDecoder(ObjectProvider<ObjectMapper> objectMapperProvider) {
-        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new).copy().findAndRegisterModules();
-        return new AiServiceErrorDecoder(objectMapper);
+    public ObjectMapper aiServiceObjectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 
     @Bean
-    public AiServiceSseEventReader aiServiceSseEventReader() {
-        return new AiServiceSseEventReader();
+    public AiServiceErrorDecoder aiServiceErrorDecoder(ObjectMapper aiServiceObjectMapper) {
+        return new AiServiceErrorDecoder(aiServiceObjectMapper.copy());
     }
 
     @Bean(name = "aiServiceRestClient")
@@ -65,26 +61,16 @@ public class AiServiceClientConfig {
             AiServiceProperties properties,
             RequestContextPropagationInterceptor requestContextPropagationInterceptor,
             ApiKeyAuthenticationInterceptor apiKeyAuthenticationInterceptor,
-            AiServiceErrorDecoder aiServiceErrorDecoder) {
+            AiServiceErrorDecoder aiServiceErrorDecoder,
+            ObjectMapper aiServiceObjectMapper) {
         return builder.baseUrl(properties.baseUrl().toString())
                 .requestFactory(aiServiceRequestFactory(properties.connectTimeout(), properties.readTimeout()))
                 .requestInterceptor(requestContextPropagationInterceptor)
                 .requestInterceptor(apiKeyAuthenticationInterceptor)
-                .defaultStatusHandler(aiServiceResponseErrorHandler(aiServiceErrorDecoder))
-                .build();
-    }
-
-    @Bean(name = "aiServiceStreamRestClient")
-    public RestClient aiServiceStreamRestClient(
-            RestClient.Builder builder,
-            AiServiceProperties properties,
-            RequestContextPropagationInterceptor requestContextPropagationInterceptor,
-            ApiKeyAuthenticationInterceptor apiKeyAuthenticationInterceptor,
-            AiServiceErrorDecoder aiServiceErrorDecoder) {
-        return builder.baseUrl(properties.baseUrl().toString())
-                .requestFactory(aiServiceRequestFactory(properties.connectTimeout(), properties.streamReadTimeout()))
-                .requestInterceptor(requestContextPropagationInterceptor)
-                .requestInterceptor(apiKeyAuthenticationInterceptor)
+                .messageConverters(converters -> converters.stream()
+                        .filter(MappingJackson2HttpMessageConverter.class::isInstance)
+                        .map(MappingJackson2HttpMessageConverter.class::cast)
+                        .forEach(converter -> converter.setObjectMapper(aiServiceObjectMapper.copy())))
                 .defaultStatusHandler(aiServiceResponseErrorHandler(aiServiceErrorDecoder))
                 .build();
     }
@@ -103,17 +89,6 @@ public class AiServiceClientConfig {
     public PythonAiChatClient pythonAiChatClient(
             @Qualifier("aiServiceRestClient") RestClient aiServiceRestClient) {
         return new PythonAiChatClient(aiServiceRestClient);
-    }
-
-    @Bean
-    public PythonAiChatStreamClient pythonAiChatStreamClient(
-            @Qualifier("aiServiceStreamRestClient") RestClient aiServiceRestClient,
-            AiServiceErrorDecoder aiServiceErrorDecoder,
-            AiServiceSseEventReader aiServiceSseEventReader,
-            ObjectProvider<ObjectMapper> objectMapperProvider) {
-        ObjectMapper objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new).copy().findAndRegisterModules();
-        return new PythonAiChatStreamClient(
-                aiServiceRestClient, aiServiceErrorDecoder, aiServiceSseEventReader, objectMapper);
     }
 
     @Bean
@@ -139,12 +114,6 @@ public class AiServiceClientConfig {
     @Bean
     public AiChatPort aiChatPort(PythonAiChatClient pythonAiChatClient, PythonAiChatMapper pythonAiChatMapper) {
         return new PythonAiChatPortAdapter(pythonAiChatClient, pythonAiChatMapper);
-    }
-
-    @Bean
-    public AiChatStreamPort aiChatStreamPort(
-            PythonAiChatStreamClient pythonAiChatStreamClient, PythonAiChatMapper pythonAiChatMapper) {
-        return new PythonAiChatStreamPortAdapter(pythonAiChatStreamClient, pythonAiChatMapper);
     }
 
     @Bean

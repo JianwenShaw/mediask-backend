@@ -25,6 +25,8 @@ import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
 import me.jianwen.mediask.domain.ai.model.AiSessionStatus;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
 import me.jianwen.mediask.domain.ai.model.AiSessionTurnDetail;
+import me.jianwen.mediask.domain.ai.model.AiTriageResultStatus;
+import me.jianwen.mediask.domain.ai.model.AiTriageStage;
 import me.jianwen.mediask.domain.ai.model.AiTurnStatus;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RecommendedDepartment;
@@ -83,6 +85,16 @@ class GetAiSessionReadUseCaseTest {
             @Override
             public Optional<AiSessionTriageResultView> findLatestTriageResultBySessionId(Long sessionId) {
                 return Optional.empty();
+            }
+
+            @Override
+            public Optional<AiTriageStage> findLatestTriageStageBySessionId(Long sessionId) {
+                return Optional.empty();
+            }
+
+            @Override
+            public boolean hasAccessibleTriageSession(Long patientUserId, Long sessionId) {
+                return true;
             }
         });
 
@@ -232,12 +244,28 @@ class GetAiSessionReadUseCaseTest {
             return Optional.of(new AiSessionTriageResultView(
                     9001L,
                     1001L,
+                    AiTriageResultStatus.CURRENT,
+                    AiTriageStage.READY,
+                    9101L,
+                    OffsetDateTime.parse("2026-04-12T09:31:00+08:00"),
+                    false,
+                    null,
                     "头痛三天",
                     RiskLevel.MEDIUM,
                     GuardrailAction.CAUTION,
                     List.of(new RecommendedDepartment(101L, "神经内科", 1, "持续头痛")),
                     "建议线下就诊",
                     List.of(new AiCitation(7001L, 1, 0.82D, "持续头痛建议线下评估"))));
+        }
+
+        @Override
+        public Optional<AiTriageStage> findLatestTriageStageBySessionId(Long sessionId) {
+            return Optional.of(AiTriageStage.READY);
+        }
+
+        @Override
+        public boolean hasAccessibleTriageSession(Long patientUserId, Long sessionId) {
+            return patientUserId.equals(1001L) && sessionId.equals(9001L);
         }
     }
 
@@ -247,6 +275,12 @@ class GetAiSessionReadUseCaseTest {
             return Optional.of(new AiSessionTriageResultView(
                     9001L,
                     1001L,
+                    AiTriageResultStatus.CURRENT,
+                    AiTriageStage.BLOCKED,
+                    9101L,
+                    OffsetDateTime.parse("2026-04-12T09:31:00+08:00"),
+                    false,
+                    null,
                     "胸痛一小时",
                     RiskLevel.HIGH,
                     GuardrailAction.CAUTION,
@@ -260,7 +294,20 @@ class GetAiSessionReadUseCaseTest {
         @Override
         public Optional<AiSessionTriageResultView> findLatestTriageResultBySessionId(Long sessionId) {
             return Optional.of(new AiSessionTriageResultView(
-                    9001L, 1001L, "头痛三天", RiskLevel.MEDIUM, GuardrailAction.CAUTION, List.of(), "建议线下就诊", List.of()));
+                    9001L,
+                    1001L,
+                    AiTriageResultStatus.CURRENT,
+                    AiTriageStage.READY,
+                    9101L,
+                    OffsetDateTime.parse("2026-04-12T09:31:00+08:00"),
+                    false,
+                    null,
+                    "头痛三天",
+                    RiskLevel.MEDIUM,
+                    GuardrailAction.CAUTION,
+                    List.of(),
+                    "建议线下就诊",
+                    List.of()));
         }
     }
 }

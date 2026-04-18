@@ -7,4 +7,6 @@ public interface AiModelRunRepository {
     void save(AiModelRun aiModelRun);
 
     void update(AiModelRun aiModelRun);
+
+    Integer findLatestFinalizedTurnNoBySessionId(Long sessionId);
 }

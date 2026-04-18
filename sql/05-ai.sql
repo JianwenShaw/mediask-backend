@@ -68,6 +68,7 @@ CREATE TABLE ai_model_run (
     tokens_input INT,
     tokens_output INT,
     latency_ms INT,
+    triage_snapshot_json JSONB,
     request_payload_hash VARCHAR(128),
     response_payload_hash VARCHAR(128),
     error_code INT,

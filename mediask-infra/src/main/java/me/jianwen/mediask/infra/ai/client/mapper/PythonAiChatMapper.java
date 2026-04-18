@@ -5,9 +5,11 @@ import java.util.Locale;
 import java.util.Objects;
 import me.jianwen.mediask.domain.ai.model.AiChatInvocation;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
+import me.jianwen.mediask.domain.ai.model.AiTriageCompletionReason;
 import me.jianwen.mediask.domain.ai.model.AiChatTriageResult;
 import me.jianwen.mediask.domain.ai.model.AiCitation;
 import me.jianwen.mediask.domain.ai.model.AiExecutionMetadata;
+import me.jianwen.mediask.domain.ai.model.AiTriageStage;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RecommendedDepartment;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
@@ -17,18 +19,29 @@ import me.jianwen.mediask.infra.ai.client.dto.PythonChatResponse;
 public final class PythonAiChatMapper {
 
     public PythonChatRequest toRequest(AiChatInvocation invocation) {
-        return toRequest(invocation, false);
-    }
-
-    public PythonChatRequest toStreamRequest(AiChatInvocation invocation) {
-        return toRequest(invocation, true);
+        return new PythonChatRequest(
+                invocation.modelRunId(),
+                invocation.turnId(),
+                invocation.sessionUuid(),
+                invocation.departmentId(),
+                invocation.hospitalScope(),
+                invocation.departmentCatalogVersion(),
+                invocation.patientTurnNoInActiveCycle(),
+                invocation.forceFinalize(),
+                invocation.sceneType().name(),
+                invocation.message(),
+                invocation.contextSummary(),
+                invocation.useRag(),
+                invocation.knowledgeBaseIds());
     }
 
     public AiChatTriageResult toStreamMetaDomain(PythonChatResponse response) {
         return new AiChatTriageResult(
+                toTriageStage(response.triageStage()),
                 firstNonBlank(response.chiefComplaintSummary(), response.summary()),
                 toRiskLevel(response.riskLevel()),
                 toGuardrailAction(response.guardrailAction()),
+                normalizeQuestions(response.followUpQuestions()),
                 mapRecommendedDepartments(response.recommendedDepartments()),
                 response.careAdvice(),
                 mapCitations(response.citations()),
@@ -45,26 +58,16 @@ public final class PythonAiChatMapper {
         return toReply(response, true);
     }
 
-    private PythonChatRequest toRequest(AiChatInvocation invocation, boolean stream) {
-        return new PythonChatRequest(
-                invocation.modelRunId(),
-                invocation.turnId(),
-                invocation.sessionUuid(),
-                invocation.departmentId(),
-                invocation.sceneType().name(),
-                invocation.message(),
-                invocation.contextSummary(),
-                invocation.useRag(),
-                stream);
-    }
-
     private AiChatReply toReply(PythonChatResponse response, boolean answerRequired) {
         String answer = answerRequired ? requireAnswer(response.answer()) : response.answer();
         return new AiChatReply(
                 answer,
+                toTriageStage(response.triageStage()),
+                toTriageCompletionReason(response.triageCompletionReason()),
                 firstNonBlank(response.chiefComplaintSummary(), response.summary()),
                 toRiskLevel(response.riskLevel()),
                 toGuardrailAction(response.guardrailAction()),
+                normalizeQuestions(response.followUpQuestions()),
                 mapRecommendedDepartments(response.recommendedDepartments()),
                 response.careAdvice(),
                 mapCitations(response.citations()),
@@ -115,6 +118,17 @@ public final class PythonAiChatMapper {
         return parseEnum(value, GuardrailAction.class, "guardrailAction");
     }
 
+    private AiTriageStage toTriageStage(String value) {
+        return parseEnum(value, AiTriageStage.class, "triageStage");
+    }
+
+    private AiTriageCompletionReason toTriageCompletionReason(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return parseEnum(value, AiTriageCompletionReason.class, "triageCompletionReason");
+    }
+
     private <T extends Enum<T>> T parseEnum(String value, Class<T> enumType, String fieldName) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(fieldName + " must not be blank");
@@ -138,5 +152,15 @@ public final class PythonAiChatMapper {
             throw new IllegalArgumentException("answer must not be blank");
         }
         return answer;
+    }
+
+    private List<String> normalizeQuestions(List<String> followUpQuestions) {
+        if (followUpQuestions == null || followUpQuestions.isEmpty()) {
+            return List.of();
+        }
+        return followUpQuestions.stream()
+                .filter(question -> question != null && !question.isBlank())
+                .map(String::trim)
+                .toList();
     }
 }

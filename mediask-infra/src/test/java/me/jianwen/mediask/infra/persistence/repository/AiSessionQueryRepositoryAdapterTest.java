@@ -13,6 +13,8 @@ import me.jianwen.mediask.infra.persistence.dataobject.AiSessionDO;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
 import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
+import me.jianwen.mediask.domain.ai.model.AiTriageResultStatus;
+import me.jianwen.mediask.domain.ai.model.AiTriageStage;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
 import me.jianwen.mediask.infra.persistence.mapper.AiRunCitationRow;
@@ -73,6 +75,8 @@ class AiSessionQueryRepositoryAdapterTest {
 
         AiSessionTriageResultView result = adapter.findLatestTriageResultBySessionId(9001L).orElseThrow();
 
+        assertEquals(AiTriageResultStatus.UPDATING, result.resultStatus());
+        assertEquals(AiTriageStage.READY, result.triageStage());
         assertEquals(RiskLevel.MEDIUM, result.riskLevel());
         assertEquals(GuardrailAction.CAUTION, result.guardrailAction());
         assertEquals("头痛三天", result.chiefComplaintSummary());
@@ -168,12 +172,21 @@ class AiSessionQueryRepositoryAdapterTest {
         row.setSessionId(9001L);
         row.setPatientId(1001L);
         row.setModelRunId(9201L);
-        row.setSessionChiefComplaintSummary("头痛三天");
+        row.setFinalizedTurnId(9101L);
+        row.setFinalizedTurnNo(1);
+        row.setFinalizedAt(OffsetDateTime.parse("2026-04-12T09:31:00+08:00"));
+        row.setLatestTurnNo(3);
+        row.setLatestTurnStatus("COMPLETED");
+        row.setLatestRunStatus("SUCCEEDED");
+        row.setLatestEventDetailJson(
+                """
+                {"triageStage":"COLLECTING","followUpQuestions":["是否伴随恶心？"]}
+                """);
         row.setRiskLevel("medium");
         row.setGuardrailAction("caution");
-        row.setEventDetailJson(
+        row.setTriageSnapshotJson(
                 """
-                {"chiefComplaintSummary":"头痛三天","recommendedDepartments":[{"departmentId":101,"departmentName":"神经内科","priority":1,"reason":"持续头痛"}],"careAdvice":"建议线下就诊"}
+                {"triageStage":"READY","triageCompletionReason":"SUFFICIENT_INFO","chiefComplaintSummary":"头痛三天","recommendedDepartments":[{"departmentId":101,"departmentName":"神经内科","priority":1,"reason":"持续头痛"}],"careAdvice":"建议线下就诊"}
                 """);
         return row;
     }
@@ -217,6 +230,11 @@ class AiSessionQueryRepositoryAdapterTest {
         @Override
         public List<AiRunCitationRow> selectRunCitations(Long modelRunId) {
             return citationRows;
+        }
+
+        @Override
+        public String selectLatestTriageEventDetail(Long sessionId) {
+            return triageResultRow == null ? null : triageResultRow.getLatestEventDetailJson();
         }
     }
 }

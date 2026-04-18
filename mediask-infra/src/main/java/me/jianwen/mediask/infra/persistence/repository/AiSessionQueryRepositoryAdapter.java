@@ -16,6 +16,10 @@ import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
 import me.jianwen.mediask.domain.ai.model.AiSessionListItem;
 import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
 import me.jianwen.mediask.domain.ai.model.AiSessionStatus;
+import me.jianwen.mediask.domain.ai.model.AiTriageCompletionReason;
+import me.jianwen.mediask.domain.ai.model.AiTriageResultStatus;
+import me.jianwen.mediask.domain.ai.model.AiTriageSnapshot;
+import me.jianwen.mediask.domain.ai.model.AiTriageStage;
 import me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView;
 import me.jianwen.mediask.domain.ai.model.AiSessionTurnDetail;
 import me.jianwen.mediask.domain.ai.model.AiTurnStatus;
@@ -111,26 +115,50 @@ public class AiSessionQueryRepositoryAdapter implements AiSessionQueryRepository
         if (row == null) {
             return Optional.empty();
         }
-        EventDetailPayload detailPayload = parseEventDetail(row.getEventDetailJson());
+        TriageSnapshotPayload snapshotPayload = parseTriageSnapshot(row.getTriageSnapshotJson());
+        EventDetailPayload latestEventDetail = parseEventDetail(row.getLatestEventDetailJson());
         List<AiCitation> citations = aiSessionQueryMapper.selectRunCitations(row.getModelRunId()).stream()
                 .map(this::toCitation)
                 .toList();
-        String chiefComplaintSummary = detailPayload.chiefComplaintSummary();
-        if (chiefComplaintSummary == null || chiefComplaintSummary.isBlank()) {
-            chiefComplaintSummary = row.getSessionChiefComplaintSummary();
-        }
+        boolean hasActiveCycle = row.getLatestTurnNo() != null
+                && row.getFinalizedTurnNo() != null
+                && row.getLatestTurnNo() > row.getFinalizedTurnNo()
+                && latestEventDetail.toTriageStage() == AiTriageStage.COLLECTING;
+        Integer activeCycleTurnNo = hasActiveCycle ? row.getLatestTurnNo() - row.getFinalizedTurnNo() : null;
         return Optional.of(new AiSessionTriageResultView(
                 row.getSessionId(),
                 row.getPatientId(),
-                chiefComplaintSummary,
+                hasActiveCycle ? AiTriageResultStatus.UPDATING : AiTriageResultStatus.CURRENT,
+                snapshotPayload.toTriageStage(),
+                row.getFinalizedTurnId(),
+                row.getFinalizedAt(),
+                hasActiveCycle,
+                activeCycleTurnNo,
+                snapshotPayload.chiefComplaintSummary(),
                 RiskLevel.valueOf(row.getRiskLevel().toUpperCase()),
                 GuardrailAction.valueOf(row.getGuardrailAction().toUpperCase()),
-                detailPayload.recommendedDepartments().stream()
+                snapshotPayload.recommendedDepartments().stream()
                         .map(item -> new RecommendedDepartment(
                                 item.departmentId(), item.departmentName(), item.priority(), item.reason()))
                         .toList(),
-                detailPayload.careAdvice(),
+                snapshotPayload.careAdvice(),
                 citations));
+    }
+
+    @Override
+    public Optional<AiTriageStage> findLatestTriageStageBySessionId(Long sessionId) {
+        return Optional.ofNullable(aiSessionQueryMapper.selectLatestTriageEventDetail(sessionId))
+                .map(this::parseEventDetail)
+                .map(EventDetailPayload::toTriageStage);
+    }
+
+    @Override
+    public boolean hasAccessibleTriageSession(Long patientUserId, Long sessionId) {
+        return aiSessionMapper.selectCount(Wrappers.lambdaQuery(AiSessionDO.class)
+                        .eq(AiSessionDO::getId, sessionId)
+                        .eq(AiSessionDO::getPatientId, patientUserId)
+                        .isNull(AiSessionDO::getDeletedAt))
+                > 0;
     }
 
     private AiCitation toCitation(AiRunCitationRow row) {
@@ -149,6 +177,21 @@ public class AiSessionQueryRepositoryAdapter implements AiSessionQueryRepository
                 row.getEndedAt());
     }
 
+    private TriageSnapshotPayload parseTriageSnapshot(String triageSnapshotJson) {
+        if (triageSnapshotJson == null || triageSnapshotJson.isBlank()) {
+            throw new IllegalStateException("missing triage snapshot json");
+        }
+        try {
+            TriageSnapshotPayload payload = objectMapper.readValue(triageSnapshotJson, TriageSnapshotPayload.class);
+            if (payload == null || payload.triageStage() == null) {
+                throw new IllegalStateException("invalid triage snapshot json");
+            }
+            return payload;
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("failed to deserialize triage snapshot", exception);
+        }
+    }
+
     private EventDetailPayload parseEventDetail(String eventDetailJson) {
         if (eventDetailJson == null || eventDetailJson.isBlank()) {
             return EventDetailPayload.empty();
@@ -163,20 +206,52 @@ public class AiSessionQueryRepositoryAdapter implements AiSessionQueryRepository
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record EventDetailPayload(
+            String triageStage,
+            String triageCompletionReason,
+            List<String> followUpQuestions,
             String chiefComplaintSummary,
             List<RecommendedDepartmentPayload> recommendedDepartments,
             String careAdvice) {
 
         private EventDetailPayload {
+            followUpQuestions = followUpQuestions == null ? List.of() : List.copyOf(followUpQuestions);
             recommendedDepartments = recommendedDepartments == null ? List.of() : List.copyOf(recommendedDepartments);
         }
 
         private static EventDetailPayload empty() {
-            return new EventDetailPayload(null, List.of(), null);
+            return new EventDetailPayload(null, null, List.of(), null, List.of(), null);
+        }
+
+        private AiTriageStage toTriageStage() {
+            return triageStage == null || triageStage.isBlank() ? null : AiTriageStage.valueOf(triageStage);
+        }
+
+        @SuppressWarnings("unused")
+        private AiTriageCompletionReason toTriageCompletionReason() {
+            return triageCompletionReason == null || triageCompletionReason.isBlank()
+                    ? null
+                    : AiTriageCompletionReason.valueOf(triageCompletionReason);
         }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record RecommendedDepartmentPayload(
             Long departmentId, String departmentName, Integer priority, String reason) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record TriageSnapshotPayload(
+            String triageStage,
+            String triageCompletionReason,
+            String chiefComplaintSummary,
+            List<RecommendedDepartmentPayload> recommendedDepartments,
+            String careAdvice) {
+
+        private TriageSnapshotPayload {
+            recommendedDepartments = recommendedDepartments == null ? List.of() : List.copyOf(recommendedDepartments);
+        }
+
+        private AiTriageStage toTriageStage() {
+            return AiTriageStage.valueOf(triageStage);
+        }
+    }
 }

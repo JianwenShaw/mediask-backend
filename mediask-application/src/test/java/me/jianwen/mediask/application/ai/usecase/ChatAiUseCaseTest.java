@@ -15,10 +15,14 @@ import me.jianwen.mediask.domain.ai.model.AiExecutionMetadata;
 import me.jianwen.mediask.domain.ai.model.AiGuardrailEvent;
 import me.jianwen.mediask.domain.ai.model.AiModelRun;
 import me.jianwen.mediask.domain.ai.model.AiSession;
+import me.jianwen.mediask.domain.ai.model.AiTriageCompletionReason;
+import me.jianwen.mediask.domain.ai.model.AiTriageStage;
 import me.jianwen.mediask.domain.ai.model.AiTurn;
 import me.jianwen.mediask.domain.ai.model.AiTurnContent;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.AiCitation;
+import me.jianwen.mediask.domain.ai.model.TriageDepartmentCandidate;
+import me.jianwen.mediask.domain.ai.model.TriageDepartmentCatalog;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RecommendedDepartment;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
@@ -27,6 +31,7 @@ import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
 import me.jianwen.mediask.domain.ai.port.AiGuardrailEventRepository;
 import me.jianwen.mediask.domain.ai.port.AiModelRunRepository;
 import me.jianwen.mediask.domain.ai.port.AiSessionRepository;
+import me.jianwen.mediask.domain.ai.port.TriageDepartmentCatalogPort;
 import me.jianwen.mediask.domain.ai.port.AiTurnContentRepository;
 import me.jianwen.mediask.domain.ai.port.AiTurnRepository;
 import org.junit.jupiter.api.Test;
@@ -35,19 +40,21 @@ class ChatAiUseCaseTest {
 
     @Test
     void handle_WhenNewSession_ShouldPersistConversationAndReturnResult() {
+        CapturingAiChatPort aiChatPort = new CapturingAiChatPort();
         InMemoryAiSessionRepository sessionRepository = new InMemoryAiSessionRepository();
         InMemoryAiTurnRepository turnRepository = new InMemoryAiTurnRepository();
         InMemoryAiTurnContentRepository turnContentRepository = new InMemoryAiTurnContentRepository();
         InMemoryAiModelRunRepository modelRunRepository = new InMemoryAiModelRunRepository();
         InMemoryAiGuardrailEventRepository guardrailEventRepository = new InMemoryAiGuardrailEventRepository();
         ChatAiUseCase useCase = new ChatAiUseCase(
-                invocation -> successfulReply(),
+                aiChatPort,
                 sessionRepository,
                 turnRepository,
                 turnContentRepository,
                 modelRunRepository,
                 guardrailEventRepository,
-                encryptor());
+                encryptor(),
+                triageDepartmentCatalogPort());
 
         ChatAiResult result = useCase.handle(new ChatAiCommand(
                 1001L, null, "头痛三天", 2001L, AiSceneType.PRE_CONSULTATION, "req_chat_001"));
@@ -62,6 +69,8 @@ class ChatAiUseCaseTest {
         assertEquals(1, guardrailEventRepository.savedEvents.size());
         assertEquals("头痛三天", guardrailEventRepository.savedEvents.getFirst().chiefComplaintSummary());
         assertEquals("建议线下就诊", guardrailEventRepository.savedEvents.getFirst().careAdvice());
+        assertEquals(false, aiChatPort.lastInvocation.useRag());
+        assertEquals(null, aiChatPort.lastInvocation.knowledgeBaseIds());
     }
 
     @Test
@@ -76,7 +85,8 @@ class ChatAiUseCaseTest {
                 new InMemoryAiTurnContentRepository(),
                 new InMemoryAiModelRunRepository(),
                 new InMemoryAiGuardrailEventRepository(),
-                encryptor());
+                encryptor(),
+                triageDepartmentCatalogPort());
 
         BizException exception = assertThrows(
                 BizException.class,
@@ -100,7 +110,8 @@ class ChatAiUseCaseTest {
                 new InMemoryAiTurnContentRepository(),
                 modelRunRepository,
                 new InMemoryAiGuardrailEventRepository(),
-                encryptor());
+                encryptor(),
+                triageDepartmentCatalogPort());
 
         BizException exception = assertThrows(
                 BizException.class,
@@ -115,13 +126,23 @@ class ChatAiUseCaseTest {
     private AiChatReply successfulReply() {
         return new AiChatReply(
                 "建议挂神经内科",
+                AiTriageStage.READY,
+                AiTriageCompletionReason.SUFFICIENT_INFO,
                 "头痛三天",
                 RiskLevel.MEDIUM,
                 GuardrailAction.CAUTION,
+                java.util.List.of(),
                 java.util.List.of(new RecommendedDepartment(101L, "神经内科", 1, "头痛持续")),
                 "建议线下就诊",
                 java.util.List.of(new AiCitation(7001L, 1, 0.82D, "持续头痛建议线下评估")),
                 new AiExecutionMetadata("provider-run-1", java.util.List.of("RISK_HEADACHE"), 100, 200, 1234, false));
+    }
+
+    private TriageDepartmentCatalogPort triageDepartmentCatalogPort() {
+        return hospitalScope -> new TriageDepartmentCatalog(
+                hospitalScope,
+                "deptcat-test",
+                java.util.List.of(new TriageDepartmentCandidate(101L, "神经内科", "头痛", java.util.List.of("神内"), 1)));
     }
 
     private AiContentEncryptorPort encryptor() {
@@ -208,6 +229,11 @@ class ChatAiUseCaseTest {
             lastUpdated = aiModelRun;
             store.put(aiModelRun.id(), aiModelRun);
         }
+
+        @Override
+        public Integer findLatestFinalizedTurnNoBySessionId(Long sessionId) {
+            return null;
+        }
     }
 
     private static final class InMemoryAiGuardrailEventRepository implements AiGuardrailEventRepository {
@@ -217,5 +243,30 @@ class ChatAiUseCaseTest {
         public void save(AiGuardrailEvent aiGuardrailEvent) {
             savedEvents.add(aiGuardrailEvent);
         }
+    }
+
+    private static final class CapturingAiChatPort implements AiChatPort {
+        private me.jianwen.mediask.domain.ai.model.AiChatInvocation lastInvocation;
+
+        @Override
+        public AiChatReply chat(me.jianwen.mediask.domain.ai.model.AiChatInvocation invocation) {
+            lastInvocation = invocation;
+            return successfulReplyStatic();
+        }
+    }
+
+    private static AiChatReply successfulReplyStatic() {
+        return new AiChatReply(
+                "建议挂神经内科",
+                AiTriageStage.READY,
+                AiTriageCompletionReason.SUFFICIENT_INFO,
+                "头痛三天",
+                RiskLevel.MEDIUM,
+                GuardrailAction.CAUTION,
+                java.util.List.of(),
+                java.util.List.of(new RecommendedDepartment(101L, "神经内科", 1, "头痛持续")),
+                "建议线下就诊",
+                java.util.List.of(new AiCitation(7001L, 1, 0.82D, "持续头痛建议线下评估")),
+                new AiExecutionMetadata("provider-run-1", java.util.List.of("RISK_HEADACHE"), 100, 200, 1234, false));
     }
 }

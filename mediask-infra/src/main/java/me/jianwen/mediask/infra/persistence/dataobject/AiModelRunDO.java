@@ -1,15 +1,17 @@
 package me.jianwen.mediask.infra.persistence.dataobject;
 
 import java.time.OffsetDateTime;
+import com.baomidou.mybatisplus.annotation.TableField;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import me.jianwen.mediask.infra.persistence.base.BaseDO;
 import com.baomidou.mybatisplus.annotation.TableName;
+import me.jianwen.mediask.infra.persistence.converter.JsonbStringTypeHandler;
 
 @Getter
 @Setter
-@TableName("ai_model_run")
+@TableName(value = "ai_model_run", autoResultMap = true)
 @EqualsAndHashCode(callSuper = true)
 public class AiModelRunDO extends BaseDO {
 
@@ -29,6 +31,8 @@ public class AiModelRunDO extends BaseDO {
     private String responsePayloadHash;
     private Integer errorCode;
     private String errorMessage;
+    @TableField(typeHandler = JsonbStringTypeHandler.class)
+    private String triageSnapshotJson;
     private OffsetDateTime startedAt;
     private OffsetDateTime completedAt;
 }

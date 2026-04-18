@@ -12,17 +12,13 @@ import me.jianwen.mediask.domain.ai.port.AiGuardrailEventRepository;
 import me.jianwen.mediask.domain.ai.port.AiModelRunRepository;
 import me.jianwen.mediask.domain.ai.port.AiSessionQueryRepository;
 import me.jianwen.mediask.domain.ai.port.AiSessionRepository;
-import me.jianwen.mediask.application.ai.usecase.StreamAiChatUseCase;
-import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
+import me.jianwen.mediask.domain.ai.port.TriageDepartmentCatalogPort;
 import me.jianwen.mediask.domain.ai.port.AiTurnContentRepository;
 import me.jianwen.mediask.domain.ai.port.AiTurnRepository;
-import me.jianwen.mediask.infra.observability.MdcTaskDecorator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Configuration
 @ConditionalOnProperty(prefix = "mediask.ai.service", name = {"base-url", "api-key"})
@@ -36,7 +32,8 @@ public class AiModuleConfig {
             AiTurnContentRepository aiTurnContentRepository,
             AiModelRunRepository aiModelRunRepository,
             AiGuardrailEventRepository aiGuardrailEventRepository,
-            AiContentEncryptorPort aiContentEncryptorPort) {
+            AiContentEncryptorPort aiContentEncryptorPort,
+            TriageDepartmentCatalogPort triageDepartmentCatalogPort) {
         return new ChatAiUseCase(
                 aiChatPort,
                 aiSessionRepository,
@@ -44,26 +41,8 @@ public class AiModuleConfig {
                 aiTurnContentRepository,
                 aiModelRunRepository,
                 aiGuardrailEventRepository,
-                aiContentEncryptorPort);
-    }
-
-    @Bean
-    public StreamAiChatUseCase streamAiChatUseCase(
-            AiChatStreamPort aiChatStreamPort,
-            AiSessionRepository aiSessionRepository,
-            AiTurnRepository aiTurnRepository,
-            AiTurnContentRepository aiTurnContentRepository,
-            AiModelRunRepository aiModelRunRepository,
-            AiGuardrailEventRepository aiGuardrailEventRepository,
-            AiContentEncryptorPort aiContentEncryptorPort) {
-        return new StreamAiChatUseCase(
-                aiChatStreamPort,
-                aiSessionRepository,
-                aiTurnRepository,
-                aiTurnContentRepository,
-                aiModelRunRepository,
-                aiGuardrailEventRepository,
-                aiContentEncryptorPort);
+                aiContentEncryptorPort,
+                triageDepartmentCatalogPort);
     }
 
     @Bean
@@ -93,17 +72,5 @@ public class AiModuleConfig {
             AiSessionQueryRepository aiSessionQueryRepository,
             @Qualifier("aiRegistrationHandoffClock") Clock aiRegistrationHandoffClock) {
         return new GetAiSessionRegistrationHandoffUseCase(aiSessionQueryRepository, aiRegistrationHandoffClock);
-    }
-
-    @Bean(name = "aiSseTaskExecutor")
-    public TaskExecutor aiSseTaskExecutor() {
-        ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-        taskExecutor.setThreadNamePrefix("ai-sse-");
-        taskExecutor.setCorePoolSize(4);
-        taskExecutor.setMaxPoolSize(4);
-        taskExecutor.setQueueCapacity(32);
-        taskExecutor.setTaskDecorator(new MdcTaskDecorator());
-        taskExecutor.initialize();
-        return taskExecutor;
     }
 }

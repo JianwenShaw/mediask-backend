@@ -1,15 +1,15 @@
 package me.jianwen.mediask.infra.ai.client.mapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
 import me.jianwen.mediask.domain.ai.model.AiChatInvocation;
 import me.jianwen.mediask.domain.ai.model.AiChatTriageResult;
+import me.jianwen.mediask.domain.ai.model.AiTriageCompletionReason;
+import me.jianwen.mediask.domain.ai.model.AiTriageStage;
 import me.jianwen.mediask.domain.ai.model.AiSceneType;
 import me.jianwen.mediask.domain.ai.model.GuardrailAction;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
@@ -25,10 +25,18 @@ class PythonAiChatMapperTest {
     void toDomain_WhenPythonResponseValid_MapDomainReply() {
         PythonChatResponse response = new PythonChatResponse(
                 1L,
+                2L,
+                "session-uuid",
                 "provider-run-001",
                 "Seek offline care soon",
                 "Headache with low fever",
+                "READY",
+                "SUFFICIENT_INFO",
                 null,
+                List.of(),
+                List.of(),
+                List.of(),
+                "high",
                 List.of(new PythonChatResponse.PythonRecommendedDepartment(101L, "Neurology", 1, "Evaluate headache causes first")),
                 "Seek offline care soon and avoid self-diagnosis.",
                 List.of(new PythonChatResponse.PythonCitation(7003001L, 1, 0.82D, "Persistent headache with fever should be assessed offline")),
@@ -42,6 +50,8 @@ class PythonAiChatMapperTest {
 
         AiChatReply reply = mapper.toDomain(response);
 
+        assertEquals(AiTriageStage.READY, reply.triageStage());
+        assertEquals(AiTriageCompletionReason.SUFFICIENT_INFO, reply.triageCompletionReason());
         assertEquals(RiskLevel.MEDIUM, reply.riskLevel());
         assertEquals(GuardrailAction.CAUTION, reply.guardrailAction());
         assertEquals("Headache with low fever", reply.chiefComplaintSummary());
@@ -54,9 +64,17 @@ class PythonAiChatMapperTest {
     void toStreamMetaDomain_WhenAnswerMissing_MapStructuredReply() {
         PythonChatResponse response = new PythonChatResponse(
                 1L,
+                2L,
+                "session-uuid",
                 "provider-run-001",
                 null,
                 "Headache with low fever",
+                "COLLECTING",
+                null,
+                null,
+                List.of("How long has the fever lasted?"),
+                List.of(),
+                List.of(),
                 null,
                 List.of(new PythonChatResponse.PythonRecommendedDepartment(101L, "Neurology", 1, "Evaluate headache causes first")),
                 "Seek offline care soon and avoid self-diagnosis.",
@@ -71,10 +89,11 @@ class PythonAiChatMapperTest {
 
         AiChatTriageResult triageResult = mapper.toStreamMetaDomain(response);
 
+        assertEquals(AiTriageStage.COLLECTING, triageResult.triageStage());
         assertEquals(RiskLevel.MEDIUM, triageResult.riskLevel());
         assertEquals(GuardrailAction.CAUTION, triageResult.guardrailAction());
         assertEquals("Headache with low fever", triageResult.chiefComplaintSummary());
-        assertEquals(1, triageResult.recommendedDepartments().size());
+        assertEquals(1, triageResult.followUpQuestions().size());
         assertEquals(1, triageResult.citations().size());
         assertEquals("provider-run-001", triageResult.executionMetadata().providerRunId());
     }
@@ -82,7 +101,7 @@ class PythonAiChatMapperTest {
     @Test
     void toDomain_WhenRiskLevelUnsupported_ThrowException() {
         PythonChatResponse response = new PythonChatResponse(
-                1L, "provider-run-001", "answer", null, null, List.of(), null, List.of(), "urgent", "allow", List.of(), 1, 1, 1, false);
+                1L, 2L, "session-uuid", "provider-run-001", "answer", null, "READY", null, null, List.of(), List.of(), List.of(), null, List.of(), null, List.of(), "urgent", "allow", List.of(), 1, 1, 1, false);
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> mapper.toDomain(response));
 
@@ -93,9 +112,17 @@ class PythonAiChatMapperTest {
     void toDomain_WhenRecommendedDepartmentsContainNull_ThrowException() {
         PythonChatResponse response = new PythonChatResponse(
                 1L,
+                2L,
+                "session-uuid",
                 "provider-run-001",
                 "answer",
                 null,
+                "READY",
+                "SUFFICIENT_INFO",
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
                 null,
                 departmentsWithNullElement(),
                 null,
@@ -117,9 +144,17 @@ class PythonAiChatMapperTest {
     void toDomain_WhenCitationsContainNull_ThrowException() {
         PythonChatResponse response = new PythonChatResponse(
                 1L,
+                2L,
+                "session-uuid",
                 "provider-run-001",
                 "answer",
                 null,
+                "READY",
+                "SUFFICIENT_INFO",
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
                 null,
                 List.of(),
                 null,
@@ -138,17 +173,42 @@ class PythonAiChatMapperTest {
     }
 
     @Test
-    void toRequest_WhenNonStreamInvocation_StreamFlagFalse() {
+    void toRequest_WhenInvocationValid_MapRequestWithoutStreamField() {
         PythonChatRequest request = mapper.toRequest(invocation());
 
-        assertFalse(request.stream());
+        assertEquals(1L, request.modelRunId());
+        assertEquals(2L, request.turnId());
+        assertEquals("session-uuid", request.sessionUuid());
+        assertEquals(101L, request.departmentId());
+        assertEquals("default-hospital", request.hospitalScope());
+        assertEquals("deptcat-v1", request.departmentCatalogVersion());
+        assertEquals(1, request.patientTurnNoInActiveCycle());
+        assertEquals(false, request.forceFinalize());
+        assertEquals("PRE_CONSULTATION", request.sceneType());
+        assertEquals("头痛三天", request.message());
+        assertEquals(true, request.useRag());
+        assertEquals(List.of(), request.knowledgeBaseIds());
     }
 
     @Test
-    void toStreamRequest_WhenStreamInvocation_StreamFlagTrue() {
-        PythonChatRequest request = mapper.toStreamRequest(invocation());
+    void toRequest_WhenRagDisabled_OmitKnowledgeBaseIds() {
+        PythonChatRequest request = mapper.toRequest(new AiChatInvocation(
+                1L,
+                2L,
+                "session-uuid",
+                "头痛三天",
+                AiSceneType.PRE_CONSULTATION,
+                101L,
+                "default-hospital",
+                "deptcat-v1",
+                1,
+                false,
+                null,
+                false,
+                null));
 
-        assertTrue(request.stream());
+        assertEquals(false, request.useRag());
+        assertEquals(null, request.knowledgeBaseIds());
     }
 
     private List<PythonChatResponse.PythonRecommendedDepartment> departmentsWithNullElement() {
@@ -166,6 +226,19 @@ class PythonAiChatMapperTest {
     }
 
     private AiChatInvocation invocation() {
-        return new AiChatInvocation(1L, 2L, "session-uuid", "头痛三天", AiSceneType.PRE_CONSULTATION, 101L, null, true);
+        return new AiChatInvocation(
+                1L,
+                2L,
+                "session-uuid",
+                "头痛三天",
+                AiSceneType.PRE_CONSULTATION,
+                101L,
+                "default-hospital",
+                "deptcat-v1",
+                1,
+                false,
+                null,
+                true,
+                List.of());
     }
 }

@@ -13,18 +13,24 @@ import me.jianwen.mediask.domain.ai.model.AiContentRole;
 import me.jianwen.mediask.domain.ai.model.AiGuardrailEvent;
 import me.jianwen.mediask.domain.ai.model.AiModelRun;
 import me.jianwen.mediask.domain.ai.model.AiSession;
+import me.jianwen.mediask.domain.ai.model.AiTriageSnapshot;
+import me.jianwen.mediask.domain.ai.model.AiTriageStage;
 import me.jianwen.mediask.domain.ai.model.AiTurn;
 import me.jianwen.mediask.domain.ai.model.AiTurnContent;
+import me.jianwen.mediask.domain.ai.model.TriageDepartmentCatalog;
 import me.jianwen.mediask.domain.ai.port.AiChatPort;
 import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
 import me.jianwen.mediask.domain.ai.port.AiGuardrailEventRepository;
 import me.jianwen.mediask.domain.ai.port.AiModelRunRepository;
 import me.jianwen.mediask.domain.ai.port.AiSessionRepository;
+import me.jianwen.mediask.domain.ai.port.TriageDepartmentCatalogPort;
 import me.jianwen.mediask.domain.ai.port.AiTurnContentRepository;
 import me.jianwen.mediask.domain.ai.port.AiTurnRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 public class ChatAiUseCase {
+
+    private static final String DEFAULT_HOSPITAL_SCOPE = "default-hospital";
 
     private final AiChatPort aiChatPort;
     private final AiSessionRepository aiSessionRepository;
@@ -33,6 +39,7 @@ public class ChatAiUseCase {
     private final AiModelRunRepository aiModelRunRepository;
     private final AiGuardrailEventRepository aiGuardrailEventRepository;
     private final AiContentEncryptorPort aiContentEncryptorPort;
+    private final TriageDepartmentCatalogPort triageDepartmentCatalogPort;
 
     public ChatAiUseCase(
             AiChatPort aiChatPort,
@@ -41,7 +48,8 @@ public class ChatAiUseCase {
             AiTurnContentRepository aiTurnContentRepository,
             AiModelRunRepository aiModelRunRepository,
             AiGuardrailEventRepository aiGuardrailEventRepository,
-            AiContentEncryptorPort aiContentEncryptorPort) {
+            AiContentEncryptorPort aiContentEncryptorPort,
+            TriageDepartmentCatalogPort triageDepartmentCatalogPort) {
         this.aiChatPort = aiChatPort;
         this.aiSessionRepository = aiSessionRepository;
         this.aiTurnRepository = aiTurnRepository;
@@ -49,13 +57,19 @@ public class ChatAiUseCase {
         this.aiModelRunRepository = aiModelRunRepository;
         this.aiGuardrailEventRepository = aiGuardrailEventRepository;
         this.aiContentEncryptorPort = aiContentEncryptorPort;
+        this.triageDepartmentCatalogPort = triageDepartmentCatalogPort;
     }
 
     @Transactional
     public ChatAiResult handle(ChatAiCommand command) {
         AiSession aiSession = loadOrCreateSession(command);
         String inputHash = sha256(command.message());
-        AiTurn aiTurn = AiTurn.createProcessing(aiSession.id(), aiTurnRepository.findMaxTurnNoBySessionId(aiSession.id()) + 1, inputHash);
+        int latestTurnNo = aiTurnRepository.findMaxTurnNoBySessionId(aiSession.id());
+        int currentTurnNo = latestTurnNo + 1;
+        Integer latestFinalizedTurnNo = aiModelRunRepository.findLatestFinalizedTurnNoBySessionId(aiSession.id());
+        int patientTurnNoInActiveCycle = currentTurnNo - (latestFinalizedTurnNo == null ? 0 : latestFinalizedTurnNo);
+        TriageDepartmentCatalog triageDepartmentCatalog = triageDepartmentCatalogPort.getCatalog(DEFAULT_HOSPITAL_SCOPE);
+        AiTurn aiTurn = AiTurn.createProcessing(aiSession.id(), currentTurnNo, inputHash);
         AiModelRun aiModelRun = AiModelRun.createRunning(aiTurn.id(), command.requestId(), hashInvocation(aiSession, aiTurn, command), true);
 
         aiTurnRepository.save(aiTurn);
@@ -70,8 +84,15 @@ public class ChatAiUseCase {
                     command.message(),
                     aiSession.sceneType(),
                     command.departmentId(),
+                    triageDepartmentCatalog.hospitalScope(),
+                    triageDepartmentCatalog.departmentCatalogVersion(),
+                    patientTurnNoInActiveCycle,
+                    patientTurnNoInActiveCycle >= 5,
                     aiSession.summary(),
-                    true));
+                    false,
+                    null));
+
+            validateRecommendedDepartments(reply, triageDepartmentCatalog);
 
             String outputHash = sha256(reply.answer());
             aiTurnContentRepository.save(createContent(aiTurn.id(), AiContentRole.ASSISTANT, reply.answer(), outputHash));
@@ -82,7 +103,7 @@ public class ChatAiUseCase {
             aiTurn.markCompleted(outputHash);
             aiTurnRepository.update(aiTurn);
 
-            aiModelRun.markSucceeded(reply.executionMetadata(), hashReply(reply));
+            aiModelRun.markSucceeded(reply.executionMetadata(), hashReply(reply), buildSnapshot(reply));
             aiModelRunRepository.update(aiModelRun);
 
             aiGuardrailEventRepository.save(AiGuardrailEvent.create(
@@ -90,6 +111,9 @@ public class ChatAiUseCase {
                     reply.riskLevel(),
                     reply.guardrailAction(),
                     reply.executionMetadata().matchedRuleCodes(),
+                    reply.triageStage(),
+                    reply.triageCompletionReason(),
+                    reply.followUpQuestions(),
                     reply.chiefComplaintSummary(),
                     reply.recommendedDepartments(),
                     reply.careAdvice(),
@@ -136,6 +160,27 @@ public class ChatAiUseCase {
         aiTurnRepository.update(aiTurn);
         aiModelRun.markFailed(errorCode, errorMessage);
         aiModelRunRepository.update(aiModelRun);
+    }
+
+    private void validateRecommendedDepartments(AiChatReply reply, TriageDepartmentCatalog catalog) {
+        boolean invalidDepartment = reply.recommendedDepartments().stream()
+                .map(department -> department.departmentId())
+                .anyMatch(departmentId -> !catalog.containsDepartmentId(departmentId));
+        if (invalidDepartment) {
+            throw new BizException(AiErrorCode.INVALID_RESPONSE);
+        }
+    }
+
+    private AiTriageSnapshot buildSnapshot(AiChatReply reply) {
+        if (reply.triageStage() == AiTriageStage.COLLECTING) {
+            return null;
+        }
+        return new AiTriageSnapshot(
+                reply.triageStage(),
+                reply.triageCompletionReason(),
+                reply.chiefComplaintSummary(),
+                reply.recommendedDepartments(),
+                reply.careAdvice());
     }
 
     private String mask(String content) {

@@ -53,10 +53,49 @@
             session.id AS session_id,
             session.patient_id,
             run.id AS model_run_id,
-            session.chief_complaint_summary AS session_chief_complaint_summary,
+            turn.id AS finalized_turn_id,
+            turn.turn_no AS finalized_turn_no,
+            run.completed_at AS finalized_at,
+            (
+                SELECT latest_turn.turn_no
+                FROM ai_turn latest_turn
+                WHERE latest_turn.session_id = session.id
+                  AND latest_turn.deleted_at IS NULL
+                ORDER BY latest_turn.turn_no DESC, latest_turn.id DESC
+                LIMIT 1
+            ) AS latest_turn_no,
+            (
+                SELECT latest_turn.turn_status
+                FROM ai_turn latest_turn
+                WHERE latest_turn.session_id = session.id
+                  AND latest_turn.deleted_at IS NULL
+                ORDER BY latest_turn.turn_no DESC, latest_turn.id DESC
+                LIMIT 1
+            ) AS latest_turn_status,
+            (
+                SELECT latest_run.run_status
+                FROM ai_model_run latest_run
+                JOIN ai_turn latest_turn ON latest_turn.id = latest_run.turn_id
+                WHERE latest_turn.session_id = session.id
+                  AND latest_turn.deleted_at IS NULL
+                  AND latest_run.deleted_at IS NULL
+                ORDER BY latest_turn.turn_no DESC, latest_run.id DESC
+                LIMIT 1
+            ) AS latest_run_status,
+            (
+                SELECT latest_event.event_detail_json
+                FROM ai_guardrail_event latest_event
+                JOIN ai_model_run latest_run ON latest_run.id = latest_event.run_id
+                JOIN ai_turn latest_turn ON latest_turn.id = latest_run.turn_id
+                WHERE latest_turn.session_id = session.id
+                  AND latest_turn.deleted_at IS NULL
+                  AND latest_run.deleted_at IS NULL
+                ORDER BY latest_turn.turn_no DESC, latest_run.id DESC, latest_event.id DESC
+                LIMIT 1
+            ) AS latest_event_detail_json,
             event.risk_level,
             event.action_taken AS guardrail_action,
-            event.event_detail_json
+            run.triage_snapshot_json
         FROM ai_session session
         JOIN ai_turn turn ON turn.session_id = session.id
         JOIN ai_model_run run ON run.turn_id = turn.id
@@ -67,6 +106,7 @@
           AND run.deleted_at IS NULL
           AND turn.turn_status = 'COMPLETED'
           AND run.run_status = 'SUCCEEDED'
+          AND run.triage_snapshot_json IS NOT NULL
         ORDER BY turn.turn_no DESC, run.completed_at DESC, run.id DESC, event.occurred_at DESC, event.id DESC
         LIMIT 1
     </select>
@@ -80,5 +120,19 @@
         FROM ai_run_citation
         WHERE model_run_id = #{modelRunId}
         ORDER BY retrieval_rank ASC, id ASC
+    </select>
+
+    <select id="selectLatestTriageEventDetail" resultType="java.lang.String">
+        SELECT latest_event.event_detail_json
+        FROM ai_guardrail_event latest_event
+        JOIN ai_model_run latest_run ON latest_run.id = latest_event.run_id
+        JOIN ai_turn latest_turn ON latest_turn.id = latest_run.turn_id
+        JOIN ai_session session ON session.id = latest_turn.session_id
+        WHERE session.id = #{sessionId}
+          AND session.deleted_at IS NULL
+          AND latest_turn.deleted_at IS NULL
+          AND latest_run.deleted_at IS NULL
+        ORDER BY latest_turn.turn_no DESC, latest_run.id DESC, latest_event.id DESC
+        LIMIT 1
     </select>
 </mapper>

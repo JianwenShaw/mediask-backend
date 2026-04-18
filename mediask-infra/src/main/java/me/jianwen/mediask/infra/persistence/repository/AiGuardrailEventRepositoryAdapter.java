@@ -33,6 +33,11 @@ public class AiGuardrailEventRepositoryAdapter implements AiGuardrailEventReposi
         dataObject.setInputHash(aiGuardrailEvent.inputHash());
         dataObject.setOutputHash(aiGuardrailEvent.outputHash());
         dataObject.setEventDetailJson(writeJson(new AiGuardrailEventDetailPayload(
+                aiGuardrailEvent.triageStage().name(),
+                aiGuardrailEvent.triageCompletionReason() == null
+                        ? null
+                        : aiGuardrailEvent.triageCompletionReason().name(),
+                aiGuardrailEvent.followUpQuestions(),
                 aiGuardrailEvent.chiefComplaintSummary(),
                 aiGuardrailEvent.recommendedDepartments().stream()
                         .map(department -> new RecommendedDepartmentPayload(
@@ -54,6 +59,9 @@ public class AiGuardrailEventRepositoryAdapter implements AiGuardrailEventReposi
     }
 
     private record AiGuardrailEventDetailPayload(
+            String triageStage,
+            String triageCompletionReason,
+            List<String> followUpQuestions,
             String chiefComplaintSummary,
             List<RecommendedDepartmentPayload> recommendedDepartments,
             String careAdvice) {}

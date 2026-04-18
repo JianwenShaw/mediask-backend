@@ -16,9 +16,12 @@ class AiChatReplyTest {
 
         AiChatReply reply = new AiChatReply(
                 "answer",
+                AiTriageStage.READY,
+                AiTriageCompletionReason.SUFFICIENT_INFO,
                 "summary",
                 RiskLevel.LOW,
                 GuardrailAction.ALLOW,
+                List.of(),
                 List.of(new RecommendedDepartment(1L, "Neurology", 1, null)),
                 null,
                 citations,
@@ -35,9 +38,12 @@ class AiChatReplyTest {
                 IllegalArgumentException.class,
                 () -> new AiChatReply(
                         "  ",
+                        AiTriageStage.COLLECTING,
+                        null,
                         null,
                         RiskLevel.LOW,
                         GuardrailAction.ALLOW,
+                        List.of(),
                         List.of(),
                         null,
                         List.of(),

@@ -2,20 +2,25 @@ package me.jianwen.mediask.api.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.function.Consumer;
+import java.net.URI;
+import java.time.Duration;
 import me.jianwen.mediask.api.controller.AiController;
+import me.jianwen.mediask.api.controller.InternalTriageDepartmentCatalogController;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
 import me.jianwen.mediask.domain.ai.model.AiChatInvocation;
-import me.jianwen.mediask.domain.ai.model.AiChatStreamEvent;
+import me.jianwen.mediask.domain.ai.model.AiTriageCompletionReason;
+import me.jianwen.mediask.domain.ai.model.AiTriageStage;
+import me.jianwen.mediask.domain.ai.model.TriageDepartmentCatalog;
 import me.jianwen.mediask.domain.ai.port.AiChatPort;
 import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
 import me.jianwen.mediask.domain.ai.port.AiGuardrailEventRepository;
 import me.jianwen.mediask.domain.ai.port.AiModelRunRepository;
 import me.jianwen.mediask.domain.ai.port.AiSessionQueryRepository;
 import me.jianwen.mediask.domain.ai.port.AiSessionRepository;
-import me.jianwen.mediask.domain.ai.port.AiChatStreamPort;
 import me.jianwen.mediask.domain.ai.port.AiTurnContentRepository;
 import me.jianwen.mediask.domain.ai.port.AiTurnRepository;
+import me.jianwen.mediask.domain.ai.port.TriageDepartmentCatalogPort;
+import me.jianwen.mediask.infra.ai.config.AiServiceProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -24,48 +29,44 @@ import org.springframework.context.annotation.Configuration;
 class AiModuleConfigTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withUserConfiguration(AiModuleConfig.class, AiController.class, TestAiStreamConfig.class);
+            .withUserConfiguration(AiModuleConfig.class, AiController.class, InternalTriageDepartmentCatalogController.class, TestAiConfig.class);
 
     @Test
-    void contextWithoutAiServiceProperties_ShouldNotCreateStreamBeans() {
+    void contextWithoutAiServiceProperties_ShouldNotCreateAiBeans() {
         contextRunner.run(context -> {
             assertThat(context).doesNotHaveBean(AiController.class);
+            assertThat(context).doesNotHaveBean(InternalTriageDepartmentCatalogController.class);
             assertThat(context).doesNotHaveBean("chatAiUseCase");
-            assertThat(context).doesNotHaveBean("streamAiChatUseCase");
-            assertThat(context).doesNotHaveBean("aiSseTaskExecutor");
         });
     }
 
     @Test
-    void contextWithAiServiceProperties_ShouldCreateStreamBeans() {
+    void contextWithAiServiceProperties_ShouldCreateAiBeans() {
         contextRunner
                 .withPropertyValues(
                         "mediask.ai.service.base-url=http://localhost:8000",
                         "mediask.ai.service.api-key=test-key")
                 .run(context -> {
                     assertThat(context).hasSingleBean(AiController.class);
+                    assertThat(context).hasSingleBean(InternalTriageDepartmentCatalogController.class);
                     assertThat(context).hasBean("chatAiUseCase");
-                    assertThat(context).hasBean("streamAiChatUseCase");
                     assertThat(context).hasBean("listAiSessionsUseCase");
-                    assertThat(context).hasBean("aiSseTaskExecutor");
                 });
     }
 
     @Configuration
-    static class TestAiStreamConfig {
-
-        @Bean
-        AiChatStreamPort aiChatStreamPort() {
-            return new NoopAiChatStreamPort();
-        }
+    static class TestAiConfig {
 
         @Bean
         AiChatPort aiChatPort() {
             return invocation -> new AiChatReply(
                     "answer",
-                    null,
+                    AiTriageStage.READY,
+                    AiTriageCompletionReason.SUFFICIENT_INFO,
+                    "summary",
                     me.jianwen.mediask.domain.ai.model.RiskLevel.LOW,
                     me.jianwen.mediask.domain.ai.model.GuardrailAction.ALLOW,
+                    java.util.List.of(),
                     java.util.List.of(),
                     null,
                     java.util.List.of(),
@@ -116,12 +117,21 @@ class AiModuleConfigTest {
         AiSessionQueryRepository aiSessionQueryRepository() {
             return new NoopAiSessionQueryRepository();
         }
-    }
 
-    static class NoopAiChatStreamPort implements AiChatStreamPort {
+        @Bean
+        TriageDepartmentCatalogPort triageDepartmentCatalogPort() {
+            return hospitalScope -> new TriageDepartmentCatalog(hospitalScope, "deptcat-test", java.util.List.of());
+        }
 
-        @Override
-        public void stream(AiChatInvocation invocation, Consumer<AiChatStreamEvent> eventConsumer) {}
+        @Bean
+        AiServiceProperties aiServiceProperties() {
+            return new AiServiceProperties(
+                    URI.create("http://localhost:8000"),
+                    "test-key",
+                    Duration.ofSeconds(3),
+                    Duration.ofSeconds(30),
+                    Duration.ofMinutes(5));
+        }
     }
 
     static class NoopAiSessionRepository implements AiSessionRepository {
@@ -156,6 +166,11 @@ class AiModuleConfigTest {
 
         @Override
         public void update(me.jianwen.mediask.domain.ai.model.AiModelRun aiModelRun) {}
+
+        @Override
+        public Integer findLatestFinalizedTurnNoBySessionId(Long sessionId) {
+            return null;
+        }
     }
 
     static class NoopAiSessionQueryRepository implements AiSessionQueryRepository {
@@ -174,6 +189,17 @@ class AiModuleConfigTest {
         public java.util.Optional<me.jianwen.mediask.domain.ai.model.AiSessionTriageResultView> findLatestTriageResultBySessionId(
                 Long sessionId) {
             return java.util.Optional.empty();
+        }
+
+        @Override
+        public java.util.Optional<me.jianwen.mediask.domain.ai.model.AiTriageStage> findLatestTriageStageBySessionId(
+                Long sessionId) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public boolean hasAccessibleTriageSession(Long patientUserId, Long sessionId) {
+            return false;
         }
     }
 }

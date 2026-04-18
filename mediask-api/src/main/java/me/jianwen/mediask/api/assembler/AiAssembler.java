@@ -9,14 +9,11 @@ import me.jianwen.mediask.api.dto.AiSessionDetailResponse;
 import me.jianwen.mediask.api.dto.AiSessionListResponse;
 import me.jianwen.mediask.api.dto.AiSessionRegistrationHandoffResponse;
 import me.jianwen.mediask.api.dto.AiSessionTriageResultResponse;
-import me.jianwen.mediask.api.dto.AiChatStreamMetaResponse;
-import me.jianwen.mediask.api.dto.AiChatStreamRequest;
 import me.jianwen.mediask.api.dto.AiTriageResultResponse;
 import me.jianwen.mediask.api.dto.ImportKnowledgeDocumentResponse;
 import me.jianwen.mediask.api.dto.KnowledgeBaseResponse;
 import me.jianwen.mediask.api.dto.KnowledgeDocumentListItemResponse;
 import me.jianwen.mediask.application.ai.command.ChatAiCommand;
-import me.jianwen.mediask.application.ai.command.StreamAiChatCommand;
 import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionRegistrationHandoffQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
@@ -52,16 +49,6 @@ public final class AiAssembler {
                 ApiRequestContext.currentRequestIdOrGenerate());
     }
 
-    public static StreamAiChatCommand toStreamAiChatCommand(Long patientUserId, AiChatStreamRequest request) {
-        return new StreamAiChatCommand(
-                patientUserId,
-                request.sessionId(),
-                request.message(),
-                request.departmentId(),
-                toSceneType(request.sceneType()),
-                ApiRequestContext.currentRequestIdOrGenerate());
-    }
-
     public static GetAiSessionDetailQuery toGetAiSessionDetailQuery(Long patientUserId, Long sessionId) {
         return new GetAiSessionDetailQuery(patientUserId, sessionId);
     }
@@ -81,11 +68,6 @@ public final class AiAssembler {
 
     public static AiChatResponse toChatResponse(ChatAiResult result) {
         return new AiChatResponse(result.sessionId(), result.turnId(), result.answer(), toTriageResultResponse(result.reply()));
-    }
-
-    public static AiChatStreamMetaResponse toStreamMetaResponse(
-            Long sessionId, Long turnId, AiChatTriageResult triageResult) {
-        return new AiChatStreamMetaResponse(sessionId, turnId, toTriageResultResponse(triageResult));
     }
 
     public static ImportKnowledgeDocumentResponse toImportKnowledgeDocumentResponse(ImportKnowledgeDocumentResult result) {
@@ -157,9 +139,11 @@ public final class AiAssembler {
 
     public static AiTriageResultResponse toTriageResultResponse(AiChatReply reply) {
         return toTriageResultResponse(new AiChatTriageResult(
+                reply.triageStage(),
                 reply.chiefComplaintSummary(),
                 reply.riskLevel(),
                 reply.guardrailAction(),
+                reply.followUpQuestions(),
                 reply.recommendedDepartments(),
                 reply.careAdvice(),
                 reply.citations(),
@@ -169,9 +153,15 @@ public final class AiAssembler {
     public static AiSessionTriageResultResponse toSessionTriageResultResponse(AiSessionTriageResultView triageResult) {
         return new AiSessionTriageResultResponse(
                 triageResult.sessionId(),
+                triageResult.resultStatus().name(),
+                triageResult.triageStage().name(),
                 triageResult.riskLevel().name().toLowerCase(Locale.ROOT),
                 triageResult.guardrailAction().name().toLowerCase(Locale.ROOT),
-                toNextAction(triageResult.riskLevel(), triageResult.guardrailAction()),
+                toNextAction(triageResult.triageStage(), triageResult.riskLevel(), triageResult.guardrailAction()),
+                triageResult.finalizedTurnId(),
+                triageResult.finalizedAt(),
+                triageResult.hasActiveCycle(),
+                triageResult.activeCycleTurnNo(),
                 triageResult.chiefComplaintSummary(),
                 triageResult.recommendedDepartments().stream()
                         .map(department -> new AiSessionTriageResultResponse.RecommendedDepartmentResponse(
@@ -209,9 +199,11 @@ public final class AiAssembler {
 
     public static AiTriageResultResponse toTriageResultResponse(AiChatTriageResult triageResult) {
         return new AiTriageResultResponse(
+                triageResult.triageStage().name(),
                 triageResult.riskLevel().name().toLowerCase(Locale.ROOT),
                 triageResult.guardrailAction().name().toLowerCase(Locale.ROOT),
-                toNextAction(triageResult.riskLevel(), triageResult.guardrailAction()),
+                toNextAction(triageResult.triageStage(), triageResult.riskLevel(), triageResult.guardrailAction()),
+                triageResult.followUpQuestions(),
                 triageResult.chiefComplaintSummary(),
                 triageResult.recommendedDepartments().stream()
                         .map(department -> new AiTriageResultResponse.RecommendedDepartmentResponse(
@@ -241,15 +233,18 @@ public final class AiAssembler {
         }
     }
 
-    private static String toNextAction(RiskLevel riskLevel, GuardrailAction guardrailAction) {
+    private static String toNextAction(
+            me.jianwen.mediask.domain.ai.model.AiTriageStage triageStage,
+            RiskLevel riskLevel,
+            GuardrailAction guardrailAction) {
+        if (triageStage == me.jianwen.mediask.domain.ai.model.AiTriageStage.COLLECTING) {
+            return "CONTINUE_TRIAGE";
+        }
         if (riskLevel == RiskLevel.HIGH) {
             return "EMERGENCY_OFFLINE";
         }
         if (guardrailAction == GuardrailAction.REFUSE) {
             return "MANUAL_SUPPORT";
-        }
-        if (riskLevel == RiskLevel.MEDIUM || guardrailAction == GuardrailAction.CAUTION) {
-            return "GO_REGISTRATION";
         }
         return "VIEW_TRIAGE_RESULT";
     }

@@ -16,4 +16,6 @@ public interface AiSessionQueryMapper {
     AiSessionTriageResultRow selectLatestTriageResult(@Param("sessionId") Long sessionId);
 
     List<AiRunCitationRow> selectRunCitations(@Param("modelRunId") Long modelRunId);
+
+    String selectLatestTriageEventDetail(@Param("sessionId") Long sessionId);
 }

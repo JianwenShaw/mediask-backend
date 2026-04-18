@@ -15,9 +15,11 @@ class AiChatTriageResultTest {
         citations.add(new AiCitation(1L, 1, 0.9D, "snippet"));
 
         AiChatTriageResult triageResult = new AiChatTriageResult(
+                AiTriageStage.READY,
                 "summary",
                 RiskLevel.LOW,
                 GuardrailAction.ALLOW,
+                List.of(),
                 List.of(new RecommendedDepartment(1L, "Neurology", 1, null)),
                 null,
                 citations,
@@ -33,7 +35,15 @@ class AiChatTriageResultTest {
         NullPointerException exception = assertThrows(
                 NullPointerException.class,
                 () -> new AiChatTriageResult(
-                        "summary", null, GuardrailAction.ALLOW, List.of(), null, List.of(), AiExecutionMetadata.empty()));
+                        AiTriageStage.READY,
+                        "summary",
+                        null,
+                        GuardrailAction.ALLOW,
+                        List.of(),
+                        List.of(),
+                        null,
+                        List.of(),
+                        AiExecutionMetadata.empty()));
 
         assertEquals("riskLevel must not be null", exception.getMessage());
     }

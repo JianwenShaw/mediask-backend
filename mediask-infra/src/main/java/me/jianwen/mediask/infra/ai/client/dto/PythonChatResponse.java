@@ -5,10 +5,18 @@ import java.util.List;
 
 public record PythonChatResponse(
         @JsonProperty("model_run_id") Long modelRunId,
+        @JsonProperty("turn_id") Long turnId,
+        @JsonProperty("session_uuid") String sessionUuid,
         @JsonProperty("provider_run_id") String providerRunId,
         String answer,
         String summary,
+        @JsonProperty("triage_stage") String triageStage,
+        @JsonProperty("triage_completion_reason") String triageCompletionReason,
         @JsonProperty("chief_complaint_summary") String chiefComplaintSummary,
+        @JsonProperty("follow_up_questions") List<String> followUpQuestions,
+        @JsonProperty("risk_blockers") List<String> riskBlockers,
+        @JsonProperty("missing_critical_info") List<String> missingCriticalInfo,
+        @JsonProperty("department_recommendation_confidence") String departmentRecommendationConfidence,
         @JsonProperty("recommended_departments") List<PythonRecommendedDepartment> recommendedDepartments,
         @JsonProperty("care_advice") String careAdvice,
         List<PythonCitation> citations,

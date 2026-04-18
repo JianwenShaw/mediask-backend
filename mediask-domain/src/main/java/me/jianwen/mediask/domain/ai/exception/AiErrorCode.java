@@ -24,7 +24,8 @@ public enum AiErrorCode implements ErrorCodeType {
     AI_MODEL_RUN_UPDATE_CONFLICT(6018, "ai model run update conflict", ErrorCodeCategory.CONFLICT),
     AI_SESSION_TRIAGE_RESULT_NOT_FOUND(6019, "ai session triage result not found", ErrorCodeCategory.NOT_FOUND),
     AI_SESSION_REGISTRATION_HANDOFF_UNAVAILABLE(
-            6020, "ai session registration handoff unavailable", ErrorCodeCategory.CONFLICT);
+            6020, "ai session registration handoff unavailable", ErrorCodeCategory.CONFLICT),
+    AI_SESSION_TRIAGE_RESULT_NOT_READY(6021, "ai session triage result not ready", ErrorCodeCategory.CONFLICT);
 
     private final int code;
     private final String message;
