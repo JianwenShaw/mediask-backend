@@ -1,6 +1,7 @@
 package me.jianwen.mediask.api.config;
 
 import java.time.Clock;
+import me.jianwen.mediask.application.ai.usecase.AiRegistrationHandoffSupport;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionRegistrationHandoffUseCase;
@@ -69,8 +70,8 @@ public class AiModuleConfig {
 
     @Bean
     public GetAiSessionRegistrationHandoffUseCase getAiSessionRegistrationHandoffUseCase(
-            AiSessionQueryRepository aiSessionQueryRepository,
+            AiRegistrationHandoffSupport aiRegistrationHandoffSupport,
             @Qualifier("aiRegistrationHandoffClock") Clock aiRegistrationHandoffClock) {
-        return new GetAiSessionRegistrationHandoffUseCase(aiSessionQueryRepository, aiRegistrationHandoffClock);
+        return new GetAiSessionRegistrationHandoffUseCase(aiRegistrationHandoffSupport, aiRegistrationHandoffClock);
     }
 }

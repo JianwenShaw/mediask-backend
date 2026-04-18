@@ -19,6 +19,7 @@ import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionRegistrationHandoffQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
 import me.jianwen.mediask.application.ai.query.ListAiSessionsQuery;
+import me.jianwen.mediask.application.ai.usecase.AiRegistrationHandoffSupport;
 import me.jianwen.mediask.application.ai.usecase.ChatAiResult;
 import me.jianwen.mediask.application.ai.usecase.ChatAiUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
@@ -449,7 +450,7 @@ class AiControllerTest {
         private AiSessionRegistrationHandoffView result;
 
         private StubGetAiSessionRegistrationHandoffUseCase() {
-            super(new NoopAiSessionQueryRepository(), java.time.Clock.systemUTC());
+            super(new AiRegistrationHandoffSupport(new NoopAiSessionQueryRepository()), java.time.Clock.systemUTC());
         }
 
         @Override

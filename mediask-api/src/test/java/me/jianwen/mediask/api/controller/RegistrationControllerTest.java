@@ -27,8 +27,10 @@ import me.jianwen.mediask.api.security.SecurityConfig;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationResult;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationUseCase;
 import me.jianwen.mediask.application.outpatient.usecase.ListRegistrationsUseCase;
+import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationListItem;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
+import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
 import me.jianwen.mediask.domain.user.model.AccessToken;
 import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
@@ -113,6 +115,23 @@ class RegistrationControllerTest {
     }
 
     @Test
+    void create_WhenSourceAiSessionIdMissing_StillReturnRegistration() throws Exception {
+        patientMockMvc.perform(post("/api/v1/registrations")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "clinicSessionId": 4101,
+                                  "clinicSlotId": 5101
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        assertEquals(null, patientCreateRegistrationUseCase.lastCommand.sourceAiSessionId());
+    }
+
+    @Test
     void list_WhenAuthenticatedPatient_ReturnOwnRegistrations() throws Exception {
         patientMockMvc.perform(get("/api/v1/registrations")
                         .header("Authorization", "Bearer " + PATIENT_TOKEN)
@@ -156,6 +175,24 @@ class RegistrationControllerTest {
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(2008));
+    }
+
+    @Test
+    void create_WhenAiSourceRejected_ReturnAiErrorMapping() throws Exception {
+        patientCreateRegistrationUseCase.throwable = new BizException(AiErrorCode.AI_SESSION_REGISTRATION_HANDOFF_UNAVAILABLE);
+
+        patientMockMvc.perform(post("/api/v1/registrations")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "clinicSessionId": 4101,
+                                  "clinicSlotId": 5101,
+                                  "sourceAiSessionId": 7101
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(6020));
     }
 
     @Test
@@ -218,14 +255,18 @@ class RegistrationControllerTest {
     private static final class StubCreateRegistrationUseCase extends CreateRegistrationUseCase {
 
         private me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand lastCommand;
+        private RuntimeException throwable;
 
         private StubCreateRegistrationUseCase() {
-            super(null, null, null);
+            super(null, null, null, null);
         }
 
         @Override
         public CreateRegistrationResult handle(me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand command) {
             this.lastCommand = command;
+            if (throwable != null) {
+                throw throwable;
+            }
             return new CreateRegistrationResult(6101L, "REG6101", RegistrationStatus.PENDING_PAYMENT);
         }
     }

@@ -118,7 +118,7 @@ class GetAiSessionReadUseCaseTest {
     @Test
     void getSessionRegistrationHandoff_WhenOwnedByPatient_ShouldReturnHandoff() {
         GetAiSessionRegistrationHandoffUseCase useCase = new GetAiSessionRegistrationHandoffUseCase(
-                new StubQueryRepository(),
+                new AiRegistrationHandoffSupport(new StubQueryRepository()),
                 Clock.fixed(Instant.parse("2026-04-15T00:00:00Z"), ZoneOffset.UTC));
 
         AiSessionRegistrationHandoffView result =
@@ -135,7 +135,7 @@ class GetAiSessionReadUseCaseTest {
     @Test
     void getSessionRegistrationHandoff_WhenHighRisk_ShouldReturnBlockedResponse() {
         GetAiSessionRegistrationHandoffUseCase useCase = new GetAiSessionRegistrationHandoffUseCase(
-                new HighRiskQueryRepository(),
+                new AiRegistrationHandoffSupport(new HighRiskQueryRepository()),
                 Clock.fixed(Instant.parse("2026-04-15T00:00:00Z"), ZoneOffset.UTC));
 
         AiSessionRegistrationHandoffView result =
@@ -149,7 +149,7 @@ class GetAiSessionReadUseCaseTest {
     @Test
     void getSessionRegistrationHandoff_WhenSessionOwnedByAnotherPatient_ShouldReject() {
         GetAiSessionRegistrationHandoffUseCase useCase = new GetAiSessionRegistrationHandoffUseCase(
-                new StubQueryRepository(),
+                new AiRegistrationHandoffSupport(new StubQueryRepository()),
                 Clock.fixed(Instant.parse("2026-04-15T00:00:00Z"), ZoneOffset.UTC));
 
         BizException exception = assertThrows(
@@ -161,7 +161,7 @@ class GetAiSessionReadUseCaseTest {
     @Test
     void getSessionRegistrationHandoff_WhenNoRecommendedDepartment_ShouldReject() {
         GetAiSessionRegistrationHandoffUseCase useCase = new GetAiSessionRegistrationHandoffUseCase(
-                new NoDepartmentQueryRepository(),
+                new AiRegistrationHandoffSupport(new NoDepartmentQueryRepository()),
                 Clock.fixed(Instant.parse("2026-04-15T00:00:00Z"), ZoneOffset.UTC));
 
         BizException exception = assertThrows(

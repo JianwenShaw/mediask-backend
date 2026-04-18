@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
 import java.time.Duration;
+import me.jianwen.mediask.application.ai.usecase.AiRegistrationHandoffSupport;
 import me.jianwen.mediask.api.controller.AiController;
 import me.jianwen.mediask.api.controller.InternalTriageDepartmentCatalogController;
 import me.jianwen.mediask.domain.ai.model.AiChatReply;
@@ -116,6 +117,11 @@ class AiModuleConfigTest {
         @Bean
         AiSessionQueryRepository aiSessionQueryRepository() {
             return new NoopAiSessionQueryRepository();
+        }
+
+        @Bean
+        AiRegistrationHandoffSupport aiRegistrationHandoffSupport(AiSessionQueryRepository aiSessionQueryRepository) {
+            return new AiRegistrationHandoffSupport(aiSessionQueryRepository);
         }
 
         @Bean

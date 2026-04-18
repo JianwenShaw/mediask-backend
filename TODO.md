@@ -1,5 +1,11 @@
 # TODO
 
+> 执行入口已迁移到飞书文档：
+> https://www.feishu.cn/docx/A0bFdW8rKoSGaWxv2rqcwIgXnWg
+>
+> 后续 agent 执行时，优先参考飞书中的「MediAsk Backend P0 Agent 执行板」。
+> 本文件保留原始任务明细，作为历史上下文和补充说明，不再作为首选执行视图。
+
 ## Working Rules
 
 - 一次只执行一个 `CURRENT` 任务。

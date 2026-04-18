@@ -1,5 +1,6 @@
 package me.jianwen.mediask.application.outpatient.usecase;
 
+import me.jianwen.mediask.application.ai.usecase.AiRegistrationHandoffSupport;
 import me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounter;
@@ -16,18 +17,26 @@ public class CreateRegistrationUseCase {
     private final ClinicSlotReservationRepository clinicSlotReservationRepository;
     private final RegistrationOrderRepository registrationOrderRepository;
     private final VisitEncounterRepository visitEncounterRepository;
+    private final AiRegistrationHandoffSupport aiRegistrationHandoffSupport;
 
     public CreateRegistrationUseCase(
             ClinicSlotReservationRepository clinicSlotReservationRepository,
             RegistrationOrderRepository registrationOrderRepository,
-            VisitEncounterRepository visitEncounterRepository) {
+            VisitEncounterRepository visitEncounterRepository,
+            AiRegistrationHandoffSupport aiRegistrationHandoffSupport) {
         this.clinicSlotReservationRepository = clinicSlotReservationRepository;
         this.registrationOrderRepository = registrationOrderRepository;
         this.visitEncounterRepository = visitEncounterRepository;
+        this.aiRegistrationHandoffSupport = aiRegistrationHandoffSupport;
     }
 
     @Transactional
     public CreateRegistrationResult handle(CreateRegistrationCommand command) {
+        if (command.sourceAiSessionId() != null) {
+            aiRegistrationHandoffSupport
+                    .resolve(command.patientUserId(), command.sourceAiSessionId())
+                    .requireRegistrationAvailable();
+        }
         if (!clinicSlotReservationRepository.existsOpenSession(command.clinicSessionId())) {
             throw new BizException(OutpatientErrorCode.SESSION_NOT_FOUND);
         }
