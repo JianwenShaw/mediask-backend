@@ -32,6 +32,20 @@ class RegistrationOrderQueryRepositoryAdapterTest {
         assertEquals(1, handler.selectListInvocations);
     }
 
+    @Test
+    void listByPatientUserId_WhenStatusAbsent_ReturnMappedItems() {
+        CapturingHandler handler = new CapturingHandler();
+        RegistrationOrderQueryRepositoryAdapter adapter = new RegistrationOrderQueryRepositoryAdapter(
+                proxy(RegistrationOrderMapper.class, Map.of("selectList", handler::selectList)));
+
+        List<RegistrationListItem> result = adapter.listByPatientUserId(2003L, null);
+
+        assertEquals(1, result.size());
+        assertEquals(6101L, result.getFirst().registrationId());
+        assertEquals(RegistrationStatus.CONFIRMED, result.getFirst().status());
+        assertEquals(1, handler.selectListInvocations);
+    }
+
     private static <T> T proxy(Class<T> type, Map<String, Function<Object[], Object>> handlers) {
         Object proxyInstance = Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] {type}, (proxy, method, args) -> {
             if (method.getDeclaringClass() == Object.class) {

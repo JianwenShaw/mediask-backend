@@ -20,11 +20,14 @@ public class RegistrationOrderQueryRepositoryAdapter implements RegistrationOrde
 
     @Override
     public List<RegistrationListItem> listByPatientUserId(Long patientUserId, RegistrationStatus status) {
-        return registrationOrderMapper.selectList(Wrappers.lambdaQuery(RegistrationOrderDO.class)
-                        .eq(RegistrationOrderDO::getPatientId, patientUserId)
-                        .eq(status != null, RegistrationOrderDO::getOrderStatus, status.name())
-                        .isNull(RegistrationOrderDO::getDeletedAt)
-                        .orderByDesc(RegistrationOrderDO::getCreatedAt))
+        var query = Wrappers.lambdaQuery(RegistrationOrderDO.class)
+                .eq(RegistrationOrderDO::getPatientId, patientUserId)
+                .isNull(RegistrationOrderDO::getDeletedAt)
+                .orderByDesc(RegistrationOrderDO::getCreatedAt);
+        if (status != null) {
+            query.eq(RegistrationOrderDO::getOrderStatus, status.name());
+        }
+        return registrationOrderMapper.selectList(query)
                 .stream()
                 .map(this::toListItem)
                 .toList();
