@@ -5,7 +5,8 @@ import me.jianwen.mediask.common.exception.ErrorCodeType;
 
 public enum ClinicalErrorCode implements ErrorCodeType {
     ENCOUNTER_ACCESS_DENIED(4003, "encounter access denied", ErrorCodeCategory.FORBIDDEN),
-    ENCOUNTER_NOT_FOUND(4004, "encounter not found", ErrorCodeCategory.NOT_FOUND);
+    ENCOUNTER_NOT_FOUND(4004, "encounter not found", ErrorCodeCategory.NOT_FOUND),
+    ENCOUNTER_AI_SUMMARY_NOT_FOUND(4005, "encounter ai summary not found", ErrorCodeCategory.NOT_FOUND);
 
     private final int code;
     private final String message;

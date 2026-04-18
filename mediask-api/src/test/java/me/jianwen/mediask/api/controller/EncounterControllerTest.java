@@ -27,9 +27,15 @@ import me.jianwen.mediask.api.security.ScenarioAuthorizationAspect;
 import me.jianwen.mediask.api.security.SecurityConfig;
 import me.jianwen.mediask.application.authz.AuthorizationDecisionService;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
+import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
+import me.jianwen.mediask.application.clinical.usecase.GetEncounterAiSummaryUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
+import me.jianwen.mediask.domain.ai.model.AiCitation;
+import me.jianwen.mediask.domain.ai.model.RecommendedDepartment;
+import me.jianwen.mediask.domain.ai.model.RiskLevel;
+import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterListItem;
@@ -67,11 +73,13 @@ class EncounterControllerTest {
     private MockMvc noPermissionDoctorMockMvc;
     private StubListEncountersUseCase doctorListEncountersUseCase;
     private StubGetEncounterDetailUseCase doctorGetEncounterDetailUseCase;
+    private StubGetEncounterAiSummaryUseCase doctorGetEncounterAiSummaryUseCase;
 
     @BeforeEach
     void setUp() {
         doctorListEncountersUseCase = new StubListEncountersUseCase();
         doctorGetEncounterDetailUseCase = new StubGetEncounterDetailUseCase();
+        doctorGetEncounterAiSummaryUseCase = new StubGetEncounterAiSummaryUseCase();
         doctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2004L,
                 "doctor_zhang",
@@ -82,7 +90,7 @@ class EncounterControllerTest {
                 Set.of(),
                 null,
                 2101L,
-                3101L), doctorListEncountersUseCase, doctorGetEncounterDetailUseCase);
+                3101L), doctorListEncountersUseCase, doctorGetEncounterDetailUseCase, doctorGetEncounterAiSummaryUseCase);
         patientMockMvc = buildMockMvc(new AuthenticatedUser(
                 2003L,
                 "patient_li",
@@ -93,7 +101,7 @@ class EncounterControllerTest {
                 Set.of(),
                 2201L,
                 null,
-                null), new StubListEncountersUseCase(), new StubGetEncounterDetailUseCase());
+                null), new StubListEncountersUseCase(), new StubGetEncounterDetailUseCase(), new StubGetEncounterAiSummaryUseCase());
         noPermissionDoctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2005L,
                 "doctor_wang",
@@ -104,7 +112,7 @@ class EncounterControllerTest {
                 Set.of(),
                 null,
                 2102L,
-                3101L), new StubListEncountersUseCase(), new StubGetEncounterDetailUseCase());
+                3101L), new StubListEncountersUseCase(), new StubGetEncounterDetailUseCase(), new StubGetEncounterAiSummaryUseCase());
     }
 
     @Test
@@ -210,11 +218,72 @@ class EncounterControllerTest {
                 .andExpect(jsonPath("$.code").value(4003));
     }
 
+    @Test
+    void aiSummary_WhenAuthenticatedDoctor_ReturnOwnEncounterSummary() throws Exception {
+        doctorMockMvc.perform(get("/api/v1/encounters/8101/ai-summary")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN)
+                        .contentType(APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.encounterId").value(8101))
+                .andExpect(jsonPath("$.data.sessionId").value(9001))
+                .andExpect(jsonPath("$.data.chiefComplaintSummary").value("头痛三天"))
+                .andExpect(jsonPath("$.data.structuredSummary").value("患者自述头痛三天伴低热"))
+                .andExpect(jsonPath("$.data.riskLevel").value("medium"))
+                .andExpect(jsonPath("$.data.recommendedDepartments[0].departmentId").value(3101))
+                .andExpect(jsonPath("$.data.latestCitations[0].chunkId").value(7001))
+                .andExpect(jsonPath("$.data.aiRawContent").doesNotExist());
+
+        assertEquals(8101L, doctorGetEncounterAiSummaryUseCase.lastQuery.encounterId());
+        assertEquals(2101L, doctorGetEncounterAiSummaryUseCase.lastQuery.doctorId());
+    }
+
+    @Test
+    void aiSummary_WhenAuthenticatedPatientWithoutPermission_ReturnForbidden() throws Exception {
+        patientMockMvc.perform(get("/api/v1/encounters/8101/ai-summary")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(1003));
+    }
+
+    @Test
+    void aiSummary_WhenEncounterMissing_ReturnNotFound() throws Exception {
+        doctorGetEncounterAiSummaryUseCase.throwNotFound = true;
+
+        doctorMockMvc.perform(get("/api/v1/encounters/9999/ai-summary")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(4004));
+    }
+
+    @Test
+    void aiSummary_WhenEncounterBelongsToAnotherDoctor_ReturnForbidden() throws Exception {
+        doctorGetEncounterAiSummaryUseCase.throwAccessDenied = true;
+
+        doctorMockMvc.perform(get("/api/v1/encounters/8101/ai-summary")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(4003));
+    }
+
+    @Test
+    void aiSummary_WhenAiSummaryMissing_ReturnNotFound() throws Exception {
+        doctorGetEncounterAiSummaryUseCase.throwAiSummaryNotFound = true;
+
+        doctorMockMvc.perform(get("/api/v1/encounters/8101/ai-summary")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(4005));
+    }
+
     private MockMvc buildMockMvc(
             AuthenticatedUser authenticatedUser,
             StubListEncountersUseCase listEncountersUseCase,
-            StubGetEncounterDetailUseCase getEncounterDetailUseCase) {
-        EncounterController target = new EncounterController(listEncountersUseCase, getEncounterDetailUseCase);
+            StubGetEncounterDetailUseCase getEncounterDetailUseCase,
+            StubGetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase) {
+        EncounterController target =
+                new EncounterController(listEncountersUseCase, getEncounterDetailUseCase, getEncounterAiSummaryUseCase);
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAspect(new ScenarioAuthorizationAspect(new AuthorizationDecisionService(List.of(), List.of())));
@@ -314,6 +383,40 @@ class EncounterControllerTest {
                             VisitEncounterStatus.SCHEDULED,
                             OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
                             null));
+        }
+    }
+
+    private static final class StubGetEncounterAiSummaryUseCase extends GetEncounterAiSummaryUseCase {
+
+        private GetEncounterAiSummaryQuery lastQuery;
+        private boolean throwNotFound;
+        private boolean throwAccessDenied;
+        private boolean throwAiSummaryNotFound;
+
+        private StubGetEncounterAiSummaryUseCase() {
+            super(null);
+        }
+
+        @Override
+        public EncounterAiSummary handle(GetEncounterAiSummaryQuery query) {
+            this.lastQuery = query;
+            if (throwAccessDenied) {
+                throw new me.jianwen.mediask.common.exception.BizException(ClinicalErrorCode.ENCOUNTER_ACCESS_DENIED);
+            }
+            if (throwNotFound) {
+                throw new me.jianwen.mediask.common.exception.BizException(ClinicalErrorCode.ENCOUNTER_NOT_FOUND);
+            }
+            if (throwAiSummaryNotFound) {
+                throw new me.jianwen.mediask.common.exception.BizException(ClinicalErrorCode.ENCOUNTER_AI_SUMMARY_NOT_FOUND);
+            }
+            return new EncounterAiSummary(
+                    8101L,
+                    9001L,
+                    "头痛三天",
+                    "患者自述头痛三天伴低热",
+                    RiskLevel.MEDIUM,
+                    List.of(new RecommendedDepartment(3101L, "心内科", 1, "持续头痛需线下评估")),
+                    List.of(new AiCitation(7001L, 1, 0.82D, "引用片段-1")));
         }
     }
 

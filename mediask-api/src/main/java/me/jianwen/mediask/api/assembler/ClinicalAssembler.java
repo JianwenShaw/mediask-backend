@@ -1,11 +1,15 @@
 package me.jianwen.mediask.api.assembler;
 
 import java.util.List;
+import java.util.Locale;
+import me.jianwen.mediask.api.dto.EncounterAiSummaryResponse;
 import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListItemResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
 import me.jianwen.mediask.api.dto.EncounterPatientSummaryResponse;
+import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
+import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
 import me.jianwen.mediask.common.exception.BizException;
@@ -24,6 +28,10 @@ public final class ClinicalAssembler {
 
     public static GetEncounterDetailQuery toGetEncounterDetailQuery(Long encounterId, Long doctorId) {
         return new GetEncounterDetailQuery(encounterId, doctorId);
+    }
+
+    public static GetEncounterAiSummaryQuery toGetEncounterAiSummaryQuery(Long encounterId, Long doctorId) {
+        return new GetEncounterAiSummaryQuery(encounterId, doctorId);
     }
 
     public static EncounterListResponse toEncounterListResponse(List<EncounterListItem> items) {
@@ -46,6 +54,29 @@ public final class ClinicalAssembler {
                         detail.patientSummary().encounterStatus().name(),
                         detail.patientSummary().startedAt(),
                         detail.patientSummary().endedAt()));
+    }
+
+    public static EncounterAiSummaryResponse toEncounterAiSummaryResponse(EncounterAiSummary summary) {
+        return new EncounterAiSummaryResponse(
+                summary.encounterId(),
+                summary.sessionId(),
+                summary.chiefComplaintSummary(),
+                summary.structuredSummary(),
+                summary.riskLevel().name().toLowerCase(Locale.ROOT),
+                summary.recommendedDepartments().stream()
+                        .map(department -> new EncounterAiSummaryResponse.RecommendedDepartmentResponse(
+                                department.departmentId(),
+                                department.departmentName(),
+                                department.priority(),
+                                department.reason()))
+                        .toList(),
+                summary.latestCitations().stream()
+                        .map(citation -> new EncounterAiSummaryResponse.CitationResponse(
+                                citation.chunkId(),
+                                citation.retrievalRank(),
+                                citation.fusionScore(),
+                                citation.snippet()))
+                        .toList());
     }
 
     private static EncounterListItemResponse toEncounterListItemResponse(EncounterListItem item) {
