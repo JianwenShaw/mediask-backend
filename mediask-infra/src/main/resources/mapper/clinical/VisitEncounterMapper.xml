@@ -34,4 +34,32 @@
         </if>
         ORDER BY encounter.created_at DESC, encounter.id DESC
     </select>
+
+    <select id="selectEncounterDetail"
+            resultType="me.jianwen.mediask.infra.persistence.mapper.VisitEncounterDetailRow">
+        SELECT
+            encounter.id AS encounter_id,
+            encounter.order_id AS registration_id,
+            encounter.doctor_id,
+            encounter.patient_id AS patient_user_id,
+            patient.display_name AS patient_name,
+            encounter.department_id,
+            department.name AS department_name,
+            session.session_date,
+            session.period_code,
+            encounter.encounter_status,
+            encounter.started_at,
+            encounter.ended_at
+        FROM visit_encounter encounter
+        JOIN registration_order registration ON registration.id = encounter.order_id
+        JOIN clinic_session session ON session.id = registration.session_id
+        JOIN users patient ON patient.id = encounter.patient_id
+        JOIN departments department ON department.id = encounter.department_id
+        WHERE encounter.deleted_at IS NULL
+          AND registration.deleted_at IS NULL
+          AND session.deleted_at IS NULL
+          AND patient.deleted_at IS NULL
+          AND department.deleted_at IS NULL
+          AND encounter.id = #{encounterId}
+    </select>
 </mapper>

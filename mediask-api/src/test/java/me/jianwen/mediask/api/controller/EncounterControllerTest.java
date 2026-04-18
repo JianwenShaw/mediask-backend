@@ -12,9 +12,9 @@ import jakarta.servlet.Filter;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.Optional;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
@@ -26,9 +26,14 @@ import me.jianwen.mediask.api.security.JwtAuthenticationFilter;
 import me.jianwen.mediask.api.security.ScenarioAuthorizationAspect;
 import me.jianwen.mediask.api.security.SecurityConfig;
 import me.jianwen.mediask.application.authz.AuthorizationDecisionService;
+import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
+import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
+import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
+import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterListItem;
+import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
 import me.jianwen.mediask.domain.user.model.AccessToken;
 import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
@@ -61,10 +66,12 @@ class EncounterControllerTest {
     private MockMvc patientMockMvc;
     private MockMvc noPermissionDoctorMockMvc;
     private StubListEncountersUseCase doctorListEncountersUseCase;
+    private StubGetEncounterDetailUseCase doctorGetEncounterDetailUseCase;
 
     @BeforeEach
     void setUp() {
         doctorListEncountersUseCase = new StubListEncountersUseCase();
+        doctorGetEncounterDetailUseCase = new StubGetEncounterDetailUseCase();
         doctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2004L,
                 "doctor_zhang",
@@ -75,7 +82,7 @@ class EncounterControllerTest {
                 Set.of(),
                 null,
                 2101L,
-                3101L), doctorListEncountersUseCase);
+                3101L), doctorListEncountersUseCase, doctorGetEncounterDetailUseCase);
         patientMockMvc = buildMockMvc(new AuthenticatedUser(
                 2003L,
                 "patient_li",
@@ -86,7 +93,7 @@ class EncounterControllerTest {
                 Set.of(),
                 2201L,
                 null,
-                null), new StubListEncountersUseCase());
+                null), new StubListEncountersUseCase(), new StubGetEncounterDetailUseCase());
         noPermissionDoctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2005L,
                 "doctor_wang",
@@ -97,7 +104,7 @@ class EncounterControllerTest {
                 Set.of(),
                 null,
                 2102L,
-                3101L), new StubListEncountersUseCase());
+                3101L), new StubListEncountersUseCase(), new StubGetEncounterDetailUseCase());
     }
 
     @Test
@@ -154,8 +161,60 @@ class EncounterControllerTest {
                 .andExpect(jsonPath("$.code").value(1002));
     }
 
-    private MockMvc buildMockMvc(AuthenticatedUser authenticatedUser, StubListEncountersUseCase listEncountersUseCase) {
-        EncounterController target = new EncounterController(listEncountersUseCase);
+    @Test
+    void detail_WhenAuthenticatedDoctor_ReturnOwnEncounter() throws Exception {
+        doctorMockMvc.perform(get("/api/v1/encounters/8101")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN)
+                        .contentType(APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.encounterId").value(8101))
+                .andExpect(jsonPath("$.data.registrationId").value(6101))
+                .andExpect(jsonPath("$.data.patientSummary.patientUserId").value(2003))
+                .andExpect(jsonPath("$.data.patientSummary.patientName").value("李患者"))
+                .andExpect(jsonPath("$.data.patientSummary.departmentId").value(3101))
+                .andExpect(jsonPath("$.data.patientSummary.departmentName").value("心内科"))
+                .andExpect(jsonPath("$.data.patientSummary.periodCode").value("MORNING"))
+                .andExpect(jsonPath("$.data.patientSummary.encounterStatus").value("SCHEDULED"));
+
+        assertEquals(8101L, doctorGetEncounterDetailUseCase.lastQuery.encounterId());
+        assertEquals(2101L, doctorGetEncounterDetailUseCase.lastQuery.doctorId());
+    }
+
+    @Test
+    void detail_WhenAuthenticatedPatientWithoutPermission_ReturnForbidden() throws Exception {
+        patientMockMvc.perform(get("/api/v1/encounters/8101")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(1003));
+    }
+
+    @Test
+    void detail_WhenEncounterMissing_ReturnNotFound() throws Exception {
+        doctorGetEncounterDetailUseCase.throwNotFound = true;
+
+        doctorMockMvc.perform(get("/api/v1/encounters/9999")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(4004));
+    }
+
+    @Test
+    void detail_WhenEncounterBelongsToAnotherDoctor_ReturnForbidden() throws Exception {
+        doctorGetEncounterDetailUseCase.throwAccessDenied = true;
+
+        doctorMockMvc.perform(get("/api/v1/encounters/8101")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(4003));
+    }
+
+    private MockMvc buildMockMvc(
+            AuthenticatedUser authenticatedUser,
+            StubListEncountersUseCase listEncountersUseCase,
+            StubGetEncounterDetailUseCase getEncounterDetailUseCase) {
+        EncounterController target = new EncounterController(listEncountersUseCase, getEncounterDetailUseCase);
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAspect(new ScenarioAuthorizationAspect(new AuthorizationDecisionService(List.of(), List.of())));
@@ -219,6 +278,42 @@ class EncounterControllerTest {
                     VisitEncounterStatus.SCHEDULED,
                     OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
                     null));
+        }
+    }
+
+    private static final class StubGetEncounterDetailUseCase extends GetEncounterDetailUseCase {
+
+        private GetEncounterDetailQuery lastQuery;
+        private boolean throwNotFound;
+        private boolean throwAccessDenied;
+
+        private StubGetEncounterDetailUseCase() {
+            super(null);
+        }
+
+        @Override
+        public EncounterDetail handle(GetEncounterDetailQuery query) {
+            this.lastQuery = query;
+            if (throwAccessDenied) {
+                throw new me.jianwen.mediask.common.exception.BizException(ClinicalErrorCode.ENCOUNTER_ACCESS_DENIED);
+            }
+            if (throwNotFound) {
+                throw new me.jianwen.mediask.common.exception.BizException(ClinicalErrorCode.ENCOUNTER_NOT_FOUND);
+            }
+            return new EncounterDetail(
+                    8101L,
+                    6101L,
+                    2101L,
+                    new EncounterPatientSummary(
+                            2003L,
+                            "李患者",
+                            3101L,
+                            "心内科",
+                            LocalDate.parse("2026-04-03"),
+                            "MORNING",
+                            VisitEncounterStatus.SCHEDULED,
+                            OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
+                            null));
         }
     }
 

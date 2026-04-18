@@ -1,9 +1,13 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
 import java.util.List;
+import java.util.Optional;
+import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterListItem;
+import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
 import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
+import me.jianwen.mediask.infra.persistence.mapper.VisitEncounterDetailRow;
 import me.jianwen.mediask.infra.persistence.mapper.VisitEncounterListRow;
 import me.jianwen.mediask.infra.persistence.mapper.VisitEncounterMapper;
 import org.springframework.stereotype.Component;
@@ -26,6 +30,12 @@ public class EncounterQueryRepositoryAdapter implements EncounterQueryRepository
                 .toList();
     }
 
+    @Override
+    public Optional<EncounterDetail> findDetailByEncounterId(Long encounterId) {
+        VisitEncounterDetailRow row = visitEncounterMapper.selectEncounterDetail(encounterId);
+        return Optional.ofNullable(row).map(this::toDetail);
+    }
+
     private EncounterListItem toListItem(VisitEncounterListRow row) {
         return new EncounterListItem(
                 row.getEncounterId(),
@@ -39,5 +49,22 @@ public class EncounterQueryRepositoryAdapter implements EncounterQueryRepository
                 VisitEncounterStatus.valueOf(row.getEncounterStatus()),
                 row.getStartedAt(),
                 row.getEndedAt());
+    }
+
+    private EncounterDetail toDetail(VisitEncounterDetailRow row) {
+        return new EncounterDetail(
+                row.getEncounterId(),
+                row.getRegistrationId(),
+                row.getDoctorId(),
+                new EncounterPatientSummary(
+                        row.getPatientUserId(),
+                        row.getPatientName(),
+                        row.getDepartmentId(),
+                        row.getDepartmentName(),
+                        row.getSessionDate(),
+                        row.getPeriodCode(),
+                        VisitEncounterStatus.valueOf(row.getEncounterStatus()),
+                        row.getStartedAt(),
+                        row.getEndedAt()));
     }
 }

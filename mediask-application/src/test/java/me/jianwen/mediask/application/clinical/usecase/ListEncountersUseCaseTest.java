@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
+import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterListItem;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
 import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
@@ -46,6 +48,11 @@ class ListEncountersUseCaseTest {
                     VisitEncounterStatus.SCHEDULED,
                     OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
                     null));
+        }
+
+        @Override
+        public Optional<EncounterDetail> findDetailByEncounterId(Long encounterId) {
+            throw new UnsupportedOperationException();
         }
     }
 }

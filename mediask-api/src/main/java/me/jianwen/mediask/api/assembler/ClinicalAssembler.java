@@ -1,8 +1,12 @@
 package me.jianwen.mediask.api.assembler;
 
 import java.util.List;
+import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListItemResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
+import me.jianwen.mediask.api.dto.EncounterPatientSummaryResponse;
+import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
+import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
@@ -18,10 +22,30 @@ public final class ClinicalAssembler {
         return new ListEncountersQuery(doctorId, toVisitEncounterStatus(status));
     }
 
+    public static GetEncounterDetailQuery toGetEncounterDetailQuery(Long encounterId, Long doctorId) {
+        return new GetEncounterDetailQuery(encounterId, doctorId);
+    }
+
     public static EncounterListResponse toEncounterListResponse(List<EncounterListItem> items) {
         return new EncounterListResponse(items.stream()
                 .map(ClinicalAssembler::toEncounterListItemResponse)
                 .toList());
+    }
+
+    public static EncounterDetailResponse toEncounterDetailResponse(EncounterDetail detail) {
+        return new EncounterDetailResponse(
+                detail.encounterId(),
+                detail.registrationId(),
+                new EncounterPatientSummaryResponse(
+                        detail.patientSummary().patientUserId(),
+                        detail.patientSummary().patientName(),
+                        detail.patientSummary().departmentId(),
+                        detail.patientSummary().departmentName(),
+                        detail.patientSummary().sessionDate(),
+                        detail.patientSummary().periodCode(),
+                        detail.patientSummary().encounterStatus().name(),
+                        detail.patientSummary().startedAt(),
+                        detail.patientSummary().endedAt()));
     }
 
     private static EncounterListItemResponse toEncounterListItemResponse(EncounterListItem item) {
