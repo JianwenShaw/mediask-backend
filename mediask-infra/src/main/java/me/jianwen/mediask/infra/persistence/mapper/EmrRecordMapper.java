@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 @Mapper
 public interface EmrRecordMapper extends BaseMapper<EmrRecordDO> {
@@ -19,4 +20,14 @@ public interface EmrRecordMapper extends BaseMapper<EmrRecordDO> {
     int insertDiagnoses(@Param("diagnoses") List<EmrDiagnosisDO> diagnoses);
 
     boolean existsByEncounterId(@Param("encounterId") Long encounterId);
+
+    Optional<EmrRecordDO> selectByEncounterId(@Param("encounterId") Long encounterId);
+
+    Optional<Long> selectRecordIdByEncounterId(@Param("encounterId") Long encounterId);
+
+    Optional<EmrRecordDO> selectAccessByRecordId(@Param("recordId") Long recordId);
+
+    Optional<EmrRecordContentDO> selectContentByRecordId(@Param("recordId") Long recordId);
+
+    List<EmrDiagnosisDO> selectDiagnosesByRecordId(@Param("recordId") Long recordId);
 }

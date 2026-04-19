@@ -30,4 +30,63 @@
         )
     </select>
 
+    <select id="selectByEncounterId" resultType="me.jianwen.mediask.infra.persistence.dataobject.EmrRecordDO">
+        SELECT id,
+               version,
+               created_at,
+               updated_at,
+               deleted_at,
+               record_no,
+               encounter_id,
+               patient_id,
+               doctor_id,
+               department_id,
+               record_status,
+               chief_complaint_summary
+        FROM emr_record
+        WHERE encounter_id = #{encounterId}
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="selectRecordIdByEncounterId" resultType="java.lang.Long">
+        SELECT id
+        FROM emr_record
+        WHERE encounter_id = #{encounterId}
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="selectAccessByRecordId" resultType="me.jianwen.mediask.infra.persistence.dataobject.EmrRecordDO">
+        SELECT id,
+               patient_id,
+               department_id
+        FROM emr_record
+        WHERE id = #{recordId}
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="selectContentByRecordId" resultType="me.jianwen.mediask.infra.persistence.dataobject.EmrRecordContentDO">
+        SELECT record_id,
+               content_encrypted,
+               content_masked,
+               content_hash,
+               created_at,
+               updated_at
+        FROM emr_record_content
+        WHERE record_id = #{recordId}
+    </select>
+
+    <select id="selectDiagnosesByRecordId" resultType="me.jianwen.mediask.infra.persistence.dataobject.EmrDiagnosisDO">
+        SELECT id,
+               record_id,
+               diagnosis_type,
+               diagnosis_code,
+               diagnosis_name,
+               is_primary,
+               sort_order,
+               created_at
+        FROM emr_diagnosis
+        WHERE record_id = #{recordId}
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
 </mapper>

@@ -1,5 +1,9 @@
 # MediAsk Backend Agent Guide
 
+## Attention
+
+You can't use `lark-cli` in `sandbox`!
+
 ## Repository Snapshot
 - Stack: Java 21, Spring Boot 3.5.x, Maven multi-module build.
 - Architecture target: DDD + hexagonal modular monolith.

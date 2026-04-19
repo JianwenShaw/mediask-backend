@@ -8,7 +8,9 @@ public enum ClinicalErrorCode implements ErrorCodeType {
     ENCOUNTER_NOT_FOUND(4004, "encounter not found", ErrorCodeCategory.NOT_FOUND),
     ENCOUNTER_AI_SUMMARY_NOT_FOUND(4005, "encounter ai summary not found", ErrorCodeCategory.NOT_FOUND),
     EMR_RECORD_ALREADY_EXISTS(4006, "emr record already exists for this encounter", ErrorCodeCategory.CONFLICT),
-    EMR_ENCOUNTER_NOT_FOUND(4007, "encounter not found or access denied", ErrorCodeCategory.NOT_FOUND);
+    EMR_ENCOUNTER_NOT_FOUND(4007, "encounter not found or access denied", ErrorCodeCategory.NOT_FOUND),
+    EMR_RECORD_NOT_FOUND(4008, "emr record not found", ErrorCodeCategory.NOT_FOUND),
+    EMR_RECORD_ACCESS_DENIED(4009, "emr record access denied", ErrorCodeCategory.FORBIDDEN);
 
     private final int code;
     private final String message;

@@ -4,16 +4,19 @@ import java.util.List;
 import java.util.Locale;
 import me.jianwen.mediask.api.dto.CreateEmrRequest;
 import me.jianwen.mediask.api.dto.CreateEmrResponse;
+import me.jianwen.mediask.api.dto.EmrDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterAiSummaryResponse;
 import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListItemResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
 import me.jianwen.mediask.api.dto.EncounterPatientSummaryResponse;
 import me.jianwen.mediask.application.clinical.command.CreateEmrCommand;
+import me.jianwen.mediask.application.clinical.query.GetEmrDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
 import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
+import me.jianwen.mediask.domain.clinical.model.EmrRecord;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
@@ -35,6 +38,10 @@ public final class ClinicalAssembler {
 
     public static GetEncounterAiSummaryQuery toGetEncounterAiSummaryQuery(Long encounterId, Long doctorId) {
         return new GetEncounterAiSummaryQuery(encounterId, doctorId);
+    }
+
+    public static GetEmrDetailQuery toGetEmrDetailQuery(Long encounterId) {
+        return new GetEmrDetailQuery(encounterId);
     }
 
     public static CreateEmrCommand toCreateEmrCommand(CreateEmrRequest request, Long doctorId) {
@@ -61,6 +68,20 @@ public final class ClinicalAssembler {
                 emrRecord.encounterId(),
                 emrRecord.recordStatus().name(),
                 emrRecord.version());
+    }
+
+    public static EmrDetailResponse toEmrDetailResponse(EmrRecord emrRecord) {
+        return new EmrDetailResponse(
+                emrRecord.recordId(),
+                emrRecord.content(),
+                emrRecord.diagnoses().stream()
+                        .map(diagnosis -> new EmrDetailResponse.DiagnosisResponse(
+                                diagnosis.diagnosisType().name(),
+                                diagnosis.diagnosisCode(),
+                                diagnosis.diagnosisName(),
+                                diagnosis.isPrimary(),
+                                diagnosis.sortOrder()))
+                        .toList());
     }
 
     public static EncounterListResponse toEncounterListResponse(List<EncounterListItem> items) {

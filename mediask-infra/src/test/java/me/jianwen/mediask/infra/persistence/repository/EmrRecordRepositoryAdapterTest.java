@@ -3,6 +3,7 @@ package me.jianwen.mediask.infra.persistence.repository;
 import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
 import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordStatus;
@@ -13,8 +14,10 @@ import me.jianwen.mediask.infra.persistence.mapper.EmrRecordMapper;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -113,6 +116,94 @@ class EmrRecordRepositoryAdapterTest {
     }
 
     @Test
+    void findByEncounterId_WhenRecordExists_ReturnsDecryptedRecord() {
+        EmrMapperCapturingHandler handler = new EmrMapperCapturingHandler();
+        handler.selectedRecord = new EmrRecordDO();
+        handler.selectedRecord.setId(7101L);
+        handler.selectedRecord.setRecordNo("EMR123456");
+        handler.selectedRecord.setEncounterId(8101L);
+        handler.selectedRecord.setPatientId(1001L);
+        handler.selectedRecord.setDoctorId(2101L);
+        handler.selectedRecord.setDepartmentId(3101L);
+        handler.selectedRecord.setRecordStatus(EmrRecordStatus.DRAFT.name());
+        handler.selectedRecord.setChiefComplaintSummary("Headache and congestion");
+        handler.selectedRecord.setVersion(0);
+        handler.selectedRecord.setCreatedAt(OffsetDateTime.parse("2026-04-19T10:00:00+08:00"));
+        handler.selectedRecord.setUpdatedAt(OffsetDateTime.parse("2026-04-19T10:00:00+08:00"));
+
+        handler.selectedContent = new EmrRecordContentDO();
+        handler.selectedContent.setRecordId(7101L);
+        handler.selectedContent.setContentEncrypted("encrypted:Detailed medical examination findings...");
+
+        EmrDiagnosisDO primaryDiagnosis = new EmrDiagnosisDO();
+        primaryDiagnosis.setId(81001L);
+        primaryDiagnosis.setRecordId(7101L);
+        primaryDiagnosis.setDiagnosisType("PRIMARY");
+        primaryDiagnosis.setDiagnosisCode("J01.90");
+        primaryDiagnosis.setDiagnosisName("Acute sinusitis");
+        primaryDiagnosis.setIsPrimary(true);
+        primaryDiagnosis.setSortOrder(0);
+        handler.selectedDiagnoses = List.of(primaryDiagnosis);
+
+        EmrRecordRepositoryAdapter adapter = new EmrRecordRepositoryAdapter(
+                new StubAiContentEncryptor(),
+                proxy(EmrRecordMapper.class, Map.of(
+                        "selectByEncounterId", handler::selectByEncounterId,
+                        "selectContentByRecordId", handler::selectContentByRecordId,
+                        "selectDiagnosesByRecordId", handler::selectDiagnosesByRecordId
+                ))
+        );
+
+        Optional<EmrRecord> result = adapter.findByEncounterId(8101L);
+
+        assertTrue(result.isPresent());
+        assertEquals(8101L, handler.selectedEncounterIdArg);
+        assertEquals(7101L, handler.selectedContentRecordIdArg);
+        assertEquals(7101L, handler.selectedDiagnosesRecordIdArg);
+        assertEquals("Detailed medical examination findings...", result.get().content());
+        assertEquals(1, result.get().diagnoses().size());
+        assertEquals("Acute sinusitis", result.get().diagnoses().get(0).diagnosisName());
+    }
+
+    @Test
+    void findRecordIdByEncounterId_WhenRecordExists_ReturnsRecordId() {
+        EmrMapperCapturingHandler handler = new EmrMapperCapturingHandler();
+        handler.selectedRecordId = 7101L;
+
+        EmrRecordRepositoryAdapter adapter = new EmrRecordRepositoryAdapter(
+                new StubAiContentEncryptor(),
+                proxy(EmrRecordMapper.class, Map.of("selectRecordIdByEncounterId", handler::selectRecordIdByEncounterId))
+        );
+
+        Optional<Long> result = adapter.findRecordIdByEncounterId(8101L);
+
+        assertEquals(8101L, handler.selectedEncounterIdArg);
+        assertTrue(result.isPresent());
+        assertEquals(7101L, result.get());
+    }
+
+    @Test
+    void findAccessByRecordId_WhenRecordExists_ReturnsAccessContext() {
+        EmrMapperCapturingHandler handler = new EmrMapperCapturingHandler();
+        handler.selectedAccessRecord = new EmrRecordDO();
+        handler.selectedAccessRecord.setId(7101L);
+        handler.selectedAccessRecord.setPatientId(1001L);
+        handler.selectedAccessRecord.setDepartmentId(3101L);
+
+        EmrRecordRepositoryAdapter adapter = new EmrRecordRepositoryAdapter(
+                new StubAiContentEncryptor(),
+                proxy(EmrRecordMapper.class, Map.of("selectAccessByRecordId", handler::selectAccessByRecordId))
+        );
+
+        Optional<EmrRecordAccess> result = adapter.findAccessByRecordId(7101L);
+
+        assertEquals(7101L, handler.selectedAccessRecordIdArg);
+        assertTrue(result.isPresent());
+        assertEquals(1001L, result.get().patientId());
+        assertEquals(3101L, result.get().departmentId());
+    }
+
+    @Test
     void save_WhenEncounterDuplicate_ThrowsConflictBizException() {
         EmrRecordRepositoryAdapter adapter = new EmrRecordRepositoryAdapter(
                 new StubAiContentEncryptor(),
@@ -182,7 +273,7 @@ class EmrRecordRepositoryAdapterTest {
 
         @Override
         public String decrypt(String encryptedText) {
-            throw new UnsupportedOperationException();
+            return encryptedText.replaceFirst("^encrypted:", "");
         }
     }
 
@@ -192,6 +283,15 @@ class EmrRecordRepositoryAdapterTest {
         List<EmrDiagnosisDO> insertedDiagnoses;
         Long existsByEncounterIdArg;
         Boolean existsByEncounterIdResult;
+        Long selectedEncounterIdArg;
+        Long selectedAccessRecordIdArg;
+        Long selectedContentRecordIdArg;
+        Long selectedDiagnosesRecordIdArg;
+        Long selectedRecordId;
+        EmrRecordDO selectedRecord;
+        EmrRecordDO selectedAccessRecord;
+        EmrRecordContentDO selectedContent;
+        List<EmrDiagnosisDO> selectedDiagnoses;
 
         private Object insertRecord(Object[] arguments) {
             this.insertedRecord = (EmrRecordDO) arguments[0];
@@ -211,6 +311,31 @@ class EmrRecordRepositoryAdapterTest {
         private Object existsByEncounterId(Object[] arguments) {
             this.existsByEncounterIdArg = (Long) arguments[0];
             return existsByEncounterIdResult;
+        }
+
+        private Object selectByEncounterId(Object[] arguments) {
+            this.selectedEncounterIdArg = (Long) arguments[0];
+            return Optional.ofNullable(selectedRecord);
+        }
+
+        private Object selectRecordIdByEncounterId(Object[] arguments) {
+            this.selectedEncounterIdArg = (Long) arguments[0];
+            return Optional.ofNullable(selectedRecordId);
+        }
+
+        private Object selectAccessByRecordId(Object[] arguments) {
+            this.selectedAccessRecordIdArg = (Long) arguments[0];
+            return Optional.ofNullable(selectedAccessRecord);
+        }
+
+        private Object selectContentByRecordId(Object[] arguments) {
+            this.selectedContentRecordIdArg = (Long) arguments[0];
+            return Optional.ofNullable(selectedContent);
+        }
+
+        private Object selectDiagnosesByRecordId(Object[] arguments) {
+            this.selectedDiagnosesRecordIdArg = (Long) arguments[0];
+            return selectedDiagnoses == null ? List.of() : selectedDiagnoses;
         }
     }
 }

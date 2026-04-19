@@ -6,12 +6,15 @@ import java.security.NoSuchAlgorithmException;
 import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.ai.port.AiContentEncryptorPort;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
 import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
+import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordRepository;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrDiagnosisDO;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrRecordContentDO;
@@ -21,7 +24,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 @Component
-public class EmrRecordRepositoryAdapter implements EmrRecordRepository {
+public class EmrRecordRepositoryAdapter implements EmrRecordRepository, EmrRecordQueryRepository {
 
     private final AiContentEncryptorPort aiContentEncryptorPort;
     private final EmrRecordMapper emrRecordMapper;
@@ -85,6 +88,48 @@ public class EmrRecordRepositoryAdapter implements EmrRecordRepository {
     @Override
     public boolean existsByEncounterId(Long encounterId) {
         return emrRecordMapper.existsByEncounterId(encounterId);
+    }
+
+    @Override
+    public Optional<EmrRecord> findByEncounterId(Long encounterId) {
+        return emrRecordMapper.selectByEncounterId(encounterId).map(recordDO -> {
+            EmrRecordContentDO contentDO = emrRecordMapper
+                    .selectContentByRecordId(recordDO.getId())
+                    .orElseThrow(() -> new IllegalStateException("missing emr record content"));
+            List<EmrDiagnosis> diagnoses = emrRecordMapper.selectDiagnosesByRecordId(recordDO.getId()).stream()
+                    .map(diagnosisDO -> new EmrDiagnosis(
+                            EmrDiagnosis.DiagnosisType.valueOf(diagnosisDO.getDiagnosisType()),
+                            diagnosisDO.getDiagnosisCode(),
+                            diagnosisDO.getDiagnosisName(),
+                            Boolean.TRUE.equals(diagnosisDO.getIsPrimary()),
+                            diagnosisDO.getSortOrder()))
+                    .toList();
+            return new EmrRecord(
+                    recordDO.getId(),
+                    recordDO.getRecordNo(),
+                    recordDO.getEncounterId(),
+                    recordDO.getPatientId(),
+                    recordDO.getDoctorId(),
+                    recordDO.getDepartmentId(),
+                    me.jianwen.mediask.domain.clinical.model.EmrRecordStatus.valueOf(recordDO.getRecordStatus()),
+                    recordDO.getChiefComplaintSummary(),
+                    aiContentEncryptorPort.decrypt(contentDO.getContentEncrypted()),
+                    diagnoses,
+                    recordDO.getVersion(),
+                    recordDO.getCreatedAt().toInstant(),
+                    recordDO.getUpdatedAt().toInstant());
+        });
+    }
+
+    @Override
+    public Optional<Long> findRecordIdByEncounterId(Long encounterId) {
+        return emrRecordMapper.selectRecordIdByEncounterId(encounterId);
+    }
+
+    @Override
+    public Optional<EmrRecordAccess> findAccessByRecordId(Long recordId) {
+        return emrRecordMapper.selectAccessByRecordId(recordId)
+                .map(recordDO -> new EmrRecordAccess(recordDO.getId(), recordDO.getPatientId(), recordDO.getDepartmentId()));
     }
 
     private static final Pattern PHONE_PATTERN = Pattern.compile("(\\d{3})\\d{4}(\\d{4})");
