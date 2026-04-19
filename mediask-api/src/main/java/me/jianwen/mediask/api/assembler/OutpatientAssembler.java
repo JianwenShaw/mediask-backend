@@ -66,7 +66,7 @@ public final class OutpatientAssembler {
                 item.registrationId(),
                 item.orderNo(),
                 item.status().name(),
-                item.createdAt(),
+                ApiDateTimeFormatter.format(item.createdAt()),
                 item.sourceAiSessionId());
     }
 

@@ -210,6 +210,9 @@ class AiControllerTest {
         mockMvc.perform(get("/api/v1/ai/sessions").header("Authorization", "Bearer " + PATIENT_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items[0].sessionId").value("90002"))
+                .andExpect(jsonPath("$.data.items[0].startedAt").value("2026-04-13T09:30:00+08:00"))
+                .andExpect(jsonPath("$.data.items[0].endedAt").value("2026-04-13T09:35:00+08:00"))
+                .andExpect(jsonPath("$.data.items[1].startedAt").value("2026-04-12T09:30:00+08:00"))
                 .andExpect(jsonPath("$.data.items[1].sessionId").value("90001"));
     }
 
@@ -245,7 +248,12 @@ class AiControllerTest {
 
         mockMvc.perform(get("/api/v1/ai/sessions/90001").header("Authorization", "Bearer " + PATIENT_TOKEN))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.startedAt").value("2026-04-12T09:30:00+08:00"))
                 .andExpect(jsonPath("$.data.turns[0].messages[0].content").value("头痛三天"))
+                .andExpect(jsonPath("$.data.turns[0].startedAt").value("2026-04-12T09:30:00+08:00"))
+                .andExpect(jsonPath("$.data.turns[0].completedAt").value("2026-04-12T09:31:00+08:00"))
+                .andExpect(jsonPath("$.data.turns[0].messages[0].createdAt").value("2026-04-12T09:30:00+08:00"))
+                .andExpect(jsonPath("$.data.turns[0].messages[1].createdAt").value("2026-04-12T09:31:00+08:00"))
                 .andExpect(jsonPath("$.data.turns[0].messages[1].content").value("建议挂神经内科"));
     }
 
@@ -273,6 +281,7 @@ class AiControllerTest {
                 .andExpect(jsonPath("$.data.resultStatus").value("UPDATING"))
                 .andExpect(jsonPath("$.data.triageStage").value("READY"))
                 .andExpect(jsonPath("$.data.nextAction").value("VIEW_TRIAGE_RESULT"))
+                .andExpect(jsonPath("$.data.finalizedAt").value("2026-04-12T09:31:00+08:00"))
                 .andExpect(jsonPath("$.data.activeCycleTurnNo").value(2))
                 .andExpect(jsonPath("$.data.citations[0].chunkId").value("7001"));
     }

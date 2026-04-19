@@ -102,8 +102,8 @@ public final class ClinicalAssembler {
                         detail.patientSummary().sessionDate(),
                         detail.patientSummary().periodCode(),
                         detail.patientSummary().encounterStatus().name(),
-                        detail.patientSummary().startedAt(),
-                        detail.patientSummary().endedAt()));
+                        ApiDateTimeFormatter.format(detail.patientSummary().startedAt()),
+                        ApiDateTimeFormatter.format(detail.patientSummary().endedAt())));
     }
 
     public static EncounterAiSummaryResponse toEncounterAiSummaryResponse(EncounterAiSummary summary) {
@@ -140,8 +140,8 @@ public final class ClinicalAssembler {
                 item.sessionDate(),
                 item.periodCode(),
                 item.encounterStatus().name(),
-                item.startedAt(),
-                item.endedAt());
+                ApiDateTimeFormatter.format(item.startedAt()),
+                ApiDateTimeFormatter.format(item.endedAt()));
     }
 
     private static VisitEncounterStatus toVisitEncounterStatus(String status) {

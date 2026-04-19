@@ -105,20 +105,22 @@ public final class AiAssembler {
                 detail.departmentId(),
                 detail.chiefComplaintSummary(),
                 detail.summary(),
-                detail.startedAt(),
-                detail.endedAt(),
+                ApiDateTimeFormatter.format(detail.startedAt()),
+                ApiDateTimeFormatter.format(detail.endedAt()),
                 detail.turns().stream()
                         .map(turn -> new AiSessionDetailResponse.AiSessionTurnResponse(
                                 turn.turnId(),
                                 turn.turnNo(),
                                 turn.status().name(),
-                                turn.startedAt(),
-                                turn.completedAt(),
+                                ApiDateTimeFormatter.format(turn.startedAt()),
+                                ApiDateTimeFormatter.format(turn.completedAt()),
                                 turn.errorCode(),
                                 turn.errorMessage(),
                                 turn.messages().stream()
                                         .map(message -> new AiSessionDetailResponse.AiSessionMessageResponse(
-                                                message.role().name(), message.encryptedContent(), message.createdAt()))
+                                                message.role().name(),
+                                                message.encryptedContent(),
+                                                ApiDateTimeFormatter.format(message.createdAt())))
                                         .toList()))
                         .toList());
     }
@@ -132,8 +134,8 @@ public final class AiAssembler {
                         item.departmentId(),
                         item.chiefComplaintSummary(),
                         item.summary(),
-                        item.startedAt(),
-                        item.endedAt()))
+                        ApiDateTimeFormatter.format(item.startedAt()),
+                        ApiDateTimeFormatter.format(item.endedAt())))
                 .toList());
     }
 
@@ -159,7 +161,7 @@ public final class AiAssembler {
                 triageResult.guardrailAction().name().toLowerCase(Locale.ROOT),
                 toNextAction(triageResult.triageStage(), triageResult.riskLevel(), triageResult.guardrailAction()),
                 triageResult.finalizedTurnId(),
-                triageResult.finalizedAt(),
+                ApiDateTimeFormatter.format(triageResult.finalizedAt()),
                 triageResult.hasActiveCycle(),
                 triageResult.activeCycleTurnNo(),
                 triageResult.chiefComplaintSummary(),

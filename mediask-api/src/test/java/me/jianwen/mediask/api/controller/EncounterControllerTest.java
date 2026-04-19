@@ -131,6 +131,7 @@ class EncounterControllerTest {
                 .andExpect(jsonPath("$.data.items[0].departmentId").value(3101))
                 .andExpect(jsonPath("$.data.items[0].departmentName").value("心内科"))
                 .andExpect(jsonPath("$.data.items[0].periodCode").value("MORNING"))
+                .andExpect(jsonPath("$.data.items[0].startedAt").value("2026-04-03T09:00:00+08:00"))
                 .andExpect(jsonPath("$.data.items[0].encounterStatus").value("SCHEDULED"));
 
         assertEquals(2101L, doctorListEncountersUseCase.lastQuery.doctorId());
@@ -184,6 +185,7 @@ class EncounterControllerTest {
                 .andExpect(jsonPath("$.data.patientSummary.departmentId").value(3101))
                 .andExpect(jsonPath("$.data.patientSummary.departmentName").value("心内科"))
                 .andExpect(jsonPath("$.data.patientSummary.periodCode").value("MORNING"))
+                .andExpect(jsonPath("$.data.patientSummary.startedAt").value("2026-04-03T09:00:00+08:00"))
                 .andExpect(jsonPath("$.data.patientSummary.encounterStatus").value("SCHEDULED"));
 
         assertEquals(8101L, doctorGetEncounterDetailUseCase.lastQuery.encounterId());

@@ -1,6 +1,5 @@
 package me.jianwen.mediask.api.dto;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 public record AiSessionListResponse(List<AiSessionListItemResponse> items) {
@@ -12,6 +11,6 @@ public record AiSessionListResponse(List<AiSessionListItemResponse> items) {
             Long departmentId,
             String chiefComplaintSummary,
             String summary,
-            OffsetDateTime startedAt,
-            OffsetDateTime endedAt) {}
+            String startedAt,
+            String endedAt) {}
 }

@@ -1,6 +1,5 @@
 package me.jianwen.mediask.api.dto;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 public record AiSessionTriageResultResponse(
@@ -11,7 +10,7 @@ public record AiSessionTriageResultResponse(
         String guardrailAction,
         String nextAction,
         Long finalizedTurnId,
-        OffsetDateTime finalizedAt,
+        String finalizedAt,
         boolean hasActiveCycle,
         Integer activeCycleTurnNo,
         String chiefComplaintSummary,

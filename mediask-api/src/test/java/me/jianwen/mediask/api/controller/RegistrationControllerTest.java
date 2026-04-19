@@ -142,6 +142,7 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.data.items[0].registrationId").value(6101))
                 .andExpect(jsonPath("$.data.items[0].orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.items[0].status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-04-02T10:00:00+08:00"))
                 .andExpect(jsonPath("$.data.items[0].sourceAiSessionId").value(7101));
 
         assertEquals(2003L, patientListRegistrationsUseCase.lastQuery.patientUserId());

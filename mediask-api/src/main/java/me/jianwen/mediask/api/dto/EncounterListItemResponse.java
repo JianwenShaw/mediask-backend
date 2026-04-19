@@ -1,7 +1,6 @@
 package me.jianwen.mediask.api.dto;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 
 public record EncounterListItemResponse(
         Long encounterId,
@@ -13,6 +12,6 @@ public record EncounterListItemResponse(
         LocalDate sessionDate,
         String periodCode,
         String encounterStatus,
-        OffsetDateTime startedAt,
-        OffsetDateTime endedAt) {
+        String startedAt,
+        String endedAt) {
 }
