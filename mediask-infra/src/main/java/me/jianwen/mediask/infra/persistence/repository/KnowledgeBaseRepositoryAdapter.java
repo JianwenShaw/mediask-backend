@@ -133,7 +133,7 @@ public class KnowledgeBaseRepositoryAdapter implements KnowledgeBaseRepository {
         }
 
         OffsetDateTime deletedAt = OffsetDateTime.now();
-        LambdaUpdateWrapper<KnowledgeBaseDO> deleteKnowledgeBase = Wrappers.<KnowledgeBaseDO>lambdaUpdate()
+        LambdaUpdateWrapper<KnowledgeBaseDO> deleteKnowledgeBase = Wrappers.lambdaUpdate(KnowledgeBaseDO.class)
                 .eq(KnowledgeBaseDO::getId, existing.getId())
                 .eq(KnowledgeBaseDO::getVersion, existing.getVersion())
                 .isNull(KnowledgeBaseDO::getDeletedAt)
@@ -145,14 +145,14 @@ public class KnowledgeBaseRepositoryAdapter implements KnowledgeBaseRepository {
             throw new BizException(AiErrorCode.KNOWLEDGE_BASE_DELETE_CONFLICT);
         }
 
-        LambdaUpdateWrapper<KnowledgeDocumentDO> deleteDocuments = Wrappers.<KnowledgeDocumentDO>lambdaUpdate()
+        LambdaUpdateWrapper<KnowledgeDocumentDO> deleteDocuments = Wrappers.lambdaUpdate(KnowledgeDocumentDO.class)
                 .eq(KnowledgeDocumentDO::getKnowledgeBaseId, knowledgeBaseId)
                 .isNull(KnowledgeDocumentDO::getDeletedAt)
                 .set(KnowledgeDocumentDO::getDeletedAt, deletedAt)
                 .set(KnowledgeDocumentDO::getUpdatedAt, deletedAt);
         knowledgeDocumentMapper.update(null, deleteDocuments);
 
-        LambdaUpdateWrapper<KnowledgeChunkDO> deleteChunks = Wrappers.<KnowledgeChunkDO>lambdaUpdate()
+        LambdaUpdateWrapper<KnowledgeChunkDO> deleteChunks = Wrappers.lambdaUpdate(KnowledgeChunkDO.class)
                 .eq(KnowledgeChunkDO::getKnowledgeBaseId, knowledgeBaseId)
                 .isNull(KnowledgeChunkDO::getDeletedAt)
                 .set(KnowledgeChunkDO::getDeletedAt, deletedAt)

@@ -195,7 +195,8 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.refreshToken").value("rt.2003.refresh-token-2.refresh-secret-2"))
                 .andExpect(jsonPath("$.data.userContext.userId").value(2003))
                 .andExpect(jsonPath("$.data.userContext.roles[0]").value("PATIENT"))
-                .andExpect(jsonPath("$.data.userContext.permissions[0]").value("auth:refresh"))
+                .andExpect(jsonPath("$.data.userContext.permissions").isArray())
+                .andExpect(jsonPath("$.data.userContext.permissions[?(@ == 'auth:refresh')]").exists())
                 .andExpect(jsonPath("$.data.userContext.patientId").value(2201));
 
         assertEquals("refresh-token-2", accessTokenCodec.lastIssuedSessionId());
@@ -217,7 +218,8 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.userContext.userId").value(2004))
                 .andExpect(jsonPath("$.data.userContext.username").value("patient_space"))
                 .andExpect(jsonPath("$.data.userContext.roles[0]").value("PATIENT"))
-                .andExpect(jsonPath("$.data.userContext.permissions[0]").value("auth:refresh"))
+                .andExpect(jsonPath("$.data.userContext.permissions").isArray())
+                .andExpect(jsonPath("$.data.userContext.permissions[?(@ == 'auth:refresh')]").exists())
                 .andExpect(jsonPath("$.data.userContext.patientId").value(2202));
     }
 

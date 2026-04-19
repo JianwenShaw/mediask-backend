@@ -109,7 +109,7 @@ public class KnowledgeDocumentRepositoryAdapter implements KnowledgeDocumentRepo
         }
 
         OffsetDateTime deletedAt = OffsetDateTime.now();
-        LambdaUpdateWrapper<KnowledgeDocumentDO> deleteDocument = Wrappers.<KnowledgeDocumentDO>lambdaUpdate()
+        LambdaUpdateWrapper<KnowledgeDocumentDO> deleteDocument = Wrappers.lambdaUpdate(KnowledgeDocumentDO.class)
                 .eq(KnowledgeDocumentDO::getId, existing.getId())
                 .eq(KnowledgeDocumentDO::getVersion, existing.getVersion())
                 .isNull(KnowledgeDocumentDO::getDeletedAt)
@@ -121,7 +121,7 @@ public class KnowledgeDocumentRepositoryAdapter implements KnowledgeDocumentRepo
             throw new BizException(AiErrorCode.KNOWLEDGE_DOCUMENT_DELETE_CONFLICT);
         }
 
-        LambdaUpdateWrapper<KnowledgeChunkDO> deleteChunks = Wrappers.<KnowledgeChunkDO>lambdaUpdate()
+        LambdaUpdateWrapper<KnowledgeChunkDO> deleteChunks = Wrappers.lambdaUpdate(KnowledgeChunkDO.class)
                 .eq(KnowledgeChunkDO::getDocumentId, documentId)
                 .isNull(KnowledgeChunkDO::getDeletedAt)
                 .set(KnowledgeChunkDO::getDeletedAt, deletedAt)

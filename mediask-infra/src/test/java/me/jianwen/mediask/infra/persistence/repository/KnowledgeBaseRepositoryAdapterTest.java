@@ -3,18 +3,24 @@ package me.jianwen.mediask.infra.persistence.repository;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import java.lang.reflect.Proxy;
 import java.util.Map;
 import me.jianwen.mediask.infra.persistence.dataobject.KnowledgeBaseDO;
+import me.jianwen.mediask.infra.persistence.dataobject.KnowledgeChunkDO;
+import me.jianwen.mediask.infra.persistence.dataobject.KnowledgeDocumentDO;
 import me.jianwen.mediask.infra.persistence.mapper.KnowledgeBaseMapper;
 import me.jianwen.mediask.infra.persistence.mapper.KnowledgeChunkMapper;
 import me.jianwen.mediask.infra.persistence.mapper.KnowledgeDocumentMapper;
 import org.junit.jupiter.api.Test;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 
 class KnowledgeBaseRepositoryAdapterTest {
 
     @Test
     void deleteById_WhenExisting_ShouldSoftDeleteKnowledgeBaseDocumentsAndChunks() {
+        initTableInfo(KnowledgeBaseDO.class, KnowledgeDocumentDO.class, KnowledgeChunkDO.class);
         KnowledgeBaseDO existing = new KnowledgeBaseDO();
         existing.setId(4001L);
         existing.setVersion(2);
@@ -45,6 +51,16 @@ class KnowledgeBaseRepositoryAdapterTest {
         assertTrue(updatedBase[0][1] != null);
         assertTrue(updatedDocuments[0][1] != null);
         assertTrue(updatedChunks[0][1] != null);
+    }
+
+    private static void initTableInfo(Class<?>... entityClasses) {
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
+        for (Class<?> entityClass : entityClasses) {
+            if (TableInfoHelper.getTableInfo(entityClass) == null) {
+                TableInfoHelper.initTableInfo(assistant, entityClass);
+            }
+        }
     }
 
     private static KnowledgeBaseMapper proxyBaseMapper(Map<String, java.util.function.Function<Object[], Object>> handlers) {

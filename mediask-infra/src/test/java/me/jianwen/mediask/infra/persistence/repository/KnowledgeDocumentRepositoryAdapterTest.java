@@ -5,16 +5,20 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import java.lang.reflect.Proxy;
 import java.util.Map;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
 import me.jianwen.mediask.domain.ai.model.KnowledgeDocument;
 import me.jianwen.mediask.domain.ai.model.KnowledgeSourceType;
+import me.jianwen.mediask.infra.persistence.dataobject.KnowledgeChunkDO;
 import me.jianwen.mediask.infra.persistence.dataobject.KnowledgeDocumentDO;
 import me.jianwen.mediask.infra.persistence.mapper.KnowledgeChunkMapper;
 import me.jianwen.mediask.infra.persistence.mapper.KnowledgeDocumentMapper;
 import org.junit.jupiter.api.Test;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.springframework.dao.DuplicateKeyException;
 
 class KnowledgeDocumentRepositoryAdapterTest {
@@ -56,6 +60,7 @@ class KnowledgeDocumentRepositoryAdapterTest {
 
     @Test
     void deleteById_WhenExisting_ShouldSoftDeleteDocumentAndChunks() {
+        initTableInfo(KnowledgeDocumentDO.class, KnowledgeChunkDO.class);
         KnowledgeDocumentDO existing = new KnowledgeDocumentDO();
         existing.setId(5001L);
         existing.setVersion(3);
@@ -77,6 +82,16 @@ class KnowledgeDocumentRepositoryAdapterTest {
 
         assertNull(updatedDocument[0][0]);
         assertTrue(updatedChunks[0] != null);
+    }
+
+    private static void initTableInfo(Class<?>... entityClasses) {
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(configuration, "");
+        for (Class<?> entityClass : entityClasses) {
+            if (TableInfoHelper.getTableInfo(entityClass) == null) {
+                TableInfoHelper.initTableInfo(assistant, entityClass);
+            }
+        }
     }
 
     private static KnowledgeDocumentMapper proxy(Map<String, java.util.function.Function<Object[], Object>> handlers) {
