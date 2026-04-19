@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="me.jianwen.mediask.infra.persistence.mapper.EmrRecordMapper">
+
+    <insert id="insertContent">
+        INSERT INTO emr_record_content (record_id, content_encrypted, content_masked, content_hash, created_at, updated_at)
+        VALUES (#{recordId}, #{contentEncrypted}, #{contentMasked}, #{contentHash}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <insert id="insertDiagnosis">
+        INSERT INTO emr_diagnosis (id, record_id, diagnosis_type, diagnosis_code, diagnosis_name, is_primary, sort_order, created_at)
+        VALUES (#{id}, #{recordId}, #{diagnosisType}, #{diagnosisCode}, #{diagnosisName}, #{isPrimary}, #{sortOrder}, #{createdAt})
+    </insert>
+
+    <insert id="insertDiagnoses">
+        INSERT INTO emr_diagnosis (id, record_id, diagnosis_type, diagnosis_code, diagnosis_name, is_primary, sort_order, created_at)
+        VALUES
+        <foreach collection="diagnoses" item="diagnosis" separator=",">
+            (#{diagnosis.id}, #{diagnosis.recordId}, #{diagnosis.diagnosisType}, #{diagnosis.diagnosisCode}, #{diagnosis.diagnosisName}, #{diagnosis.isPrimary}, #{diagnosis.sortOrder}, #{diagnosis.createdAt})
+        </foreach>
+    </insert>
+
+    <select id="existsByEncounterId" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1 FROM emr_record
+            WHERE encounter_id = #{encounterId}
+              AND deleted_at IS NULL
+        )
+    </select>
+
+</mapper>

@@ -21,6 +21,7 @@ import me.jianwen.mediask.domain.ai.port.AiSessionRepository;
 import me.jianwen.mediask.domain.ai.port.AiTurnContentRepository;
 import me.jianwen.mediask.domain.ai.port.AiTurnRepository;
 import me.jianwen.mediask.domain.ai.port.TriageDepartmentCatalogPort;
+import me.jianwen.mediask.infra.ai.config.AiContentEncryptionConfig;
 import me.jianwen.mediask.infra.ai.config.AiServiceProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -30,7 +31,13 @@ import org.springframework.context.annotation.Configuration;
 class AiModuleConfigTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withUserConfiguration(AiModuleConfig.class, AiController.class, InternalTriageDepartmentCatalogController.class, TestAiConfig.class);
+            .withPropertyValues("mediask.encryption.key=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")
+            .withUserConfiguration(
+                    AiModuleConfig.class,
+                    AiContentEncryptionConfig.class,
+                    AiController.class,
+                    InternalTriageDepartmentCatalogController.class,
+                    TestAiConfig.class);
 
     @Test
     void contextWithoutAiServiceProperties_ShouldNotCreateAiBeans() {
@@ -38,6 +45,7 @@ class AiModuleConfigTest {
             assertThat(context).doesNotHaveBean(AiController.class);
             assertThat(context).doesNotHaveBean(InternalTriageDepartmentCatalogController.class);
             assertThat(context).doesNotHaveBean("chatAiUseCase");
+            assertThat(context).hasSingleBean(AiContentEncryptorPort.class);
         });
     }
 
@@ -97,21 +105,6 @@ class AiModuleConfigTest {
         @Bean
         AiGuardrailEventRepository aiGuardrailEventRepository() {
             return event -> {};
-        }
-
-        @Bean
-        AiContentEncryptorPort aiContentEncryptorPort() {
-            return new AiContentEncryptorPort() {
-                @Override
-                public String encrypt(String plainText) {
-                    return plainText;
-                }
-
-                @Override
-                public String decrypt(String encryptedText) {
-                    return encryptedText;
-                }
-            };
         }
 
         @Bean

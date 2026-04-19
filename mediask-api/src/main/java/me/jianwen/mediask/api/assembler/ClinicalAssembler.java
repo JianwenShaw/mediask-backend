@@ -2,11 +2,14 @@ package me.jianwen.mediask.api.assembler;
 
 import java.util.List;
 import java.util.Locale;
+import me.jianwen.mediask.api.dto.CreateEmrRequest;
+import me.jianwen.mediask.api.dto.CreateEmrResponse;
 import me.jianwen.mediask.api.dto.EncounterAiSummaryResponse;
 import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListItemResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
 import me.jianwen.mediask.api.dto.EncounterPatientSummaryResponse;
+import me.jianwen.mediask.application.clinical.command.CreateEmrCommand;
 import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
 import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
@@ -32,6 +35,32 @@ public final class ClinicalAssembler {
 
     public static GetEncounterAiSummaryQuery toGetEncounterAiSummaryQuery(Long encounterId, Long doctorId) {
         return new GetEncounterAiSummaryQuery(encounterId, doctorId);
+    }
+
+    public static CreateEmrCommand toCreateEmrCommand(CreateEmrRequest request, Long doctorId) {
+        var diagnosisCommands = request.diagnoses().stream()
+                .map(dto -> new CreateEmrCommand.EmrDiagnosisCommand(
+                        dto.diagnosisType(),
+                        dto.diagnosisCode(),
+                        dto.diagnosisName(),
+                        dto.isPrimary(),
+                        dto.sortOrder()))
+                .toList();
+        return new CreateEmrCommand(
+                request.encounterId(),
+                doctorId,
+                request.chiefComplaintSummary(),
+                request.content(),
+                diagnosisCommands);
+    }
+
+    public static CreateEmrResponse toCreateEmrResponse(me.jianwen.mediask.domain.clinical.model.EmrRecord emrRecord) {
+        return new CreateEmrResponse(
+                emrRecord.recordId(),
+                emrRecord.recordNo(),
+                emrRecord.encounterId(),
+                emrRecord.recordStatus().name(),
+                emrRecord.version());
     }
 
     public static EncounterListResponse toEncounterListResponse(List<EncounterListItem> items) {
