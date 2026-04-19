@@ -101,3 +101,12 @@ all modules -> mediask-common
 ## Agent Working Rules
 - Do not silently expand scope from `P0` into `P1` or `P2`.
 - AI output must not drift into diagnosis conclusions, prescription advice, or dosage guidance.
+
+## External Collaborative Document Rules
+- These rules apply only to external collaborative documents such as Feishu/Lark docs, online task boards, and similar repository-external documents. Repo-local Markdown and code files still follow normal repository editing rules.
+- Before modifying an external collaborative document, the agent must first read the current document content with the appropriate dedicated tool. Do not edit based only on memory, old snapshots, or partial excerpts from earlier turns.
+- Do not use full-document overwrite unless the agent has already fetched and checked the complete latest document content. Prefer scoped updates that modify only the intended section.
+- Before writing an external collaborative document, the agent must keep a local recoverable snapshot of the current content being changed so the document can be restored quickly if the update goes wrong.
+- Keep external document edits minimal. If the user asked to update a status, conclusion, or short section, do not restructure or rewrite unrelated parts of the document.
+- After every external document write, the agent must read back the updated document and verify the key sections for truncation, duplicated headings, missing sections, list corruption, or contradictory status updates.
+- If an external document update causes damage or inconsistency, the agent must explicitly acknowledge it and repair the document before moving on to any other task.

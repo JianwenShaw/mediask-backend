@@ -41,3 +41,4 @@ build/
 ### MVN macos 配置 ###
 .mvn/
 CR/
+.claude/
