@@ -9,5 +9,7 @@ public interface ClinicSlotReservationRepository {
 
     Optional<ClinicSlotReservation> reserveAvailableSlot(Long sessionId, Long slotId);
 
+    boolean releaseReservedSlot(Long sessionId, Long slotId, String expectedCurrentStatus);
+
     void refreshSessionRemainingCount(Long sessionId);
 }

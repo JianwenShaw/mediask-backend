@@ -2,10 +2,9 @@ package me.jianwen.mediask.application.outpatient.usecase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
-import me.jianwen.mediask.application.outpatient.query.ListClinicSessionsQuery;
 import me.jianwen.mediask.domain.outpatient.model.ClinicSessionListItem;
 import me.jianwen.mediask.domain.outpatient.model.ClinicSessionPeriodCode;
 import me.jianwen.mediask.domain.outpatient.model.ClinicSessionSlotListItem;
@@ -13,33 +12,26 @@ import me.jianwen.mediask.domain.outpatient.model.ClinicType;
 import me.jianwen.mediask.domain.outpatient.port.ClinicSessionQueryRepository;
 import org.junit.jupiter.api.Test;
 
-class ListClinicSessionsUseCaseTest {
+class ListClinicSessionSlotsUseCaseTest {
 
     @Test
-    void handle_WhenQueryProvided_DelegateToRepositoryWithoutDefaultDates() {
+    void handle_WhenClinicSessionIdProvided_DelegateToRepository() {
         StubClinicSessionQueryRepository repository = new StubClinicSessionQueryRepository();
-        ListClinicSessionsUseCase useCase = new ListClinicSessionsUseCase(repository);
-        ListClinicSessionsQuery query = new ListClinicSessionsQuery(3101L, null, LocalDate.of(2026, 4, 30));
+        ListClinicSessionSlotsUseCase useCase = new ListClinicSessionSlotsUseCase(repository);
 
-        List<ClinicSessionListItem> result = useCase.handle(query);
+        List<ClinicSessionSlotListItem> result = useCase.handle(4101L);
 
+        assertEquals(4101L, repository.lastClinicSessionId);
         assertEquals(1, result.size());
-        assertEquals(3101L, repository.lastDepartmentId);
-        assertEquals(null, repository.lastDateFrom);
-        assertEquals(LocalDate.of(2026, 4, 30), repository.lastDateTo);
+        assertEquals(5101L, result.getFirst().clinicSlotId());
     }
 
     private static final class StubClinicSessionQueryRepository implements ClinicSessionQueryRepository {
 
-        private Long lastDepartmentId;
-        private LocalDate lastDateFrom;
-        private LocalDate lastDateTo;
+        private Long lastClinicSessionId;
 
         @Override
         public List<ClinicSessionListItem> listOpenSessions(Long departmentId, LocalDate dateFrom, LocalDate dateTo) {
-            this.lastDepartmentId = departmentId;
-            this.lastDateFrom = dateFrom;
-            this.lastDateTo = dateTo;
             return List.of(new ClinicSessionListItem(
                     4101L,
                     3101L,
@@ -50,12 +42,17 @@ class ListClinicSessionsUseCaseTest {
                     ClinicSessionPeriodCode.MORNING,
                     ClinicType.GENERAL,
                     8,
-                    new BigDecimal("25.00")));
+                    new java.math.BigDecimal("25.00")));
         }
 
         @Override
         public List<ClinicSessionSlotListItem> listAvailableSlotsBySessionId(Long clinicSessionId) {
-            throw new UnsupportedOperationException();
+            this.lastClinicSessionId = clinicSessionId;
+            return List.of(new ClinicSessionSlotListItem(
+                    5101L,
+                    1,
+                    OffsetDateTime.parse("2026-04-21T08:30:00+08:00"),
+                    OffsetDateTime.parse("2026-04-21T08:40:00+08:00")));
         }
     }
 }

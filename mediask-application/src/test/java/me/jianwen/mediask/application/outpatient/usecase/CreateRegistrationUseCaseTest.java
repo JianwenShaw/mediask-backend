@@ -25,6 +25,7 @@ import me.jianwen.mediask.domain.ai.model.RiskLevel;
 import me.jianwen.mediask.domain.ai.port.AiSessionQueryRepository;
 import me.jianwen.mediask.domain.outpatient.exception.OutpatientErrorCode;
 import me.jianwen.mediask.domain.outpatient.model.ClinicSlotReservation;
+import me.jianwen.mediask.domain.outpatient.model.RegistrationDetail;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationOrder;
 import me.jianwen.mediask.domain.outpatient.port.ClinicSlotReservationRepository;
 import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderRepository;
@@ -71,8 +72,8 @@ class CreateRegistrationUseCaseTest {
         reservationRepository.existsOpenSession = false;
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(
                 reservationRepository,
-                registrationOrder -> {},
-                visitEncounter -> {},
+                new CapturingRegistrationOrderRepository(),
+                new CapturingVisitEncounterRepository(),
                 new AiRegistrationHandoffSupport(new AllowingAiSessionQueryRepository()));
 
         BizException exception = assertThrows(
@@ -87,8 +88,8 @@ class CreateRegistrationUseCaseTest {
         reservationRepository.reservation = Optional.empty();
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(
                 reservationRepository,
-                registrationOrder -> {},
-                visitEncounter -> {},
+                new CapturingRegistrationOrderRepository(),
+                new CapturingVisitEncounterRepository(),
                 new AiRegistrationHandoffSupport(new AllowingAiSessionQueryRepository()));
 
         BizException exception = assertThrows(
@@ -102,8 +103,8 @@ class CreateRegistrationUseCaseTest {
         StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(
                 reservationRepository,
-                registrationOrder -> {},
-                visitEncounter -> {},
+                new CapturingRegistrationOrderRepository(),
+                new CapturingVisitEncounterRepository(),
                 new AiRegistrationHandoffSupport(new ForeignAiSessionQueryRepository()));
 
         BizException exception = assertThrows(
@@ -118,8 +119,8 @@ class CreateRegistrationUseCaseTest {
         StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(
                 reservationRepository,
-                registrationOrder -> {},
-                visitEncounter -> {},
+                new CapturingRegistrationOrderRepository(),
+                new CapturingVisitEncounterRepository(),
                 new AiRegistrationHandoffSupport(new CollectingAiSessionQueryRepository()));
 
         BizException exception = assertThrows(
@@ -134,8 +135,8 @@ class CreateRegistrationUseCaseTest {
         StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(
                 reservationRepository,
-                registrationOrder -> {},
-                visitEncounter -> {},
+                new CapturingRegistrationOrderRepository(),
+                new CapturingVisitEncounterRepository(),
                 new AiRegistrationHandoffSupport(new HighRiskAiSessionQueryRepository()));
 
         BizException exception = assertThrows(
@@ -150,8 +151,8 @@ class CreateRegistrationUseCaseTest {
         StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(
                 reservationRepository,
-                registrationOrder -> {},
-                visitEncounter -> {},
+                new CapturingRegistrationOrderRepository(),
+                new CapturingVisitEncounterRepository(),
                 new AiRegistrationHandoffSupport(new NoDepartmentAiSessionQueryRepository()));
 
         BizException exception = assertThrows(
@@ -183,6 +184,11 @@ class CreateRegistrationUseCaseTest {
         }
 
         @Override
+        public boolean releaseReservedSlot(Long sessionId, Long slotId, String expectedCurrentStatus) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public void refreshSessionRemainingCount(Long sessionId) {
             refreshSessionRemainingCountCalled = true;
         }
@@ -196,6 +202,16 @@ class CreateRegistrationUseCaseTest {
         public void save(RegistrationOrder registrationOrder) {
             this.savedOrder = registrationOrder;
         }
+
+        @Override
+        public Optional<RegistrationOrder> findByRegistrationIdAndPatientId(Long registrationId, Long patientUserId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void update(RegistrationOrder registrationOrder) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final class CapturingVisitEncounterRepository implements VisitEncounterRepository {
@@ -205,6 +221,11 @@ class CreateRegistrationUseCaseTest {
         @Override
         public void save(VisitEncounter visitEncounter) {
             this.savedEncounter = visitEncounter;
+        }
+
+        @Override
+        public boolean cancelScheduledByRegistrationId(Long registrationId) {
+            throw new UnsupportedOperationException();
         }
     }
 

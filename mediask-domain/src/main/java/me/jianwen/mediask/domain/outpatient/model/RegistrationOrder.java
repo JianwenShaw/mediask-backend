@@ -1,7 +1,10 @@
 package me.jianwen.mediask.domain.outpatient.model;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.id.SnowflakeIdGenerator;
+import me.jianwen.mediask.domain.outpatient.exception.OutpatientErrorCode;
 
 public final class RegistrationOrder {
 
@@ -15,6 +18,8 @@ public final class RegistrationOrder {
     private final Long sourceAiSessionId;
     private final RegistrationStatus status;
     private final BigDecimal fee;
+    private final OffsetDateTime cancelledAt;
+    private final String cancellationReason;
 
     private RegistrationOrder(
             Long registrationId,
@@ -26,7 +31,9 @@ public final class RegistrationOrder {
             Long slotId,
             Long sourceAiSessionId,
             RegistrationStatus status,
-            BigDecimal fee) {
+            BigDecimal fee,
+            OffsetDateTime cancelledAt,
+            String cancellationReason) {
         this.registrationId = registrationId;
         this.orderNo = orderNo;
         this.patientId = patientId;
@@ -37,6 +44,8 @@ public final class RegistrationOrder {
         this.sourceAiSessionId = sourceAiSessionId;
         this.status = status;
         this.fee = fee;
+        this.cancelledAt = cancelledAt;
+        this.cancellationReason = cancellationReason;
     }
 
     public static RegistrationOrder createPendingPayment(
@@ -58,7 +67,56 @@ public final class RegistrationOrder {
                 slotId,
                 sourceAiSessionId,
                 RegistrationStatus.PENDING_PAYMENT,
-                fee);
+                fee,
+                null,
+                null);
+    }
+
+    public static RegistrationOrder reconstitute(
+            Long registrationId,
+            String orderNo,
+            Long patientId,
+            Long doctorId,
+            Long departmentId,
+            Long sessionId,
+            Long slotId,
+            Long sourceAiSessionId,
+            RegistrationStatus status,
+            BigDecimal fee,
+            OffsetDateTime cancelledAt,
+            String cancellationReason) {
+        return new RegistrationOrder(
+                registrationId,
+                orderNo,
+                patientId,
+                doctorId,
+                departmentId,
+                sessionId,
+                slotId,
+                sourceAiSessionId,
+                status,
+                fee,
+                cancelledAt,
+                cancellationReason);
+    }
+
+    public RegistrationOrder cancel(OffsetDateTime cancelledAt) {
+        if (status != RegistrationStatus.PENDING_PAYMENT && status != RegistrationStatus.CONFIRMED) {
+            throw new BizException(OutpatientErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        return new RegistrationOrder(
+                registrationId,
+                orderNo,
+                patientId,
+                doctorId,
+                departmentId,
+                sessionId,
+                slotId,
+                sourceAiSessionId,
+                RegistrationStatus.CANCELLED,
+                fee,
+                cancelledAt,
+                cancellationReason);
     }
 
     public Long registrationId() {
@@ -99,5 +157,13 @@ public final class RegistrationOrder {
 
     public BigDecimal fee() {
         return fee;
+    }
+
+    public OffsetDateTime cancelledAt() {
+        return cancelledAt;
+    }
+
+    public String cancellationReason() {
+        return cancellationReason;
     }
 }

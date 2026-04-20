@@ -1,10 +1,13 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationOrder;
 import me.jianwen.mediask.infra.persistence.dataobject.RegistrationOrderDO;
@@ -17,7 +20,11 @@ class RegistrationOrderRepositoryAdapterTest {
     void save_WhenCalled_InsertMappedRegistrationOrder() {
         CapturingHandler handler = new CapturingHandler();
         RegistrationOrderRepositoryAdapter adapter =
-                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of("insert", handler::insert)));
+                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
+                        "insert", handler::insert,
+                        "selectOne", handler::selectOne,
+                        "selectById", handler::selectById,
+                        "updateById", handler::updateById)));
 
         RegistrationOrder registrationOrder = RegistrationOrder.createPendingPayment(
                 2201L, 2101L, 3101L, 4101L, 5101L, 7101L, new BigDecimal("18.00"));
@@ -33,6 +40,65 @@ class RegistrationOrderRepositoryAdapterTest {
         assertEquals(registrationOrder.sourceAiSessionId(), handler.inserted.getSourceAiSessionId());
         assertEquals("PENDING_PAYMENT", handler.inserted.getOrderStatus());
         assertEquals(new BigDecimal("18.00"), handler.inserted.getFee());
+    }
+
+    @Test
+    void findByRegistrationIdAndPatientId_WhenFound_ReturnMappedOrder() {
+        CapturingHandler handler = new CapturingHandler();
+        RegistrationOrderRepositoryAdapter adapter =
+                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
+                        "insert", handler::insert,
+                        "selectOne", handler::selectOne,
+                        "selectById", handler::selectById,
+                        "updateById", handler::updateById)));
+
+        Optional<RegistrationOrder> result = adapter.findByRegistrationIdAndPatientId(6101L, 2003L);
+
+        assertTrue(result.isPresent());
+        assertEquals(RegistrationOrder.reconstitute(
+                        6101L,
+                        "REG6101",
+                        2003L,
+                        2101L,
+                        3101L,
+                        4101L,
+                        5101L,
+                        7101L,
+                        me.jianwen.mediask.domain.outpatient.model.RegistrationStatus.CONFIRMED,
+                        new BigDecimal("18.00"),
+                        null,
+                        null).status(),
+                result.orElseThrow().status());
+    }
+
+    @Test
+    void update_WhenCalled_UpdateMappedRegistrationOrder() {
+        CapturingHandler handler = new CapturingHandler();
+        RegistrationOrderRepositoryAdapter adapter =
+                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
+                        "insert", handler::insert,
+                        "selectOne", handler::selectOne,
+                        "selectById", handler::selectById,
+                        "updateById", handler::updateById)));
+
+        RegistrationOrder registrationOrder = RegistrationOrder.reconstitute(
+                6101L,
+                "REG6101",
+                2003L,
+                2101L,
+                3101L,
+                4101L,
+                5101L,
+                7101L,
+                me.jianwen.mediask.domain.outpatient.model.RegistrationStatus.CANCELLED,
+                new BigDecimal("18.00"),
+                OffsetDateTime.parse("2026-04-03T11:00:00+08:00"),
+                null);
+        adapter.update(registrationOrder);
+
+        assertEquals("CANCELLED", handler.updated.getOrderStatus());
+        assertEquals(7, handler.updated.getVersion());
+        assertEquals(OffsetDateTime.parse("2026-04-03T11:00:00+08:00"), handler.updated.getCancelledAt());
     }
 
     private static <T> T proxy(Class<T> type, Map<String, Function<Object[], Object>> handlers) {
@@ -57,10 +123,40 @@ class RegistrationOrderRepositoryAdapterTest {
     private static final class CapturingHandler {
 
         private RegistrationOrderDO inserted;
+        private RegistrationOrderDO updated;
 
         private Object insert(Object[] arguments) {
             this.inserted = (RegistrationOrderDO) arguments[0];
             return 1;
+        }
+
+        private Object selectOne(Object[] arguments) {
+            return buildExisting();
+        }
+
+        private Object selectById(Object[] arguments) {
+            return buildExisting();
+        }
+
+        private Object updateById(Object[] arguments) {
+            this.updated = (RegistrationOrderDO) arguments[0];
+            return 1;
+        }
+
+        private RegistrationOrderDO buildExisting() {
+            RegistrationOrderDO dataObject = new RegistrationOrderDO();
+            dataObject.setId(6101L);
+            dataObject.setVersion(7);
+            dataObject.setOrderNo("REG6101");
+            dataObject.setPatientId(2003L);
+            dataObject.setDoctorId(2101L);
+            dataObject.setDepartmentId(3101L);
+            dataObject.setSessionId(4101L);
+            dataObject.setSlotId(5101L);
+            dataObject.setSourceAiSessionId(7101L);
+            dataObject.setOrderStatus("CONFIRMED");
+            dataObject.setFee(new BigDecimal("18.00"));
+            return dataObject;
         }
     }
 }

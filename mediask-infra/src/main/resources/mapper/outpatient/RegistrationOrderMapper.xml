@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="me.jianwen.mediask.infra.persistence.mapper.RegistrationOrderMapper">
+
+    <select id="selectRegistrationDetail"
+            resultType="me.jianwen.mediask.infra.persistence.mapper.RegistrationDetailRow">
+        SELECT
+            registration.id AS registration_id,
+            registration.patient_id AS patient_user_id,
+            registration.order_no,
+            registration.order_status,
+            registration.created_at,
+            registration.source_ai_session_id,
+            registration.session_id AS clinic_session_id,
+            registration.slot_id AS clinic_slot_id,
+            registration.department_id,
+            department.name AS department_name,
+            registration.doctor_id,
+            user_info.display_name AS doctor_name,
+            session.session_date,
+            session.period_code,
+            registration.fee,
+            registration.cancelled_at,
+            registration.cancellation_reason
+        FROM registration_order registration
+        LEFT JOIN clinic_session session
+               ON session.id = registration.session_id
+              AND session.deleted_at IS NULL
+        LEFT JOIN departments department
+               ON department.id = registration.department_id
+              AND department.deleted_at IS NULL
+        LEFT JOIN doctors doctor
+               ON doctor.id = registration.doctor_id
+              AND doctor.deleted_at IS NULL
+        LEFT JOIN users user_info
+               ON user_info.id = doctor.user_id
+              AND user_info.deleted_at IS NULL
+        WHERE registration.deleted_at IS NULL
+          AND registration.patient_id = #{patientUserId}
+          AND registration.id = #{registrationId}
+    </select>
+</mapper>

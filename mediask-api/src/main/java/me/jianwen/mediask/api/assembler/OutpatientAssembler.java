@@ -1,16 +1,25 @@
 package me.jianwen.mediask.api.assembler;
 
 import java.util.List;
+import me.jianwen.mediask.api.dto.CancelRegistrationResponse;
 import me.jianwen.mediask.api.dto.ClinicSessionListItemResponse;
 import me.jianwen.mediask.api.dto.ClinicSessionListResponse;
+import me.jianwen.mediask.api.dto.ClinicSessionSlotListItemResponse;
+import me.jianwen.mediask.api.dto.ClinicSessionSlotListResponse;
 import me.jianwen.mediask.api.dto.CreateRegistrationRequest;
 import me.jianwen.mediask.api.dto.CreateRegistrationResponse;
+import me.jianwen.mediask.api.dto.RegistrationDetailResponse;
 import me.jianwen.mediask.api.dto.RegistrationListItemResponse;
 import me.jianwen.mediask.api.dto.RegistrationListResponse;
+import me.jianwen.mediask.application.outpatient.command.CancelRegistrationCommand;
 import me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand;
+import me.jianwen.mediask.application.outpatient.query.GetRegistrationDetailQuery;
 import me.jianwen.mediask.application.outpatient.query.ListRegistrationsQuery;
+import me.jianwen.mediask.application.outpatient.usecase.CancelRegistrationResult;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationResult;
 import me.jianwen.mediask.domain.outpatient.model.ClinicSessionListItem;
+import me.jianwen.mediask.domain.outpatient.model.ClinicSessionSlotListItem;
+import me.jianwen.mediask.domain.outpatient.model.RegistrationDetail;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationListItem;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
 import me.jianwen.mediask.common.exception.BizException;
@@ -41,6 +50,20 @@ public final class OutpatientAssembler {
                 item.fee());
     }
 
+    public static ClinicSessionSlotListResponse toClinicSessionSlotListResponse(List<ClinicSessionSlotListItem> items) {
+        return new ClinicSessionSlotListResponse(items.stream()
+                .map(OutpatientAssembler::toClinicSessionSlotListItemResponse)
+                .toList());
+    }
+
+    public static ClinicSessionSlotListItemResponse toClinicSessionSlotListItemResponse(ClinicSessionSlotListItem item) {
+        return new ClinicSessionSlotListItemResponse(
+                item.clinicSlotId(),
+                item.slotSeq(),
+                ApiDateTimeFormatter.format(item.slotStartTime()),
+                ApiDateTimeFormatter.format(item.slotEndTime()));
+    }
+
     public static CreateRegistrationCommand toCreateRegistrationCommand(
             Long patientUserId, CreateRegistrationRequest request) {
         return new CreateRegistrationCommand(
@@ -49,6 +72,14 @@ public final class OutpatientAssembler {
 
     public static CreateRegistrationResponse toCreateRegistrationResponse(CreateRegistrationResult result) {
         return new CreateRegistrationResponse(result.registrationId(), result.orderNo(), result.status().name());
+    }
+
+    public static GetRegistrationDetailQuery toGetRegistrationDetailQuery(Long patientUserId, Long registrationId) {
+        return new GetRegistrationDetailQuery(registrationId, patientUserId);
+    }
+
+    public static CancelRegistrationCommand toCancelRegistrationCommand(Long patientUserId, Long registrationId) {
+        return new CancelRegistrationCommand(registrationId, patientUserId);
     }
 
     public static ListRegistrationsQuery toListRegistrationsQuery(Long patientUserId, String status) {
@@ -68,6 +99,31 @@ public final class OutpatientAssembler {
                 item.status().name(),
                 ApiDateTimeFormatter.format(item.createdAt()),
                 item.sourceAiSessionId());
+    }
+
+    public static RegistrationDetailResponse toRegistrationDetailResponse(RegistrationDetail detail) {
+        return new RegistrationDetailResponse(
+                detail.registrationId(),
+                detail.orderNo(),
+                detail.status().name(),
+                ApiDateTimeFormatter.format(detail.createdAt()),
+                detail.sourceAiSessionId(),
+                detail.clinicSessionId(),
+                detail.clinicSlotId(),
+                detail.departmentId(),
+                detail.departmentName(),
+                detail.doctorId(),
+                detail.doctorName(),
+                detail.sessionDate(),
+                detail.periodCode() == null ? null : detail.periodCode().name(),
+                detail.fee(),
+                ApiDateTimeFormatter.format(detail.cancelledAt()),
+                detail.cancellationReason());
+    }
+
+    public static CancelRegistrationResponse toCancelRegistrationResponse(CancelRegistrationResult result) {
+        return new CancelRegistrationResponse(
+                result.registrationId(), result.status().name(), ApiDateTimeFormatter.format(result.cancelledAt()));
     }
 
     private static RegistrationStatus toRegistrationStatus(String status) {

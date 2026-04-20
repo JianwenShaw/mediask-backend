@@ -2,6 +2,7 @@ package me.jianwen.mediask.api.controller;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -26,8 +27,14 @@ import me.jianwen.mediask.api.security.JwtAuthenticationFilter;
 import me.jianwen.mediask.api.security.SecurityConfig;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationResult;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationUseCase;
+import me.jianwen.mediask.application.outpatient.usecase.CancelRegistrationResult;
+import me.jianwen.mediask.application.outpatient.usecase.CancelRegistrationUseCase;
+import me.jianwen.mediask.application.outpatient.usecase.GetRegistrationDetailUseCase;
 import me.jianwen.mediask.application.outpatient.usecase.ListRegistrationsUseCase;
 import me.jianwen.mediask.common.exception.BizException;
+import me.jianwen.mediask.domain.outpatient.exception.OutpatientErrorCode;
+import me.jianwen.mediask.domain.outpatient.model.ClinicSessionPeriodCode;
+import me.jianwen.mediask.domain.outpatient.model.RegistrationDetail;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationListItem;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
 import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
@@ -60,11 +67,15 @@ class RegistrationControllerTest {
     private MockMvc doctorMockMvc;
     private StubCreateRegistrationUseCase patientCreateRegistrationUseCase;
     private StubListRegistrationsUseCase patientListRegistrationsUseCase;
+    private StubGetRegistrationDetailUseCase patientGetRegistrationDetailUseCase;
+    private StubCancelRegistrationUseCase patientCancelRegistrationUseCase;
 
     @BeforeEach
     void setUp() {
         patientCreateRegistrationUseCase = new StubCreateRegistrationUseCase();
         patientListRegistrationsUseCase = new StubListRegistrationsUseCase();
+        patientGetRegistrationDetailUseCase = new StubGetRegistrationDetailUseCase();
+        patientCancelRegistrationUseCase = new StubCancelRegistrationUseCase();
         patientMockMvc = buildMockMvc(new AuthenticatedUser(
                 2003L,
                 "patient_li",
@@ -75,7 +86,11 @@ class RegistrationControllerTest {
                 Set.of(),
                 2201L,
                 null,
-                null), patientCreateRegistrationUseCase, patientListRegistrationsUseCase);
+                null),
+                patientCreateRegistrationUseCase,
+                patientListRegistrationsUseCase,
+                patientGetRegistrationDetailUseCase,
+                patientCancelRegistrationUseCase);
         doctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2004L,
                 "doctor_zhang",
@@ -86,7 +101,11 @@ class RegistrationControllerTest {
                 Set.of(),
                 null,
                 2101L,
-                3101L), new StubCreateRegistrationUseCase(), new StubListRegistrationsUseCase());
+                3101L),
+                new StubCreateRegistrationUseCase(),
+                new StubListRegistrationsUseCase(),
+                new StubGetRegistrationDetailUseCase(),
+                new StubCancelRegistrationUseCase());
     }
 
     @Test
@@ -147,6 +166,46 @@ class RegistrationControllerTest {
 
         assertEquals(2003L, patientListRegistrationsUseCase.lastQuery.patientUserId());
         assertEquals(RegistrationStatus.CONFIRMED, patientListRegistrationsUseCase.lastQuery.status());
+    }
+
+    @Test
+    void detail_WhenAuthenticatedPatient_ReturnRegistrationDetail() throws Exception {
+        patientMockMvc.perform(get("/api/v1/registrations/6101")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.registrationId").value(6101))
+                .andExpect(jsonPath("$.data.orderNo").value("REG6101"))
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.data.createdAt").value("2026-04-02T10:00:00+08:00"))
+                .andExpect(jsonPath("$.data.clinicSessionId").value(4101))
+                .andExpect(jsonPath("$.data.clinicSlotId").value(5101))
+                .andExpect(jsonPath("$.data.departmentId").value(3101))
+                .andExpect(jsonPath("$.data.departmentName").value("神经内科"))
+                .andExpect(jsonPath("$.data.doctorId").value(2101))
+                .andExpect(jsonPath("$.data.doctorName").value("张医生"))
+                .andExpect(jsonPath("$.data.sessionDate[0]").value(2026))
+                .andExpect(jsonPath("$.data.sessionDate[1]").value(4))
+                .andExpect(jsonPath("$.data.sessionDate[2]").value(3))
+                .andExpect(jsonPath("$.data.periodCode").value("MORNING"))
+                .andExpect(jsonPath("$.data.fee").value(18.00));
+
+        assertEquals(6101L, patientGetRegistrationDetailUseCase.lastQuery.registrationId());
+        assertEquals(2003L, patientGetRegistrationDetailUseCase.lastQuery.patientUserId());
+    }
+
+    @Test
+    void cancel_WhenAuthenticatedPatient_ReturnCancelledRegistration() throws Exception {
+        patientMockMvc.perform(patch("/api/v1/registrations/6101/cancel")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.registrationId").value(6101))
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.data.cancelledAt").value("2026-04-03T11:00:00+08:00"));
+
+        assertEquals(6101L, patientCancelRegistrationUseCase.lastCommand.registrationId());
+        assertEquals(2003L, patientCancelRegistrationUseCase.lastCommand.patientUserId());
     }
 
     @Test
@@ -211,12 +270,37 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.code").value(2008));
     }
 
+    @Test
+    void detail_WhenRegistrationMissing_ReturnNotFound() throws Exception {
+        patientGetRegistrationDetailUseCase.throwable = new BizException(OutpatientErrorCode.REGISTRATION_NOT_FOUND);
+
+        patientMockMvc.perform(get("/api/v1/registrations/9999")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(3008));
+    }
+
+    @Test
+    void cancel_WhenCancellationRejected_ReturnConflict() throws Exception {
+        patientCancelRegistrationUseCase.throwable = new BizException(OutpatientErrorCode.REGISTRATION_CANCEL_NOT_ALLOWED);
+
+        patientMockMvc.perform(patch("/api/v1/registrations/6101/cancel")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(3009));
+    }
+
     private MockMvc buildMockMvc(
             AuthenticatedUser authenticatedUser,
             StubCreateRegistrationUseCase createRegistrationUseCase,
-            StubListRegistrationsUseCase listRegistrationsUseCase) {
-        RegistrationController controller =
-                new RegistrationController(createRegistrationUseCase, listRegistrationsUseCase);
+            StubListRegistrationsUseCase listRegistrationsUseCase,
+            StubGetRegistrationDetailUseCase getRegistrationDetailUseCase,
+            StubCancelRegistrationUseCase cancelRegistrationUseCase) {
+        RegistrationController controller = new RegistrationController(
+                createRegistrationUseCase,
+                listRegistrationsUseCase,
+                getRegistrationDetailUseCase,
+                cancelRegistrationUseCase);
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);
         SecurityConfig securityConfig = new SecurityConfig();
@@ -289,6 +373,64 @@ class RegistrationControllerTest {
                     RegistrationStatus.CONFIRMED,
                     OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
                     7101L));
+        }
+    }
+
+    private static final class StubGetRegistrationDetailUseCase extends GetRegistrationDetailUseCase {
+
+        private me.jianwen.mediask.application.outpatient.query.GetRegistrationDetailQuery lastQuery;
+        private RuntimeException throwable;
+
+        private StubGetRegistrationDetailUseCase() {
+            super(null);
+        }
+
+        @Override
+        public RegistrationDetail handle(me.jianwen.mediask.application.outpatient.query.GetRegistrationDetailQuery query) {
+            this.lastQuery = query;
+            if (throwable != null) {
+                throw throwable;
+            }
+            return new RegistrationDetail(
+                    6101L,
+                    2003L,
+                    "REG6101",
+                    RegistrationStatus.CONFIRMED,
+                    OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
+                    7101L,
+                    4101L,
+                    5101L,
+                    3101L,
+                    "神经内科",
+                    2101L,
+                    "张医生",
+                    java.time.LocalDate.parse("2026-04-03"),
+                    ClinicSessionPeriodCode.MORNING,
+                    new java.math.BigDecimal("18.00"),
+                    null,
+                    null);
+        }
+    }
+
+    private static final class StubCancelRegistrationUseCase extends CancelRegistrationUseCase {
+
+        private me.jianwen.mediask.application.outpatient.command.CancelRegistrationCommand lastCommand;
+        private RuntimeException throwable;
+
+        private StubCancelRegistrationUseCase() {
+            super(null, null, null);
+        }
+
+        @Override
+        public CancelRegistrationResult handle(me.jianwen.mediask.application.outpatient.command.CancelRegistrationCommand command) {
+            this.lastCommand = command;
+            if (throwable != null) {
+                throw throwable;
+            }
+            return new CancelRegistrationResult(
+                    6101L,
+                    RegistrationStatus.CANCELLED,
+                    OffsetDateTime.parse("2026-04-03T11:00:00+08:00"));
         }
     }
 

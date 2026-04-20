@@ -43,6 +43,7 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "updateById", sessionHandler::updateById)),
                 proxy(ClinicSlotMapper.class, Map.of(
                         "selectReservableSlot", slotHandler::selectReservableSlot,
+                        "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
                         "countAvailableSlots", slotHandler::countAvailableSlots)));
 
@@ -67,6 +68,7 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "updateById", sessionHandler::updateById)),
                 proxy(ClinicSlotMapper.class, Map.of(
                         "selectReservableSlot", slotHandler::selectReservableSlot,
+                        "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
                         "countAvailableSlots", slotHandler::countAvailableSlots)));
 
@@ -85,12 +87,79 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "updateById", sessionHandler::updateById)),
                 proxy(ClinicSlotMapper.class, Map.of(
                         "selectReservableSlot", slotHandler::selectReservableSlot,
+                        "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
                         "countAvailableSlots", slotHandler::countAvailableSlots)));
 
         BizException exception = assertThrows(BizException.class, () -> adapter.refreshSessionRemainingCount(4101L));
 
         assertEquals(OutpatientErrorCode.SESSION_UPDATE_CONFLICT, exception.getErrorCode());
+    }
+
+    @Test
+    void releaseReservedSlot_WhenSlotLocked_ReturnTrue() {
+        SessionMapperHandler sessionHandler = new SessionMapperHandler();
+        SlotMapperHandler slotHandler = new SlotMapperHandler();
+        ClinicSlotReservationRepositoryAdapter adapter = new ClinicSlotReservationRepositoryAdapter(
+                proxy(ClinicSessionMapper.class, Map.of(
+                        "selectCount", sessionHandler::selectCount,
+                        "selectOne", sessionHandler::selectOne,
+                        "updateById", sessionHandler::updateById)),
+                proxy(ClinicSlotMapper.class, Map.of(
+                        "selectReservableSlot", slotHandler::selectReservableSlot,
+                        "selectOne", slotHandler::selectOne,
+                        "updateById", slotHandler::updateById,
+                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+
+        boolean result = adapter.releaseReservedSlot(4101L, 5101L, "LOCKED");
+
+        assertTrue(result);
+        assertEquals("AVAILABLE", slotHandler.updatedSlotStatus);
+        assertEquals(1, slotHandler.updatedRemainingCount);
+    }
+
+    @Test
+    void releaseReservedSlot_WhenSlotBookedAndExpectedBooked_ReturnTrue() {
+        SessionMapperHandler sessionHandler = new SessionMapperHandler();
+        SlotMapperHandler slotHandler = new SlotMapperHandler();
+        slotHandler.currentSlotStatus = "BOOKED";
+        ClinicSlotReservationRepositoryAdapter adapter = new ClinicSlotReservationRepositoryAdapter(
+                proxy(ClinicSessionMapper.class, Map.of(
+                        "selectCount", sessionHandler::selectCount,
+                        "selectOne", sessionHandler::selectOne,
+                        "updateById", sessionHandler::updateById)),
+                proxy(ClinicSlotMapper.class, Map.of(
+                        "selectReservableSlot", slotHandler::selectReservableSlot,
+                        "selectOne", slotHandler::selectOne,
+                        "updateById", slotHandler::updateById,
+                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+
+        boolean result = adapter.releaseReservedSlot(4101L, 5101L, "BOOKED");
+
+        assertTrue(result);
+        assertEquals("AVAILABLE", slotHandler.updatedSlotStatus);
+        assertEquals(1, slotHandler.updatedRemainingCount);
+    }
+
+    @Test
+    void releaseReservedSlot_WhenSlotStatusMismatch_ReturnFalse() {
+        SessionMapperHandler sessionHandler = new SessionMapperHandler();
+        SlotMapperHandler slotHandler = new SlotMapperHandler();
+        slotHandler.currentSlotStatus = "LOCKED";
+        ClinicSlotReservationRepositoryAdapter adapter = new ClinicSlotReservationRepositoryAdapter(
+                proxy(ClinicSessionMapper.class, Map.of(
+                        "selectCount", sessionHandler::selectCount,
+                        "selectOne", sessionHandler::selectOne,
+                        "updateById", sessionHandler::updateById)),
+                proxy(ClinicSlotMapper.class, Map.of(
+                        "selectReservableSlot", slotHandler::selectReservableSlot,
+                        "selectOne", slotHandler::selectOne,
+                        "updateById", slotHandler::updateById,
+                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+
+        boolean result = adapter.releaseReservedSlot(4101L, 5101L, "BOOKED");
+
+        assertFalse(result);
     }
 
     private static <T> T proxy(Class<T> type, Map<String, Function<Object[], Object>> handlers) {
@@ -147,6 +216,7 @@ class ClinicSlotReservationRepositoryAdapterTest {
         private int updateRows = 1;
         private String updatedSlotStatus;
         private Integer updatedRemainingCount;
+        private String currentSlotStatus = "LOCKED";
 
         private Object selectReservableSlot(Object[] arguments) {
             ClinicSlotReservationRow row = new ClinicSlotReservationRow();
@@ -164,6 +234,15 @@ class ClinicSlotReservationRepositoryAdapterTest {
             this.updatedSlotStatus = slot.getSlotStatus();
             this.updatedRemainingCount = slot.getRemainingCount();
             return updateRows;
+        }
+
+        private Object selectOne(Object[] arguments) {
+            ClinicSlotDO slot = new ClinicSlotDO();
+            slot.setId(5101L);
+            slot.setSessionId(4101L);
+            slot.setVersion(2);
+            slot.setSlotStatus(currentSlotStatus);
+            return slot;
         }
 
         private Object countAvailableSlots(Object[] arguments) {

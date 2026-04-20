@@ -3,11 +3,14 @@ package me.jianwen.mediask.api.controller;
 import java.time.LocalDate;
 import me.jianwen.mediask.api.assembler.OutpatientAssembler;
 import me.jianwen.mediask.api.dto.ClinicSessionListResponse;
+import me.jianwen.mediask.api.dto.ClinicSessionSlotListResponse;
 import me.jianwen.mediask.application.outpatient.query.ListClinicSessionsQuery;
+import me.jianwen.mediask.application.outpatient.usecase.ListClinicSessionSlotsUseCase;
 import me.jianwen.mediask.application.outpatient.usecase.ListClinicSessionsUseCase;
 import me.jianwen.mediask.common.result.Result;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,9 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClinicSessionController {
 
     private final ListClinicSessionsUseCase listClinicSessionsUseCase;
+    private final ListClinicSessionSlotsUseCase listClinicSessionSlotsUseCase;
 
-    public ClinicSessionController(ListClinicSessionsUseCase listClinicSessionsUseCase) {
+    public ClinicSessionController(
+            ListClinicSessionsUseCase listClinicSessionsUseCase,
+            ListClinicSessionSlotsUseCase listClinicSessionSlotsUseCase) {
         this.listClinicSessionsUseCase = listClinicSessionsUseCase;
+        this.listClinicSessionSlotsUseCase = listClinicSessionSlotsUseCase;
     }
 
     @GetMapping
@@ -29,5 +36,11 @@ public class ClinicSessionController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
         return Result.ok(OutpatientAssembler.toClinicSessionListResponse(
                 listClinicSessionsUseCase.handle(new ListClinicSessionsQuery(departmentId, dateFrom, dateTo))));
+    }
+
+    @GetMapping("/{clinicSessionId}/slots")
+    public Result<ClinicSessionSlotListResponse> listSlots(@PathVariable Long clinicSessionId) {
+        return Result.ok(OutpatientAssembler.toClinicSessionSlotListResponse(
+                listClinicSessionSlotsUseCase.handle(clinicSessionId)));
     }
 }

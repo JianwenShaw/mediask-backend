@@ -30,4 +30,21 @@
           AND deleted_at IS NULL
           AND slot_status = 'AVAILABLE'
     </select>
+
+    <select id="selectAvailableSlotsBySessionId"
+            resultType="me.jianwen.mediask.infra.persistence.mapper.ClinicSessionSlotListRow">
+        SELECT
+            slot.id AS clinic_slot_id,
+            slot.slot_seq,
+            slot.slot_start_time,
+            slot.slot_end_time
+        FROM clinic_slot slot
+        JOIN clinic_session session ON session.id = slot.session_id
+        WHERE slot.session_id = #{clinicSessionId}
+          AND slot.deleted_at IS NULL
+          AND slot.slot_status = 'AVAILABLE'
+          AND session.deleted_at IS NULL
+          AND session.session_status = 'OPEN'
+        ORDER BY slot.slot_seq ASC, slot.id ASC
+    </select>
 </mapper>

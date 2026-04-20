@@ -60,6 +60,24 @@ public class ClinicSlotReservationRepositoryAdapter implements ClinicSlotReserva
     }
 
     @Override
+    public boolean releaseReservedSlot(Long sessionId, Long slotId, String expectedCurrentStatus) {
+        ClinicSlotDO existingSlot = clinicSlotMapper.selectOne(Wrappers.lambdaQuery(ClinicSlotDO.class)
+                .eq(ClinicSlotDO::getId, slotId)
+                .eq(ClinicSlotDO::getSessionId, sessionId)
+                .isNull(ClinicSlotDO::getDeletedAt));
+        if (existingSlot == null || !expectedCurrentStatus.equals(existingSlot.getSlotStatus())) {
+            return false;
+        }
+
+        ClinicSlotDO slotToUpdate = new ClinicSlotDO();
+        slotToUpdate.setId(existingSlot.getId());
+        slotToUpdate.setVersion(existingSlot.getVersion());
+        slotToUpdate.setSlotStatus("AVAILABLE");
+        slotToUpdate.setRemainingCount(1);
+        return clinicSlotMapper.updateById(slotToUpdate) > 0;
+    }
+
+    @Override
     public void refreshSessionRemainingCount(Long sessionId) {
         ClinicSessionDO existingSession = clinicSessionMapper.selectOne(Wrappers.lambdaQuery(ClinicSessionDO.class)
                 .eq(ClinicSessionDO::getId, sessionId)

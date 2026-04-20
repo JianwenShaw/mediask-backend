@@ -1,6 +1,7 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
 import java.util.Map;
@@ -16,7 +17,10 @@ class VisitEncounterRepositoryAdapterTest {
     void save_WhenCalled_InsertMappedVisitEncounter() {
         CapturingHandler handler = new CapturingHandler();
         VisitEncounterRepositoryAdapter adapter =
-                new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of("insert", handler::insert)));
+                new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
+                        "insert", handler::insert,
+                        "selectOne", handler::selectOne,
+                        "updateById", handler::updateById)));
 
         VisitEncounter visitEncounter = VisitEncounter.createScheduled(6101L, 2003L, 2101L, 3101L);
         adapter.save(visitEncounter);
@@ -27,6 +31,21 @@ class VisitEncounterRepositoryAdapterTest {
         assertEquals(visitEncounter.doctorId(), handler.inserted.getDoctorId());
         assertEquals(visitEncounter.departmentId(), handler.inserted.getDepartmentId());
         assertEquals("SCHEDULED", handler.inserted.getEncounterStatus());
+    }
+
+    @Test
+    void cancelScheduledByRegistrationId_WhenScheduled_UpdateCancelledStatus() {
+        CapturingHandler handler = new CapturingHandler();
+        VisitEncounterRepositoryAdapter adapter =
+                new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
+                        "insert", handler::insert,
+                        "selectOne", handler::selectOne,
+                        "updateById", handler::updateById)));
+
+        boolean result = adapter.cancelScheduledByRegistrationId(6101L);
+
+        assertTrue(result);
+        assertEquals("CANCELLED", handler.updated.getEncounterStatus());
     }
 
     private static <T> T proxy(Class<T> type, Map<String, Function<Object[], Object>> handlers) {
@@ -51,9 +70,24 @@ class VisitEncounterRepositoryAdapterTest {
     private static final class CapturingHandler {
 
         private VisitEncounterDO inserted;
+        private VisitEncounterDO updated;
 
         private Object insert(Object[] arguments) {
             this.inserted = (VisitEncounterDO) arguments[0];
+            return 1;
+        }
+
+        private Object selectOne(Object[] arguments) {
+            VisitEncounterDO dataObject = new VisitEncounterDO();
+            dataObject.setId(8101L);
+            dataObject.setVersion(5);
+            dataObject.setOrderId(6101L);
+            dataObject.setEncounterStatus("SCHEDULED");
+            return dataObject;
+        }
+
+        private Object updateById(Object[] arguments) {
+            this.updated = (VisitEncounterDO) arguments[0];
             return 1;
         }
     }

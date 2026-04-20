@@ -48,31 +48,29 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.filter.CorsFilter;
 
-class ClinicSessionControllerTest {
+class ClinicSessionSlotsControllerTest {
 
     private static final String VALID_TOKEN = "valid-token";
 
     private MockMvc mockMvc;
-    private StubClinicSessionQueryRepository repository;
-
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
-    private final AuthenticatedUser authenticatedUser = new AuthenticatedUser(
-            2003L,
-            "patient_li",
-            "李患者",
-            UserType.PATIENT,
-            new LinkedHashSet<>(List.of(RoleCode.PATIENT)),
-            Set.of("registration:create"),
-            Set.of(),
-            2201L,
-            null,
-            null);
 
     @BeforeEach
     void setUp() {
-        repository = new StubClinicSessionQueryRepository();
-        ClinicSessionController controller =
-                new ClinicSessionController(new ListClinicSessionsUseCase(repository), new ListClinicSessionSlotsUseCase(repository));
+        StubClinicSessionQueryRepository repository = new StubClinicSessionQueryRepository();
+        ClinicSessionController controller = new ClinicSessionController(
+                new ListClinicSessionsUseCase(repository), new ListClinicSessionSlotsUseCase(repository));
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser(
+                2003L,
+                "patient_li",
+                "李患者",
+                UserType.PATIENT,
+                new LinkedHashSet<>(List.of(RoleCode.PATIENT)),
+                Set.of("registration:create"),
+                Set.of(),
+                2201L,
+                null,
+                null);
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);
         SecurityConfig securityConfig = new SecurityConfig();
@@ -110,27 +108,6 @@ class ClinicSessionControllerTest {
     }
 
     @Test
-    void list_WhenAuthenticated_ReturnOpenClinicSessions() throws Exception {
-        mockMvc.perform(get("/api/v1/clinic-sessions")
-                        .header("Authorization", "Bearer " + VALID_TOKEN)
-                        .param("departmentId", "3101")
-                        .param("dateFrom", "2026-04-01")
-                        .param("dateTo", "2026-04-07")
-                        .contentType(APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(header().exists("X-Request-Id"))
-                .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.requestId").isNotEmpty())
-                .andExpect(jsonPath("$.data.items[0].clinicSessionId").value(4101))
-                .andExpect(jsonPath("$.data.items[0].departmentName").value("呼吸内科"))
-                .andExpect(jsonPath("$.data.items[0].doctorName").value("张医生"))
-                .andExpect(jsonPath("$.data.items[0].periodCode").value("MORNING"))
-                .andExpect(jsonPath("$.data.items[0].clinicType").value("GENERAL"))
-                .andExpect(jsonPath("$.data.items[0].remainingCount").value(12))
-                .andExpect(jsonPath("$.data.items[0].fee").value(18.00));
-    }
-
-    @Test
     void listSlots_WhenAuthenticated_ReturnAvailableClinicSlots() throws Exception {
         mockMvc.perform(get("/api/v1/clinic-sessions/4101/slots")
                         .header("Authorization", "Bearer " + VALID_TOKEN)
@@ -150,7 +127,7 @@ class ClinicSessionControllerTest {
         public List<ClinicSessionListItem> listOpenSessions(Long departmentId, LocalDate dateFrom, LocalDate dateTo) {
             return List.of(new ClinicSessionListItem(
                     4101L,
-                    departmentId == null ? 3101L : departmentId,
+                    3101L,
                     "呼吸内科",
                     2101L,
                     "张医生",

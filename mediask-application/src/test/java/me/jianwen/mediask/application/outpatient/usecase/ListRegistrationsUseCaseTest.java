@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
 import me.jianwen.mediask.application.outpatient.query.ListRegistrationsQuery;
+import me.jianwen.mediask.domain.outpatient.model.RegistrationDetail;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationListItem;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
 import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderQueryRepository;
@@ -40,6 +42,11 @@ class ListRegistrationsUseCaseTest {
                     RegistrationStatus.CONFIRMED,
                     OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
                     7101L));
+        }
+
+        @Override
+        public Optional<RegistrationDetail> findDetailByPatientUserIdAndRegistrationId(Long patientUserId, Long registrationId) {
+            throw new UnsupportedOperationException();
         }
     }
 }
