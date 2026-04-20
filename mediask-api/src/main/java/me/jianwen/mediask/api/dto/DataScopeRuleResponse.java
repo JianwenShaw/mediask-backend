@@ -1,7 +1,10 @@
 package me.jianwen.mediask.api.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
 public record DataScopeRuleResponse(
         String resourceType,
         String scopeType,
-        Long scopeDepartmentId) {
+        @JsonSerialize(using = ToStringSerializer.class) Long scopeDepartmentId) {
 }

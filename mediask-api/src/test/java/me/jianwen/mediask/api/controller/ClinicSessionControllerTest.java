@@ -55,7 +55,7 @@ class ClinicSessionControllerTest {
     private MockMvc mockMvc;
     private StubClinicSessionQueryRepository repository;
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper = buildObjectMapper();
     private final AuthenticatedUser authenticatedUser = new AuthenticatedUser(
             2003L,
             "patient_li",
@@ -121,8 +121,10 @@ class ClinicSessionControllerTest {
                 .andExpect(header().exists("X-Request-Id"))
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.requestId").isNotEmpty())
-                .andExpect(jsonPath("$.data.items[0].clinicSessionId").value(4101))
+                .andExpect(jsonPath("$.data.items[0].clinicSessionId").value("4101"))
+                .andExpect(jsonPath("$.data.items[0].departmentId").value("3101"))
                 .andExpect(jsonPath("$.data.items[0].departmentName").value("呼吸内科"))
+                .andExpect(jsonPath("$.data.items[0].doctorId").value("2101"))
                 .andExpect(jsonPath("$.data.items[0].doctorName").value("张医生"))
                 .andExpect(jsonPath("$.data.items[0].periodCode").value("MORNING"))
                 .andExpect(jsonPath("$.data.items[0].clinicType").value("GENERAL"))
@@ -138,7 +140,7 @@ class ClinicSessionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Request-Id"))
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.items[0].clinicSlotId").value(5101))
+                .andExpect(jsonPath("$.data.items[0].clinicSlotId").value("5101"))
                 .andExpect(jsonPath("$.data.items[0].slotSeq").value(1))
                 .andExpect(jsonPath("$.data.items[0].slotStartTime").value("2026-04-01T08:30:00+08:00"))
                 .andExpect(jsonPath("$.data.items[0].slotEndTime").value("2026-04-01T08:40:00+08:00"));
@@ -232,5 +234,9 @@ class ClinicSessionControllerTest {
         public void updateLastLoginAt(Long userId) {
             throw new UnsupportedOperationException();
         }
+    }
+
+    private ObjectMapper buildObjectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 }

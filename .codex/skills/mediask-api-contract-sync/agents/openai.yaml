@@ -1,0 +1,4 @@
+interface:
+  display_name: "MediAsk API Contract Sync"
+  short_description: "Sync MediAsk API docs and wire-format rules."
+  default_prompt: "Use $mediask-api-contract-sync to implement an API change and update the matching MediAsk contract docs."

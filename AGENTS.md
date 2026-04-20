@@ -91,6 +91,7 @@ all modules -> mediask-common
 - `code = 0` means success.
 - Every JSON response must include `requestId` and `timestamp`.
 - SSE responses are not wrapped frame-by-frame in `Result<T>`.
+- Response DTOs own JSON wire-format contracts. For business IDs and business date/time fields, declare serialization explicitly on the response DTO instead of relying on a global Jackson config to enforce the contract.
 - Throw exceptions; do not manually build failure `Result` objects in controllers.
 - Use `BizException` for expected business failures and `SysException` or centralized mapping for system failures.
 - Do not leak stack traces, SQL, secrets, tokens, or internal hostnames in user-facing messages.

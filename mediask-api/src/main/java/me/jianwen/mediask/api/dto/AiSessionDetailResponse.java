@@ -1,27 +1,38 @@
 package me.jianwen.mediask.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public record AiSessionDetailResponse(
-        Long sessionId,
+        @JsonSerialize(using = ToStringSerializer.class) Long sessionId,
         String sceneType,
         String status,
-        Long departmentId,
+        @JsonSerialize(using = ToStringSerializer.class) Long departmentId,
         String chiefComplaintSummary,
         String summary,
-        String startedAt,
-        String endedAt,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+        OffsetDateTime startedAt,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+        OffsetDateTime endedAt,
         List<AiSessionTurnResponse> turns) {
 
     public record AiSessionTurnResponse(
-            Long turnId,
+            @JsonSerialize(using = ToStringSerializer.class) Long turnId,
             Integer turnNo,
             String turnStatus,
-            String startedAt,
-            String completedAt,
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+            OffsetDateTime startedAt,
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+            OffsetDateTime completedAt,
             Integer errorCode,
             String errorMessage,
             List<AiSessionMessageResponse> messages) {}
 
-    public record AiSessionMessageResponse(String role, String content, String createdAt) {}
+    public record AiSessionMessageResponse(
+            String role,
+            String content,
+            @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX") OffsetDateTime createdAt) {}
 }

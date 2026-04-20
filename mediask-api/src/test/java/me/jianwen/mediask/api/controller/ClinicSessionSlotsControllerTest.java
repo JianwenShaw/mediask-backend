@@ -53,7 +53,7 @@ class ClinicSessionSlotsControllerTest {
     private static final String VALID_TOKEN = "valid-token";
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper = buildObjectMapper();
 
     @BeforeEach
     void setUp() {
@@ -115,7 +115,7 @@ class ClinicSessionSlotsControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Request-Id"))
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.items[0].clinicSlotId").value(5101))
+                .andExpect(jsonPath("$.data.items[0].clinicSlotId").value("5101"))
                 .andExpect(jsonPath("$.data.items[0].slotSeq").value(1))
                 .andExpect(jsonPath("$.data.items[0].slotStartTime").value("2026-04-01T08:30:00+08:00"))
                 .andExpect(jsonPath("$.data.items[0].slotEndTime").value("2026-04-01T08:40:00+08:00"));
@@ -209,5 +209,9 @@ class ClinicSessionSlotsControllerTest {
         public void updateLastLoginAt(Long userId) {
             throw new UnsupportedOperationException();
         }
+    }
+
+    private ObjectMapper buildObjectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 }

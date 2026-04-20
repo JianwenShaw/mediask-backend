@@ -1,11 +1,13 @@
 package me.jianwen.mediask.api.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import java.util.List;
 
 public record CreateEmrResponse(
-        Long recordId,
+        @JsonSerialize(using = ToStringSerializer.class) Long recordId,
         String recordNo,
-        Long encounterId,
+        @JsonSerialize(using = ToStringSerializer.class) Long encounterId,
         String recordStatus,
         int version) {
 }

@@ -1,15 +1,22 @@
 package me.jianwen.mediask.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 
 public record EncounterPatientSummaryResponse(
-        Long patientUserId,
+        @JsonSerialize(using = ToStringSerializer.class) Long patientUserId,
         String patientName,
-        Long departmentId,
+        @JsonSerialize(using = ToStringSerializer.class) Long departmentId,
         String departmentName,
+        @JsonFormat(pattern = "yyyy-MM-dd")
         LocalDate sessionDate,
         String periodCode,
         String encounterStatus,
-        String startedAt,
-        String endedAt) {
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+        OffsetDateTime startedAt,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+        OffsetDateTime endedAt) {
 }

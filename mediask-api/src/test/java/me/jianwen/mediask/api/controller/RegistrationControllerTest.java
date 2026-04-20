@@ -61,7 +61,7 @@ class RegistrationControllerTest {
     private static final String PATIENT_TOKEN = "patient-token";
     private static final String DOCTOR_TOKEN = "doctor-token";
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper = buildObjectMapper();
 
     private MockMvc patientMockMvc;
     private MockMvc doctorMockMvc;
@@ -123,7 +123,7 @@ class RegistrationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Request-Id"))
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.registrationId").value(6101))
+                .andExpect(jsonPath("$.data.registrationId").value("6101"))
                 .andExpect(jsonPath("$.data.orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"));
 
@@ -158,11 +158,11 @@ class RegistrationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Request-Id"))
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.items[0].registrationId").value(6101))
+                .andExpect(jsonPath("$.data.items[0].registrationId").value("6101"))
                 .andExpect(jsonPath("$.data.items[0].orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.items[0].status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-04-02T10:00:00+08:00"))
-                .andExpect(jsonPath("$.data.items[0].sourceAiSessionId").value(7101));
+                .andExpect(jsonPath("$.data.items[0].sourceAiSessionId").value("7101"));
 
         assertEquals(2003L, patientListRegistrationsUseCase.lastQuery.patientUserId());
         assertEquals(RegistrationStatus.CONFIRMED, patientListRegistrationsUseCase.lastQuery.status());
@@ -174,19 +174,18 @@ class RegistrationControllerTest {
                         .header("Authorization", "Bearer " + PATIENT_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.registrationId").value(6101))
+                .andExpect(jsonPath("$.data.registrationId").value("6101"))
                 .andExpect(jsonPath("$.data.orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.data.createdAt").value("2026-04-02T10:00:00+08:00"))
-                .andExpect(jsonPath("$.data.clinicSessionId").value(4101))
-                .andExpect(jsonPath("$.data.clinicSlotId").value(5101))
-                .andExpect(jsonPath("$.data.departmentId").value(3101))
+                .andExpect(jsonPath("$.data.sourceAiSessionId").value("7101"))
+                .andExpect(jsonPath("$.data.clinicSessionId").value("4101"))
+                .andExpect(jsonPath("$.data.clinicSlotId").value("5101"))
+                .andExpect(jsonPath("$.data.departmentId").value("3101"))
                 .andExpect(jsonPath("$.data.departmentName").value("神经内科"))
-                .andExpect(jsonPath("$.data.doctorId").value(2101))
+                .andExpect(jsonPath("$.data.doctorId").value("2101"))
                 .andExpect(jsonPath("$.data.doctorName").value("张医生"))
-                .andExpect(jsonPath("$.data.sessionDate[0]").value(2026))
-                .andExpect(jsonPath("$.data.sessionDate[1]").value(4))
-                .andExpect(jsonPath("$.data.sessionDate[2]").value(3))
+                .andExpect(jsonPath("$.data.sessionDate").value("2026-04-03"))
                 .andExpect(jsonPath("$.data.periodCode").value("MORNING"))
                 .andExpect(jsonPath("$.data.fee").value(18.00));
 
@@ -200,7 +199,7 @@ class RegistrationControllerTest {
                         .header("Authorization", "Bearer " + PATIENT_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.registrationId").value(6101))
+                .andExpect(jsonPath("$.data.registrationId").value("6101"))
                 .andExpect(jsonPath("$.data.status").value("CANCELLED"))
                 .andExpect(jsonPath("$.data.cancelledAt").value("2026-04-03T11:00:00+08:00"));
 
@@ -485,5 +484,9 @@ class RegistrationControllerTest {
         public void updateLastLoginAt(Long userId) {
             throw new UnsupportedOperationException();
         }
+    }
+
+    private ObjectMapper buildObjectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 }

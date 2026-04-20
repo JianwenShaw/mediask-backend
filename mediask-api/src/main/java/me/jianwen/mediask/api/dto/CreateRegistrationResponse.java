@@ -1,3 +1,9 @@
 package me.jianwen.mediask.api.dto;
 
-public record CreateRegistrationResponse(Long registrationId, String orderNo, String status) {}
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+public record CreateRegistrationResponse(
+        @JsonSerialize(using = ToStringSerializer.class) Long registrationId,
+        String orderNo,
+        String status) {}

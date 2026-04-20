@@ -64,7 +64,7 @@ class AiControllerTest {
 
     private MockMvc mockMvc;
 
-    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+    private final ObjectMapper objectMapper = buildObjectMapper();
     private StubChatAiUseCase chatAiUseCase;
     private StubListAiSessionsUseCase listAiSessionsUseCase;
     private StubGetAiSessionDetailUseCase getAiSessionDetailUseCase;
@@ -249,7 +249,10 @@ class AiControllerTest {
         mockMvc.perform(get("/api/v1/ai/sessions/90001").header("Authorization", "Bearer " + PATIENT_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.startedAt").value("2026-04-12T09:30:00+08:00"))
+                .andExpect(jsonPath("$.data.sessionId").value("90001"))
+                .andExpect(jsonPath("$.data.departmentId").value("101"))
                 .andExpect(jsonPath("$.data.turns[0].messages[0].content").value("头痛三天"))
+                .andExpect(jsonPath("$.data.turns[0].turnId").value("90011"))
                 .andExpect(jsonPath("$.data.turns[0].startedAt").value("2026-04-12T09:30:00+08:00"))
                 .andExpect(jsonPath("$.data.turns[0].completedAt").value("2026-04-12T09:31:00+08:00"))
                 .andExpect(jsonPath("$.data.turns[0].messages[0].createdAt").value("2026-04-12T09:30:00+08:00"))
@@ -281,6 +284,8 @@ class AiControllerTest {
                 .andExpect(jsonPath("$.data.resultStatus").value("UPDATING"))
                 .andExpect(jsonPath("$.data.triageStage").value("READY"))
                 .andExpect(jsonPath("$.data.nextAction").value("VIEW_TRIAGE_RESULT"))
+                .andExpect(jsonPath("$.data.finalizedTurnId").value("90011"))
+                .andExpect(jsonPath("$.data.recommendedDepartments[0].departmentId").value("101"))
                 .andExpect(jsonPath("$.data.finalizedAt").value("2026-04-12T09:31:00+08:00"))
                 .andExpect(jsonPath("$.data.activeCycleTurnNo").value(2))
                 .andExpect(jsonPath("$.data.citations[0].chunkId").value("7001"));
@@ -304,7 +309,9 @@ class AiControllerTest {
         mockMvc.perform(post("/api/v1/ai/sessions/90001/registration-handoff")
                         .header("Authorization", "Bearer " + PATIENT_TOKEN))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sessionId").value("90001"))
                 .andExpect(jsonPath("$.data.recommendedDepartmentId").value("101"))
+                .andExpect(jsonPath("$.data.registrationQuery.departmentId").value("101"))
                 .andExpect(jsonPath("$.data.registrationQuery.dateTo").value("2026-04-21"));
     }
 
@@ -544,5 +551,9 @@ class AiControllerTest {
         public String decrypt(String encryptedText) {
             return encryptedText;
         }
+    }
+
+    private ObjectMapper buildObjectMapper() {
+        return new ObjectMapper().findAndRegisterModules();
     }
 }

@@ -60,8 +60,8 @@ public final class OutpatientAssembler {
         return new ClinicSessionSlotListItemResponse(
                 item.clinicSlotId(),
                 item.slotSeq(),
-                ApiDateTimeFormatter.format(item.slotStartTime()),
-                ApiDateTimeFormatter.format(item.slotEndTime()));
+                item.slotStartTime(),
+                item.slotEndTime());
     }
 
     public static CreateRegistrationCommand toCreateRegistrationCommand(
@@ -97,7 +97,7 @@ public final class OutpatientAssembler {
                 item.registrationId(),
                 item.orderNo(),
                 item.status().name(),
-                ApiDateTimeFormatter.format(item.createdAt()),
+                item.createdAt(),
                 item.sourceAiSessionId());
     }
 
@@ -106,7 +106,7 @@ public final class OutpatientAssembler {
                 detail.registrationId(),
                 detail.orderNo(),
                 detail.status().name(),
-                ApiDateTimeFormatter.format(detail.createdAt()),
+                detail.createdAt(),
                 detail.sourceAiSessionId(),
                 detail.clinicSessionId(),
                 detail.clinicSlotId(),
@@ -117,13 +117,13 @@ public final class OutpatientAssembler {
                 detail.sessionDate(),
                 detail.periodCode() == null ? null : detail.periodCode().name(),
                 detail.fee(),
-                ApiDateTimeFormatter.format(detail.cancelledAt()),
+                detail.cancelledAt(),
                 detail.cancellationReason());
     }
 
     public static CancelRegistrationResponse toCancelRegistrationResponse(CancelRegistrationResult result) {
         return new CancelRegistrationResponse(
-                result.registrationId(), result.status().name(), ApiDateTimeFormatter.format(result.cancelledAt()));
+                result.registrationId(), result.status().name(), result.cancelledAt());
     }
 
     private static RegistrationStatus toRegistrationStatus(String status) {

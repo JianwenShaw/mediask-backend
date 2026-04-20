@@ -1,5 +1,7 @@
 package me.jianwen.mediask.api.dto;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import java.util.List;
 
 public record AiTriageResultResponse(
@@ -14,7 +16,14 @@ public record AiTriageResultResponse(
         List<CitationResponse> citations) {
 
     public record RecommendedDepartmentResponse(
-            Long departmentId, String departmentName, Integer priority, String reason) {}
+            @JsonSerialize(using = ToStringSerializer.class) Long departmentId,
+            String departmentName,
+            Integer priority,
+            String reason) {}
 
-    public record CitationResponse(Long chunkId, Integer retrievalRank, Double fusionScore, String snippet) {}
+    public record CitationResponse(
+            @JsonSerialize(using = ToStringSerializer.class) Long chunkId,
+            Integer retrievalRank,
+            Double fusionScore,
+            String snippet) {}
 }
