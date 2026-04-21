@@ -192,13 +192,15 @@ class CreateEmrUseCaseTest {
                     new EncounterPatientSummary(
                             300L,
                             "Test Patient",
+                            "FEMALE",
                             400L,
                             "Test Department",
                             LocalDate.parse("2026-04-18"),
                             "MORNING",
                             VisitEncounterStatus.IN_PROGRESS,
                             OffsetDateTime.parse("2026-04-18T10:00:00+08:00"),
-                            null
+                            null,
+                            LocalDate.parse("2002-03-18")
                     )
             ));
         }

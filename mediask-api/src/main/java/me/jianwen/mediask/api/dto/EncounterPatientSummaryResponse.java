@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 public record EncounterPatientSummaryResponse(
         @JsonSerialize(using = ToStringSerializer.class) Long patientUserId,
         String patientName,
+        String gender,
         @JsonSerialize(using = ToStringSerializer.class) Long departmentId,
         String departmentName,
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -18,5 +19,6 @@ public record EncounterPatientSummaryResponse(
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
         OffsetDateTime startedAt,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
-        OffsetDateTime endedAt) {
+        OffsetDateTime endedAt,
+        Integer age) {
 }

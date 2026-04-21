@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Period;
 import jakarta.servlet.Filter;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -182,11 +183,14 @@ class EncounterControllerTest {
                 .andExpect(jsonPath("$.data.registrationId").value("6101"))
                 .andExpect(jsonPath("$.data.patientSummary.patientUserId").value("2003"))
                 .andExpect(jsonPath("$.data.patientSummary.patientName").value("李患者"))
+                .andExpect(jsonPath("$.data.patientSummary.gender").value("FEMALE"))
                 .andExpect(jsonPath("$.data.patientSummary.departmentId").value("3101"))
                 .andExpect(jsonPath("$.data.patientSummary.departmentName").value("心内科"))
                 .andExpect(jsonPath("$.data.patientSummary.periodCode").value("MORNING"))
                 .andExpect(jsonPath("$.data.patientSummary.startedAt").value("2026-04-03T09:00:00+08:00"))
-                .andExpect(jsonPath("$.data.patientSummary.encounterStatus").value("SCHEDULED"));
+                .andExpect(jsonPath("$.data.patientSummary.encounterStatus").value("SCHEDULED"))
+                .andExpect(jsonPath("$.data.patientSummary.age").value(
+                        Period.between(LocalDate.parse("1990-05-15"), LocalDate.parse("2026-04-03")).getYears()));
 
         assertEquals(8101L, doctorGetEncounterDetailUseCase.lastQuery.encounterId());
         assertEquals(2101L, doctorGetEncounterDetailUseCase.lastQuery.doctorId());
@@ -378,13 +382,15 @@ class EncounterControllerTest {
                     new EncounterPatientSummary(
                             2003L,
                             "李患者",
+                            "FEMALE",
                             3101L,
                             "心内科",
                             LocalDate.parse("2026-04-03"),
                             "MORNING",
                             VisitEncounterStatus.SCHEDULED,
                             OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
-                            null));
+                            null,
+                            LocalDate.parse("1990-05-15")));
         }
     }
 

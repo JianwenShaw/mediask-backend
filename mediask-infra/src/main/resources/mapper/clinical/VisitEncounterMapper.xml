@@ -43,18 +43,21 @@
             encounter.doctor_id,
             encounter.patient_id AS patient_user_id,
             patient.display_name AS patient_name,
+            pp.gender,
             encounter.department_id,
             department.name AS department_name,
             session.session_date,
             session.period_code,
             encounter.encounter_status,
             encounter.started_at,
-            encounter.ended_at
+            encounter.ended_at,
+            pp.birth_date
         FROM visit_encounter encounter
         JOIN registration_order registration ON registration.id = encounter.order_id
         JOIN clinic_session session ON session.id = registration.session_id
         JOIN users patient ON patient.id = encounter.patient_id
         JOIN departments department ON department.id = encounter.department_id
+        LEFT JOIN patient_profile pp ON pp.user_id = encounter.patient_id AND pp.deleted_at IS NULL
         WHERE encounter.deleted_at IS NULL
           AND registration.deleted_at IS NULL
           AND session.deleted_at IS NULL

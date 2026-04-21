@@ -100,13 +100,15 @@ class GetEncounterAiSummaryUseCaseTest {
                     new EncounterPatientSummary(
                             2003L,
                             "李患者",
+                            "FEMALE",
                             3101L,
                             "心内科",
                             LocalDate.parse("2026-04-03"),
                             "MORNING",
                             VisitEncounterStatus.SCHEDULED,
                             OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
-                            null)));
+                            null,
+                            LocalDate.parse("2002-10-19"))));
         }
 
         @Override

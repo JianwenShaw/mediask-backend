@@ -95,13 +95,15 @@ public class EncounterQueryRepositoryAdapter implements EncounterQueryRepository
                 new EncounterPatientSummary(
                         row.getPatientUserId(),
                         row.getPatientName(),
+                        row.getGender(),
                         row.getDepartmentId(),
                         row.getDepartmentName(),
                         row.getSessionDate(),
                         row.getPeriodCode(),
                         VisitEncounterStatus.valueOf(row.getEncounterStatus()),
                         row.getStartedAt(),
-                        row.getEndedAt()));
+                        row.getEndedAt(),
+                        row.getBirthDate()));
     }
 
     private AiCitation toCitation(AiRunCitationRow row) {

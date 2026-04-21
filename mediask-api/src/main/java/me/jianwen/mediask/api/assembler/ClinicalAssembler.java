@@ -1,5 +1,7 @@
 package me.jianwen.mediask.api.assembler;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.List;
 import java.util.Locale;
 import me.jianwen.mediask.api.dto.CreateEmrRequest;
@@ -91,19 +93,25 @@ public final class ClinicalAssembler {
     }
 
     public static EncounterDetailResponse toEncounterDetailResponse(EncounterDetail detail) {
+        Integer age = null;
+        if (detail.patientSummary().birthDate() != null && detail.patientSummary().sessionDate() != null) {
+            age = Period.between(detail.patientSummary().birthDate(), detail.patientSummary().sessionDate()).getYears();
+        }
         return new EncounterDetailResponse(
                 detail.encounterId(),
                 detail.registrationId(),
                 new EncounterPatientSummaryResponse(
                         detail.patientSummary().patientUserId(),
                         detail.patientSummary().patientName(),
+                        detail.patientSummary().gender(),
                         detail.patientSummary().departmentId(),
                         detail.patientSummary().departmentName(),
                         detail.patientSummary().sessionDate(),
                         detail.patientSummary().periodCode(),
                         detail.patientSummary().encounterStatus().name(),
                         detail.patientSummary().startedAt(),
-                        detail.patientSummary().endedAt()));
+                        detail.patientSummary().endedAt(),
+                        age));
     }
 
     public static EncounterAiSummaryResponse toEncounterAiSummaryResponse(EncounterAiSummary summary) {

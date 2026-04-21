@@ -14,6 +14,7 @@ public class VisitEncounterDetailRow {
     private Long doctorId;
     private Long patientUserId;
     private String patientName;
+    private String gender;
     private Long departmentId;
     private String departmentName;
     private LocalDate sessionDate;
@@ -21,4 +22,5 @@ public class VisitEncounterDetailRow {
     private String encounterStatus;
     private OffsetDateTime startedAt;
     private OffsetDateTime endedAt;
+    private LocalDate birthDate;
 }
