@@ -10,4 +10,6 @@ public interface RegistrationOrderRepository {
     Optional<RegistrationOrder> findByRegistrationIdAndPatientId(Long registrationId, Long patientUserId);
 
     void update(RegistrationOrder registrationOrder);
+
+    boolean completeConfirmedByRegistrationId(Long registrationId);
 }

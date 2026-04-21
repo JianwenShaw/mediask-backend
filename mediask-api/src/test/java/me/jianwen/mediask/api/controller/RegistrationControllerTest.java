@@ -125,7 +125,7 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.registrationId").value("6101"))
                 .andExpect(jsonPath("$.data.orderNo").value("REG6101"))
-                .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"));
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
 
         assertEquals(2003L, patientCreateRegistrationUseCase.lastCommand.patientUserId());
         assertEquals(4101L, patientCreateRegistrationUseCase.lastCommand.clinicSessionId());
@@ -351,7 +351,7 @@ class RegistrationControllerTest {
             if (throwable != null) {
                 throw throwable;
             }
-            return new CreateRegistrationResult(6101L, "REG6101", RegistrationStatus.PENDING_PAYMENT);
+            return new CreateRegistrationResult(6101L, "REG6101", RegistrationStatus.CONFIRMED);
         }
     }
 

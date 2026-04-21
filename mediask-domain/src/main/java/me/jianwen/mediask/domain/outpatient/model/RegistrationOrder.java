@@ -48,7 +48,7 @@ public final class RegistrationOrder {
         this.cancellationReason = cancellationReason;
     }
 
-    public static RegistrationOrder createPendingPayment(
+    public static RegistrationOrder createConfirmed(
             Long patientId,
             Long doctorId,
             Long departmentId,
@@ -66,7 +66,7 @@ public final class RegistrationOrder {
                 sessionId,
                 slotId,
                 sourceAiSessionId,
-                RegistrationStatus.PENDING_PAYMENT,
+                RegistrationStatus.CONFIRMED,
                 fee,
                 null,
                 null);
@@ -101,7 +101,7 @@ public final class RegistrationOrder {
     }
 
     public RegistrationOrder cancel(OffsetDateTime cancelledAt) {
-        if (status != RegistrationStatus.PENDING_PAYMENT && status != RegistrationStatus.CONFIRMED) {
+        if (status != RegistrationStatus.CONFIRMED) {
             throw new BizException(OutpatientErrorCode.INVALID_STATUS_TRANSITION);
         }
         return new RegistrationOrder(

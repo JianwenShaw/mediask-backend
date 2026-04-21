@@ -12,6 +12,7 @@ import java.util.function.Function;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationOrder;
 import me.jianwen.mediask.infra.persistence.dataobject.RegistrationOrderDO;
 import me.jianwen.mediask.infra.persistence.mapper.RegistrationOrderMapper;
+import me.jianwen.mediask.infra.persistence.mapper.StatusTransitionLogMapper;
 import org.junit.jupiter.api.Test;
 
 class RegistrationOrderRepositoryAdapterTest {
@@ -24,9 +25,9 @@ class RegistrationOrderRepositoryAdapterTest {
                         "insert", handler::insert,
                         "selectOne", handler::selectOne,
                         "selectById", handler::selectById,
-                        "updateById", handler::updateById)));
+                        "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
 
-        RegistrationOrder registrationOrder = RegistrationOrder.createPendingPayment(
+        RegistrationOrder registrationOrder = RegistrationOrder.createConfirmed(
                 2201L, 2101L, 3101L, 4101L, 5101L, 7101L, new BigDecimal("18.00"));
         adapter.save(registrationOrder);
 
@@ -38,7 +39,7 @@ class RegistrationOrderRepositoryAdapterTest {
         assertEquals(registrationOrder.sessionId(), handler.inserted.getSessionId());
         assertEquals(registrationOrder.slotId(), handler.inserted.getSlotId());
         assertEquals(registrationOrder.sourceAiSessionId(), handler.inserted.getSourceAiSessionId());
-        assertEquals("PENDING_PAYMENT", handler.inserted.getOrderStatus());
+        assertEquals("CONFIRMED", handler.inserted.getOrderStatus());
         assertEquals(new BigDecimal("18.00"), handler.inserted.getFee());
     }
 
@@ -50,7 +51,7 @@ class RegistrationOrderRepositoryAdapterTest {
                         "insert", handler::insert,
                         "selectOne", handler::selectOne,
                         "selectById", handler::selectById,
-                        "updateById", handler::updateById)));
+                        "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
 
         Optional<RegistrationOrder> result = adapter.findByRegistrationIdAndPatientId(6101L, 2003L);
 
@@ -79,7 +80,7 @@ class RegistrationOrderRepositoryAdapterTest {
                         "insert", handler::insert,
                         "selectOne", handler::selectOne,
                         "selectById", handler::selectById,
-                        "updateById", handler::updateById)));
+                        "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
 
         RegistrationOrder registrationOrder = RegistrationOrder.reconstitute(
                 6101L,
@@ -99,6 +100,23 @@ class RegistrationOrderRepositoryAdapterTest {
         assertEquals("CANCELLED", handler.updated.getOrderStatus());
         assertEquals(7, handler.updated.getVersion());
         assertEquals(OffsetDateTime.parse("2026-04-03T11:00:00+08:00"), handler.updated.getCancelledAt());
+    }
+
+    @Test
+    void completeConfirmedByRegistrationId_WhenConfirmed_UpdateCompletedStatus() {
+        CapturingHandler handler = new CapturingHandler();
+        RegistrationOrderRepositoryAdapter adapter =
+                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
+                        "insert", handler::insert,
+                        "selectOne", handler::selectOne,
+                        "selectById", handler::selectById,
+                        "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+
+        boolean result = adapter.completeConfirmedByRegistrationId(6101L);
+
+        assertTrue(result);
+        assertEquals("COMPLETED", handler.updated.getOrderStatus());
+        assertEquals(7, handler.updated.getVersion());
     }
 
     private static <T> T proxy(Class<T> type, Map<String, Function<Object[], Object>> handlers) {
@@ -140,6 +158,10 @@ class RegistrationOrderRepositoryAdapterTest {
 
         private Object updateById(Object[] arguments) {
             this.updated = (RegistrationOrderDO) arguments[0];
+            return 1;
+        }
+
+        private Object insertLog(Object[] arguments) {
             return 1;
         }
 

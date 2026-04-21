@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 public class CancelRegistrationUseCase {
 
-    private static final String SLOT_STATUS_LOCKED = "LOCKED";
     private static final String SLOT_STATUS_BOOKED = "BOOKED";
 
     private final RegistrationOrderRepository registrationOrderRepository;
@@ -42,7 +41,7 @@ public class CancelRegistrationUseCase {
         if (!clinicSlotReservationRepository.releaseReservedSlot(
                 registrationOrder.sessionId(),
                 registrationOrder.slotId(),
-                expectedSlotStatus(registrationOrder))) {
+                SLOT_STATUS_BOOKED)) {
             throw new BizException(OutpatientErrorCode.REGISTRATION_CANCEL_NOT_ALLOWED);
         }
 
@@ -50,13 +49,5 @@ public class CancelRegistrationUseCase {
         clinicSlotReservationRepository.refreshSessionRemainingCount(registrationOrder.sessionId());
         return new CancelRegistrationResult(
                 cancelledOrder.registrationId(), cancelledOrder.status(), cancelledOrder.cancelledAt());
-    }
-
-    private String expectedSlotStatus(RegistrationOrder registrationOrder) {
-        return switch (registrationOrder.status()) {
-            case PENDING_PAYMENT -> SLOT_STATUS_LOCKED;
-            case CONFIRMED -> SLOT_STATUS_BOOKED;
-            default -> throw new BizException(OutpatientErrorCode.INVALID_STATUS_TRANSITION);
-        };
     }
 }

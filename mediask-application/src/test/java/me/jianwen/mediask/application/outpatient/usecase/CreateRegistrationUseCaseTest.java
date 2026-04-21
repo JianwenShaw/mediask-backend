@@ -34,7 +34,7 @@ import org.junit.jupiter.api.Test;
 class CreateRegistrationUseCaseTest {
 
     @Test
-    void handle_WhenOpenSessionAndAvailableSlot_CreatePendingPaymentOrder() {
+    void handle_WhenOpenSessionAndAvailableSlot_CreateConfirmedOrder() {
         StubClinicSlotReservationRepository reservationRepository = new StubClinicSlotReservationRepository();
         CapturingRegistrationOrderRepository orderRepository = new CapturingRegistrationOrderRepository();
         CapturingVisitEncounterRepository visitEncounterRepository = new CapturingVisitEncounterRepository();
@@ -61,7 +61,7 @@ class CreateRegistrationUseCaseTest {
         assertEquals(2101L, visitEncounterRepository.savedEncounter.doctorId());
         assertEquals(3101L, visitEncounterRepository.savedEncounter.departmentId());
         assertEquals(VisitEncounterStatus.SCHEDULED, visitEncounterRepository.savedEncounter.status());
-        assertEquals("PENDING_PAYMENT", result.status().name());
+        assertEquals("CONFIRMED", result.status().name());
         assertEquals(orderRepository.savedOrder.registrationId(), result.registrationId());
         assertEquals(orderRepository.savedOrder.orderNo(), result.orderNo());
     }
@@ -212,6 +212,11 @@ class CreateRegistrationUseCaseTest {
         public void update(RegistrationOrder registrationOrder) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public boolean completeConfirmedByRegistrationId(Long registrationId) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final class CapturingVisitEncounterRepository implements VisitEncounterRepository {
@@ -225,6 +230,16 @@ class CreateRegistrationUseCaseTest {
 
         @Override
         public boolean cancelScheduledByRegistrationId(Long registrationId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean startScheduledByEncounterId(Long encounterId, java.time.OffsetDateTime startedAt) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean completeInProgressByEncounterId(Long encounterId, java.time.OffsetDateTime endedAt) {
             throw new UnsupportedOperationException();
         }
     }

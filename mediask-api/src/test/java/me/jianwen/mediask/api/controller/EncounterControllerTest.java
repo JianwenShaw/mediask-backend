@@ -3,6 +3,7 @@ package me.jianwen.mediask.api.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,6 +34,9 @@ import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterAiSummaryUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
+import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusResult;
+import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusUseCase;
+import me.jianwen.mediask.application.clinical.command.UpdateEncounterStatusCommand;
 import me.jianwen.mediask.domain.ai.model.AiCitation;
 import me.jianwen.mediask.domain.ai.model.RecommendedDepartment;
 import me.jianwen.mediask.domain.ai.model.RiskLevel;
@@ -75,23 +79,29 @@ class EncounterControllerTest {
     private StubListEncountersUseCase doctorListEncountersUseCase;
     private StubGetEncounterDetailUseCase doctorGetEncounterDetailUseCase;
     private StubGetEncounterAiSummaryUseCase doctorGetEncounterAiSummaryUseCase;
+    private StubUpdateEncounterStatusUseCase doctorUpdateEncounterStatusUseCase;
 
     @BeforeEach
     void setUp() {
         doctorListEncountersUseCase = new StubListEncountersUseCase();
         doctorGetEncounterDetailUseCase = new StubGetEncounterDetailUseCase();
         doctorGetEncounterAiSummaryUseCase = new StubGetEncounterAiSummaryUseCase();
+        doctorUpdateEncounterStatusUseCase = new StubUpdateEncounterStatusUseCase();
         doctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2004L,
                 "doctor_zhang",
                 "张医生",
                 UserType.DOCTOR,
                 new LinkedHashSet<>(List.of(RoleCode.DOCTOR)),
-                Set.of("encounter:query"),
+                Set.of("encounter:query", "encounter:update"),
                 Set.of(),
                 null,
                 2101L,
-                3101L), doctorListEncountersUseCase, doctorGetEncounterDetailUseCase, doctorGetEncounterAiSummaryUseCase);
+                3101L),
+                doctorListEncountersUseCase,
+                doctorGetEncounterDetailUseCase,
+                doctorGetEncounterAiSummaryUseCase,
+                doctorUpdateEncounterStatusUseCase);
         patientMockMvc = buildMockMvc(new AuthenticatedUser(
                 2003L,
                 "patient_li",
@@ -102,7 +112,11 @@ class EncounterControllerTest {
                 Set.of(),
                 2201L,
                 null,
-                null), new StubListEncountersUseCase(), new StubGetEncounterDetailUseCase(), new StubGetEncounterAiSummaryUseCase());
+                null),
+                new StubListEncountersUseCase(),
+                new StubGetEncounterDetailUseCase(),
+                new StubGetEncounterAiSummaryUseCase(),
+                new StubUpdateEncounterStatusUseCase());
         noPermissionDoctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2005L,
                 "doctor_wang",
@@ -113,7 +127,11 @@ class EncounterControllerTest {
                 Set.of(),
                 null,
                 2102L,
-                3101L), new StubListEncountersUseCase(), new StubGetEncounterDetailUseCase(), new StubGetEncounterAiSummaryUseCase());
+                3101L),
+                new StubListEncountersUseCase(),
+                new StubGetEncounterDetailUseCase(),
+                new StubGetEncounterAiSummaryUseCase(),
+                new StubUpdateEncounterStatusUseCase());
     }
 
     @Test
@@ -283,13 +301,100 @@ class EncounterControllerTest {
                 .andExpect(jsonPath("$.code").value(4005));
     }
 
+    @Test
+    void updateStatus_WhenAuthenticatedDoctor_ReturnUpdatedEncounter() throws Exception {
+        doctorMockMvc.perform(patch("/api/v1/encounters/8101")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "action": "START"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.encounterId").value("8101"))
+                .andExpect(jsonPath("$.data.encounterStatus").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.data.startedAt").value("2026-04-03T09:00:00+08:00"))
+                .andExpect(jsonPath("$.data.endedAt").doesNotExist());
+
+        assertEquals(8101L, doctorUpdateEncounterStatusUseCase.lastCommand.encounterId());
+        assertEquals(2101L, doctorUpdateEncounterStatusUseCase.lastCommand.doctorId());
+        assertEquals(UpdateEncounterStatusCommand.Action.START, doctorUpdateEncounterStatusUseCase.lastCommand.action());
+    }
+
+    @Test
+    void updateStatus_WhenInvalidAction_ReturnBadRequest() throws Exception {
+        doctorMockMvc.perform(patch("/api/v1/encounters/8101")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "action": "INVALID"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(1002));
+    }
+
+    @Test
+    void updateStatus_WhenDoctorMissingPermission_ReturnForbidden() throws Exception {
+        noPermissionDoctorMockMvc.perform(patch("/api/v1/encounters/8101")
+                        .header("Authorization", "Bearer " + NO_PERMISSION_DOCTOR_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "action": "START"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(1003));
+    }
+
+    @Test
+    void updateStatus_WhenEncounterNotFound_ReturnNotFound() throws Exception {
+        doctorUpdateEncounterStatusUseCase.throwNotFound = true;
+
+        doctorMockMvc.perform(patch("/api/v1/encounters/9999")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "action": "START"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(4004));
+    }
+
+    @Test
+    void updateStatus_WhenTransitionNotAllowed_ReturnConflict() throws Exception {
+        doctorUpdateEncounterStatusUseCase.throwTransitionNotAllowed = true;
+
+        doctorMockMvc.perform(patch("/api/v1/encounters/8101")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN)
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "action": "COMPLETE"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(4010));
+    }
+
     private MockMvc buildMockMvc(
             AuthenticatedUser authenticatedUser,
             StubListEncountersUseCase listEncountersUseCase,
             StubGetEncounterDetailUseCase getEncounterDetailUseCase,
-            StubGetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase) {
-        EncounterController target =
-                new EncounterController(listEncountersUseCase, getEncounterDetailUseCase, getEncounterAiSummaryUseCase);
+            StubGetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase,
+            StubUpdateEncounterStatusUseCase updateEncounterStatusUseCase) {
+        EncounterController target = new EncounterController(
+                listEncountersUseCase,
+                getEncounterDetailUseCase,
+                getEncounterAiSummaryUseCase,
+                updateEncounterStatusUseCase);
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAspect(new ScenarioAuthorizationAspect(new AuthorizationDecisionService(List.of(), List.of())));
@@ -425,6 +530,34 @@ class EncounterControllerTest {
                     RiskLevel.MEDIUM,
                     List.of(new RecommendedDepartment(3101L, "心内科", 1, "持续头痛需线下评估")),
                     List.of(new AiCitation(7001L, 1, 0.82D, "引用片段-1")));
+        }
+    }
+
+    private static final class StubUpdateEncounterStatusUseCase extends UpdateEncounterStatusUseCase {
+
+        private UpdateEncounterStatusCommand lastCommand;
+        private boolean throwNotFound;
+        private boolean throwTransitionNotAllowed;
+
+        private StubUpdateEncounterStatusUseCase() {
+            super(null, null, null);
+        }
+
+        @Override
+        public UpdateEncounterStatusResult handle(UpdateEncounterStatusCommand command) {
+            this.lastCommand = command;
+            if (throwNotFound) {
+                throw new me.jianwen.mediask.common.exception.BizException(ClinicalErrorCode.ENCOUNTER_NOT_FOUND);
+            }
+            if (throwTransitionNotAllowed) {
+                throw new me.jianwen.mediask.common.exception.BizException(
+                        ClinicalErrorCode.ENCOUNTER_STATUS_TRANSITION_NOT_ALLOWED);
+            }
+            return new UpdateEncounterStatusResult(
+                    command.encounterId(),
+                    VisitEncounterStatus.IN_PROGRESS,
+                    OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
+                    null);
         }
     }
 

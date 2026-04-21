@@ -12,10 +12,14 @@ import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListItemResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
 import me.jianwen.mediask.api.dto.EncounterPatientSummaryResponse;
+import me.jianwen.mediask.api.dto.UpdateEncounterStatusRequest;
+import me.jianwen.mediask.api.dto.UpdateEncounterStatusResponse;
 import me.jianwen.mediask.application.clinical.command.CreateEmrCommand;
+import me.jianwen.mediask.application.clinical.command.UpdateEncounterStatusCommand;
 import me.jianwen.mediask.application.clinical.query.GetEmrDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
+import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusResult;
 import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
@@ -61,6 +65,19 @@ public final class ClinicalAssembler {
                 request.chiefComplaintSummary(),
                 request.content(),
                 diagnosisCommands);
+    }
+
+    public static UpdateEncounterStatusCommand toUpdateEncounterStatusCommand(
+            Long encounterId, Long doctorId, UpdateEncounterStatusRequest request) {
+        if (request == null || request.action() == null) {
+            throw new BizException(ErrorCode.INVALID_PARAMETER);
+        }
+        try {
+            return new UpdateEncounterStatusCommand(
+                    encounterId, doctorId, UpdateEncounterStatusCommand.Action.valueOf(request.action()));
+        } catch (IllegalArgumentException exception) {
+            throw new BizException(ErrorCode.INVALID_PARAMETER);
+        }
     }
 
     public static CreateEmrResponse toCreateEmrResponse(me.jianwen.mediask.domain.clinical.model.EmrRecord emrRecord) {
@@ -135,6 +152,14 @@ public final class ClinicalAssembler {
                                 citation.fusionScore(),
                                 citation.snippet()))
                         .toList());
+    }
+
+    public static UpdateEncounterStatusResponse toUpdateEncounterStatusResponse(UpdateEncounterStatusResult result) {
+        return new UpdateEncounterStatusResponse(
+                result.encounterId(),
+                result.encounterStatus().name(),
+                result.startedAt(),
+                result.endedAt());
     }
 
     private static EncounterListItemResponse toEncounterListItemResponse(EncounterListItem item) {

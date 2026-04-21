@@ -44,33 +44,6 @@ class CancelRegistrationUseCaseTest {
     }
 
     @Test
-    void handle_WhenPendingPaymentRegistrationOwnedByPatient_CancelRegistration() {
-        StubRegistrationOrderRepository registrationOrderRepository = new StubRegistrationOrderRepository();
-        registrationOrderRepository.registrationOrder = RegistrationOrder.reconstitute(
-                6101L,
-                "REG6101",
-                2003L,
-                2101L,
-                3101L,
-                4101L,
-                5101L,
-                7101L,
-                RegistrationStatus.PENDING_PAYMENT,
-                new BigDecimal("18.00"),
-                null,
-                null);
-        StubClinicSlotReservationRepository clinicSlotReservationRepository = new StubClinicSlotReservationRepository();
-        StubVisitEncounterRepository visitEncounterRepository = new StubVisitEncounterRepository();
-        CancelRegistrationUseCase useCase = new CancelRegistrationUseCase(
-                registrationOrderRepository, clinicSlotReservationRepository, visitEncounterRepository);
-
-        CancelRegistrationResult result = useCase.handle(new CancelRegistrationCommand(6101L, 2003L));
-
-        assertEquals("LOCKED", clinicSlotReservationRepository.lastExpectedCurrentStatus);
-        assertEquals(RegistrationStatus.CANCELLED, result.status());
-    }
-
-    @Test
     void handle_WhenRegistrationMissing_ThrowNotFound() {
         StubRegistrationOrderRepository registrationOrderRepository = new StubRegistrationOrderRepository();
         registrationOrderRepository.returnEmpty = true;
@@ -196,6 +169,11 @@ class CancelRegistrationUseCaseTest {
         public void update(RegistrationOrder registrationOrder) {
             this.updatedOrder = registrationOrder;
         }
+
+        @Override
+        public boolean completeConfirmedByRegistrationId(Long registrationId) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final class StubClinicSlotReservationRepository implements ClinicSlotReservationRepository {
@@ -243,6 +221,16 @@ class CancelRegistrationUseCaseTest {
         public boolean cancelScheduledByRegistrationId(Long registrationId) {
             this.cancelScheduledCalled = true;
             return cancelScheduledResult;
+        }
+
+        @Override
+        public boolean startScheduledByEncounterId(Long encounterId, java.time.OffsetDateTime startedAt) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean completeInProgressByEncounterId(Long encounterId, java.time.OffsetDateTime endedAt) {
+            throw new UnsupportedOperationException();
         }
     }
 }

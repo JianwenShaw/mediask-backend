@@ -18,6 +18,7 @@ import me.jianwen.mediask.infra.persistence.dataobject.ClinicSlotDO;
 import me.jianwen.mediask.infra.persistence.mapper.ClinicSessionMapper;
 import me.jianwen.mediask.infra.persistence.mapper.ClinicSlotMapper;
 import me.jianwen.mediask.infra.persistence.mapper.ClinicSlotReservationRow;
+import me.jianwen.mediask.infra.persistence.mapper.StatusTransitionLogMapper;
 import org.junit.jupiter.api.Test;
 
 class ClinicSlotReservationRepositoryAdapterTest {
@@ -27,7 +28,8 @@ class ClinicSlotReservationRepositoryAdapterTest {
         CountingSessionHandler sessionHandler = new CountingSessionHandler();
         ClinicSlotReservationRepositoryAdapter adapter =
                 new ClinicSlotReservationRepositoryAdapter(proxy(ClinicSessionMapper.class, Map.of(
-                        "selectCount", sessionHandler::selectCount)), proxy(ClinicSlotMapper.class, Map.of()));
+                        "selectCount", sessionHandler::selectCount)), proxy(ClinicSlotMapper.class, Map.of()),
+                        proxy(StatusTransitionLogMapper.class, Map.of("insert", sessionHandler::insertLog)));
 
         assertTrue(adapter.existsOpenSession(4101L));
     }
@@ -45,14 +47,15 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "selectReservableSlot", slotHandler::selectReservableSlot,
                         "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
-                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+                        "countAvailableSlots", slotHandler::countAvailableSlots)),
+                proxy(StatusTransitionLogMapper.class, Map.of("insert", slotHandler::insertLog)));
 
         Optional<ClinicSlotReservation> result = adapter.reserveAvailableSlot(4101L, 5101L);
 
         assertTrue(result.isPresent());
         assertEquals(4101L, result.orElseThrow().sessionId());
         assertEquals(2101L, result.orElseThrow().doctorId());
-        assertEquals("LOCKED", slotHandler.updatedSlotStatus);
+        assertEquals("BOOKED", slotHandler.updatedSlotStatus);
         assertEquals(0, slotHandler.updatedRemainingCount);
     }
 
@@ -70,7 +73,8 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "selectReservableSlot", slotHandler::selectReservableSlot,
                         "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
-                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+                        "countAvailableSlots", slotHandler::countAvailableSlots)),
+                proxy(StatusTransitionLogMapper.class, Map.of("insert", slotHandler::insertLog)));
 
         assertFalse(adapter.reserveAvailableSlot(4101L, 5101L).isPresent());
     }
@@ -89,7 +93,8 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "selectReservableSlot", slotHandler::selectReservableSlot,
                         "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
-                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+                        "countAvailableSlots", slotHandler::countAvailableSlots)),
+                proxy(StatusTransitionLogMapper.class, Map.of("insert", slotHandler::insertLog)));
 
         BizException exception = assertThrows(BizException.class, () -> adapter.refreshSessionRemainingCount(4101L));
 
@@ -109,9 +114,10 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "selectReservableSlot", slotHandler::selectReservableSlot,
                         "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
-                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+                        "countAvailableSlots", slotHandler::countAvailableSlots)),
+                proxy(StatusTransitionLogMapper.class, Map.of("insert", slotHandler::insertLog)));
 
-        boolean result = adapter.releaseReservedSlot(4101L, 5101L, "LOCKED");
+        boolean result = adapter.releaseReservedSlot(4101L, 5101L, "BOOKED");
 
         assertTrue(result);
         assertEquals("AVAILABLE", slotHandler.updatedSlotStatus);
@@ -132,7 +138,8 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "selectReservableSlot", slotHandler::selectReservableSlot,
                         "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
-                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+                        "countAvailableSlots", slotHandler::countAvailableSlots)),
+                proxy(StatusTransitionLogMapper.class, Map.of("insert", slotHandler::insertLog)));
 
         boolean result = adapter.releaseReservedSlot(4101L, 5101L, "BOOKED");
 
@@ -155,7 +162,8 @@ class ClinicSlotReservationRepositoryAdapterTest {
                         "selectReservableSlot", slotHandler::selectReservableSlot,
                         "selectOne", slotHandler::selectOne,
                         "updateById", slotHandler::updateById,
-                        "countAvailableSlots", slotHandler::countAvailableSlots)));
+                        "countAvailableSlots", slotHandler::countAvailableSlots)),
+                proxy(StatusTransitionLogMapper.class, Map.of("insert", slotHandler::insertLog)));
 
         boolean result = adapter.releaseReservedSlot(4101L, 5101L, "BOOKED");
 
@@ -185,6 +193,10 @@ class ClinicSlotReservationRepositoryAdapterTest {
 
         private Object selectCount(Object[] arguments) {
             return 1L;
+        }
+
+        private Object insertLog(Object[] arguments) {
+            return 1;
         }
     }
 
@@ -216,7 +228,7 @@ class ClinicSlotReservationRepositoryAdapterTest {
         private int updateRows = 1;
         private String updatedSlotStatus;
         private Integer updatedRemainingCount;
-        private String currentSlotStatus = "LOCKED";
+        private String currentSlotStatus = "BOOKED";
 
         private Object selectReservableSlot(Object[] arguments) {
             ClinicSlotReservationRow row = new ClinicSlotReservationRow();
@@ -247,6 +259,10 @@ class ClinicSlotReservationRepositoryAdapterTest {
 
         private Object countAvailableSlots(Object[] arguments) {
             return 5;
+        }
+
+        private Object insertLog(Object[] arguments) {
+            return 1;
         }
     }
 }

@@ -104,4 +104,19 @@
         WHERE model_run_id = #{modelRunId}
         ORDER BY retrieval_rank ASC, id ASC
     </select>
+
+    <update id="startEncounterWhenScheduledAndRegistrationConfirmed">
+        UPDATE visit_encounter encounter
+        SET encounter_status = 'IN_PROGRESS',
+            started_at = #{startedAt},
+            version = encounter.version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        FROM registration_order registration
+        WHERE encounter.id = #{encounterId}
+          AND encounter.order_id = registration.id
+          AND encounter.deleted_at IS NULL
+          AND registration.deleted_at IS NULL
+          AND encounter.encounter_status = 'SCHEDULED'
+          AND registration.order_status = 'CONFIRMED'
+    </update>
 </mapper>

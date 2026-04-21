@@ -45,7 +45,7 @@ CREATE TABLE clinic_slot (
     CONSTRAINT uk_clinic_slot_session_ref UNIQUE (id, session_id),
     CONSTRAINT fk_clinic_slot_session FOREIGN KEY (session_id) REFERENCES clinic_session (id),
     CONSTRAINT ck_clinic_slot_seq CHECK (slot_seq > 0),
-    CONSTRAINT ck_clinic_slot_status CHECK (slot_status IN ('AVAILABLE', 'LOCKED', 'BOOKED', 'CANCELLED')),
+    CONSTRAINT ck_clinic_slot_status CHECK (slot_status IN ('AVAILABLE', 'BOOKED', 'CANCELLED')),
     CONSTRAINT ck_clinic_slot_time CHECK (slot_start_time < slot_end_time),
     CONSTRAINT ck_clinic_slot_capacity CHECK (capacity >= 0),
     CONSTRAINT ck_clinic_slot_remaining CHECK (remaining_count >= 0 AND remaining_count <= capacity)
@@ -60,7 +60,7 @@ CREATE TABLE registration_order (
     session_id BIGINT NOT NULL,
     slot_id BIGINT NOT NULL,
     source_ai_session_id BIGINT,
-    order_status VARCHAR(16) NOT NULL DEFAULT 'PENDING_PAYMENT',
+    order_status VARCHAR(16) NOT NULL DEFAULT 'CONFIRMED',
     fee NUMERIC(10,2) NOT NULL DEFAULT 0,
     paid_at TIMESTAMPTZ,
     cancelled_at TIMESTAMPTZ,
@@ -77,7 +77,7 @@ CREATE TABLE registration_order (
     CONSTRAINT fk_registration_order_slot_session FOREIGN KEY (slot_id, session_id)
         REFERENCES clinic_slot (id, session_id),
     CONSTRAINT fk_registration_order_source_ai_session FOREIGN KEY (source_ai_session_id) REFERENCES ai_session (id),
-    CONSTRAINT ck_registration_order_status CHECK (order_status IN ('PENDING_PAYMENT', 'CONFIRMED', 'CANCELLED', 'COMPLETED')),
+    CONSTRAINT ck_registration_order_status CHECK (order_status IN ('CONFIRMED', 'CANCELLED', 'COMPLETED')),
     CONSTRAINT ck_registration_order_fee CHECK (fee >= 0)
 );
 
@@ -106,3 +106,19 @@ CREATE INDEX idx_clinic_session_department_date ON clinic_session (department_id
 CREATE INDEX idx_registration_order_doctor_created ON registration_order (doctor_id, created_at);
 CREATE INDEX idx_registration_order_patient_created ON registration_order (patient_id, created_at);
 CREATE INDEX idx_visit_encounter_doctor_created ON visit_encounter (doctor_id, created_at);
+
+CREATE TABLE status_transition_log (
+    id BIGINT PRIMARY KEY,
+    entity_type VARCHAR(64) NOT NULL,
+    entity_id BIGINT NOT NULL,
+    from_status VARCHAR(32),
+    to_status VARCHAR(32) NOT NULL,
+    action VARCHAR(64) NOT NULL,
+    operator_user_id BIGINT,
+    request_id VARCHAR(64),
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_status_transition_entity_time ON status_transition_log (entity_type, entity_id, occurred_at);
+CREATE INDEX idx_status_transition_request ON status_transition_log (request_id);

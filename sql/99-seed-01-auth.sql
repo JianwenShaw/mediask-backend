@@ -29,7 +29,8 @@ VALUES
     (1120, 'admin:knowledge:base:update', '后台修改知识库', 'API', 'ACTIVE', 200),
     (1121, 'admin:knowledge:base:delete', '后台删除知识库', 'API', 'ACTIVE', 210),
     (1122, 'admin:knowledge:document:list', '后台知识文档列表', 'API', 'ACTIVE', 220),
-    (1123, 'admin:knowledge:document:delete', '后台删除知识文档', 'API', 'ACTIVE', 230)
+    (1123, 'admin:knowledge:document:delete', '后台删除知识文档', 'API', 'ACTIVE', 230),
+    (1124, 'encounter:update', '更新接诊状态', 'API', 'ACTIVE', 240)
 ON CONFLICT (permission_code) DO NOTHING;
 
 INSERT INTO role_permissions (id, role_id, permission_id)
@@ -60,7 +61,8 @@ VALUES
     (1224, 1003, 1121),
     (1225, 1003, 1122),
     (1226, 1003, 1123),
-    (1227, 1001, 1105)
+    (1227, 1001, 1105),
+    (1228, 1002, 1124)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- admin / admin123
