@@ -55,6 +55,7 @@ CREATE TABLE prescription_order (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMPTZ DEFAULT NULL,
     CONSTRAINT uk_prescription_order_no UNIQUE (prescription_no),
+    CONSTRAINT uk_prescription_order_encounter UNIQUE (encounter_id),
     CONSTRAINT fk_prescription_order_record FOREIGN KEY (record_id) REFERENCES emr_record (id),
     CONSTRAINT fk_prescription_order_encounter FOREIGN KEY (encounter_id) REFERENCES visit_encounter (id),
     CONSTRAINT fk_prescription_order_patient FOREIGN KEY (patient_id) REFERENCES users (id),

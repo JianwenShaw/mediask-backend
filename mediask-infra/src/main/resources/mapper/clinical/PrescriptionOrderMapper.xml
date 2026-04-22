@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="me.jianwen.mediask.infra.persistence.mapper.PrescriptionOrderMapper">
+
+    <insert id="insertItems">
+        INSERT INTO prescription_item (
+            id,
+            prescription_id,
+            sort_order,
+            drug_name,
+            drug_specification,
+            dosage_text,
+            frequency_text,
+            duration_text,
+            quantity,
+            unit,
+            route,
+            created_at
+        )
+        VALUES
+        <foreach collection="items" item="item" separator=",">
+            (
+                #{item.id},
+                #{item.prescriptionId},
+                #{item.sortOrder},
+                #{item.drugName},
+                #{item.drugSpecification},
+                #{item.dosageText},
+                #{item.frequencyText},
+                #{item.durationText},
+                #{item.quantity},
+                #{item.unit},
+                #{item.route},
+                #{item.createdAt}
+            )
+        </foreach>
+    </insert>
+
+    <select id="existsByEncounterId" resultType="boolean">
+        SELECT EXISTS(
+            SELECT 1
+            FROM prescription_order
+            WHERE encounter_id = #{encounterId}
+              AND deleted_at IS NULL
+        )
+    </select>
+
+    <select id="selectByEncounterId" resultType="me.jianwen.mediask.infra.persistence.dataobject.PrescriptionOrderDO">
+        SELECT id,
+               version,
+               created_at,
+               updated_at,
+               deleted_at,
+               prescription_no,
+               record_id,
+               encounter_id,
+               patient_id,
+               doctor_id,
+               prescription_status
+        FROM prescription_order
+        WHERE encounter_id = #{encounterId}
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="selectItemsByPrescriptionId" resultType="me.jianwen.mediask.infra.persistence.dataobject.PrescriptionItemDO">
+        SELECT id,
+               prescription_id,
+               sort_order,
+               drug_name,
+               drug_specification,
+               dosage_text,
+               frequency_text,
+               duration_text,
+               quantity,
+               unit,
+               route,
+               created_at
+        FROM prescription_item
+        WHERE prescription_id = #{prescriptionId}
+        ORDER BY sort_order ASC, id ASC
+    </select>
+</mapper>

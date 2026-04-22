@@ -22,6 +22,8 @@ public enum ScenarioCode {
     EMR_RECORD_CREATE(ActionType.CREATE, CombinationMode.ALL, "emr:create", false, false),
     EMR_RECORD_READ(ActionType.READ, CombinationMode.ALL, "emr:read", true, false),
     EMR_RECORD_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "emr:update", true, false),
+    PRESCRIPTION_CREATE(ActionType.CREATE, CombinationMode.ALL, "prescription:create", false, false),
+    PRESCRIPTION_READ(ActionType.READ, CombinationMode.ALL, "prescription:read", false, false),
     AI_SESSION_READ(ActionType.READ, CombinationMode.ALL, "ai:session:read", true, true),
     AI_SESSION_EXPORT(ActionType.EXPORT, CombinationMode.ALL, "ai:session:export", true, true);
 

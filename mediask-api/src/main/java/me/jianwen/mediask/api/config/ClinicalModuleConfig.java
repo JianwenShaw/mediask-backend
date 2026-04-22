@@ -1,14 +1,18 @@
 package me.jianwen.mediask.api.config;
 
 import me.jianwen.mediask.application.clinical.usecase.CreateEmrUseCase;
+import me.jianwen.mediask.application.clinical.usecase.CreatePrescriptionUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterAiSummaryUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEmrDetailUseCase;
+import me.jianwen.mediask.application.clinical.usecase.GetPrescriptionDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusUseCase;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordRepository;
 import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
+import me.jianwen.mediask.domain.clinical.port.PrescriptionOrderQueryRepository;
+import me.jianwen.mediask.domain.clinical.port.PrescriptionOrderRepository;
 import me.jianwen.mediask.domain.clinical.port.VisitEncounterRepository;
 import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderRepository;
 import org.springframework.context.annotation.Bean;
@@ -51,5 +55,21 @@ public class ClinicalModuleConfig {
     @Bean
     public GetEmrDetailUseCase getEmrDetailUseCase(EmrRecordQueryRepository emrRecordQueryRepository) {
         return new GetEmrDetailUseCase(emrRecordQueryRepository);
+    }
+
+    @Bean
+    public CreatePrescriptionUseCase createPrescriptionUseCase(
+            PrescriptionOrderRepository prescriptionOrderRepository,
+            EncounterQueryRepository encounterQueryRepository,
+            EmrRecordQueryRepository emrRecordQueryRepository) {
+        return new CreatePrescriptionUseCase(
+                prescriptionOrderRepository, encounterQueryRepository, emrRecordQueryRepository);
+    }
+
+    @Bean
+    public GetPrescriptionDetailUseCase getPrescriptionDetailUseCase(
+            PrescriptionOrderQueryRepository prescriptionOrderQueryRepository,
+            EncounterQueryRepository encounterQueryRepository) {
+        return new GetPrescriptionDetailUseCase(prescriptionOrderQueryRepository, encounterQueryRepository);
     }
 }

@@ -2,8 +2,11 @@ package me.jianwen.mediask.api.assembler;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import me.jianwen.mediask.api.dto.CreatePrescriptionRequest;
+import me.jianwen.mediask.api.dto.CreatePrescriptionResponse;
 import me.jianwen.mediask.api.dto.CreateEmrRequest;
 import me.jianwen.mediask.api.dto.CreateEmrResponse;
 import me.jianwen.mediask.api.dto.EmrDetailResponse;
@@ -12,17 +15,21 @@ import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListItemResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
 import me.jianwen.mediask.api.dto.EncounterPatientSummaryResponse;
+import me.jianwen.mediask.api.dto.PrescriptionDetailResponse;
 import me.jianwen.mediask.api.dto.UpdateEncounterStatusRequest;
 import me.jianwen.mediask.api.dto.UpdateEncounterStatusResponse;
+import me.jianwen.mediask.application.clinical.command.CreatePrescriptionCommand;
 import me.jianwen.mediask.application.clinical.command.CreateEmrCommand;
 import me.jianwen.mediask.application.clinical.command.UpdateEncounterStatusCommand;
 import me.jianwen.mediask.application.clinical.query.GetEmrDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
+import me.jianwen.mediask.application.clinical.query.GetPrescriptionDetailQuery;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusResult;
 import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
+import me.jianwen.mediask.domain.clinical.model.PrescriptionOrder;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
@@ -50,6 +57,10 @@ public final class ClinicalAssembler {
         return new GetEmrDetailQuery(encounterId);
     }
 
+    public static GetPrescriptionDetailQuery toGetPrescriptionDetailQuery(Long encounterId, Long doctorId) {
+        return new GetPrescriptionDetailQuery(encounterId, doctorId);
+    }
+
     public static CreateEmrCommand toCreateEmrCommand(CreateEmrRequest request, Long doctorId) {
         var diagnosisCommands = request.diagnoses().stream()
                 .map(dto -> new CreateEmrCommand.EmrDiagnosisCommand(
@@ -65,6 +76,23 @@ public final class ClinicalAssembler {
                 request.chiefComplaintSummary(),
                 request.content(),
                 diagnosisCommands);
+    }
+
+    public static CreatePrescriptionCommand toCreatePrescriptionCommand(CreatePrescriptionRequest request, Long doctorId) {
+        List<CreatePrescriptionCommand.PrescriptionItemCommand> itemCommands = new ArrayList<>();
+        for (CreatePrescriptionRequest.PrescriptionItemRequest item : request.items()) {
+            itemCommands.add(new CreatePrescriptionCommand.PrescriptionItemCommand(
+                    item.sortOrder(),
+                    item.drugName(),
+                    item.drugSpecification(),
+                    item.dosageText(),
+                    item.frequencyText(),
+                    item.durationText(),
+                    item.quantity(),
+                    item.unit(),
+                    item.route()));
+        }
+        return new CreatePrescriptionCommand(request.encounterId(), doctorId, itemCommands);
     }
 
     public static UpdateEncounterStatusCommand toUpdateEncounterStatusCommand(
@@ -100,6 +128,44 @@ public final class ClinicalAssembler {
                                 diagnosis.diagnosisName(),
                                 diagnosis.isPrimary(),
                                 diagnosis.sortOrder()))
+                        .toList());
+    }
+
+    public static CreatePrescriptionResponse toCreatePrescriptionResponse(PrescriptionOrder prescriptionOrder) {
+        return new CreatePrescriptionResponse(
+                prescriptionOrder.prescriptionOrderId(),
+                prescriptionOrder.encounterId(),
+                prescriptionOrder.prescriptionStatus().name(),
+                prescriptionOrder.items().stream()
+                        .map(item -> new CreatePrescriptionResponse.PrescriptionItemResponse(
+                                item.sortOrder(),
+                                item.drugName(),
+                                item.drugSpecification(),
+                                item.dosageText(),
+                                item.frequencyText(),
+                                item.durationText(),
+                                item.quantity(),
+                                item.unit(),
+                                item.route()))
+                        .toList());
+    }
+
+    public static PrescriptionDetailResponse toPrescriptionDetailResponse(PrescriptionOrder prescriptionOrder) {
+        return new PrescriptionDetailResponse(
+                prescriptionOrder.prescriptionOrderId(),
+                prescriptionOrder.encounterId(),
+                prescriptionOrder.prescriptionStatus().name(),
+                prescriptionOrder.items().stream()
+                        .map(item -> new PrescriptionDetailResponse.PrescriptionItemResponse(
+                                item.sortOrder(),
+                                item.drugName(),
+                                item.drugSpecification(),
+                                item.dosageText(),
+                                item.frequencyText(),
+                                item.durationText(),
+                                item.quantity(),
+                                item.unit(),
+                                item.route()))
                         .toList());
     }
 

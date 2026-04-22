@@ -13,7 +13,11 @@ public enum ClinicalErrorCode implements ErrorCodeType {
     EMR_RECORD_ACCESS_DENIED(4009, "emr record access denied", ErrorCodeCategory.FORBIDDEN),
     ENCOUNTER_STATUS_TRANSITION_NOT_ALLOWED(4010, "encounter status transition not allowed", ErrorCodeCategory.CONFLICT),
     ENCOUNTER_STATUS_UPDATE_CONFLICT(4011, "encounter status update conflict", ErrorCodeCategory.CONFLICT),
-    ENCOUNTER_REGISTRATION_SYNC_CONFLICT(4012, "encounter registration sync conflict", ErrorCodeCategory.CONFLICT);
+    ENCOUNTER_REGISTRATION_SYNC_CONFLICT(4012, "encounter registration sync conflict", ErrorCodeCategory.CONFLICT),
+    PRESCRIPTION_ENCOUNTER_NOT_FOUND(4013, "encounter not found or access denied", ErrorCodeCategory.NOT_FOUND),
+    PRESCRIPTION_EMR_RECORD_NOT_FOUND(4014, "emr record not found for encounter", ErrorCodeCategory.NOT_FOUND),
+    PRESCRIPTION_ALREADY_EXISTS(4015, "prescription already exists for this encounter", ErrorCodeCategory.CONFLICT),
+    PRESCRIPTION_NOT_FOUND(4016, "prescription not found", ErrorCodeCategory.NOT_FOUND);
 
     private final int code;
     private final String message;
