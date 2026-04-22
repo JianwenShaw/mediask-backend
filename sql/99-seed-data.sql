@@ -9,3 +9,6 @@
 
 \echo '[mediask] seed outpatient and encounter fixtures'
 \ir 99-seed-04-outpatient.sql
+
+\echo '[mediask] seed emr and prescription fixtures'
+\ir 99-seed-05-medical.sql

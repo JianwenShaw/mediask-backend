@@ -8,7 +8,12 @@ VALUES
     (3101, 3001, 'NEURO', '神经内科', 'CLINICAL', 'ACTIVE', 10),
     (3102, 3001, 'FEVER', '发热门诊', 'CLINICAL', 'ACTIVE', 20),
     (3103, 3001, 'GENMED', '普通内科', 'CLINICAL', 'ACTIVE', 30),
-    (3104, 3001, 'PEDI', '儿科', 'CLINICAL', 'ACTIVE', 40)
+    (3104, 3001, 'PEDI', '儿科', 'CLINICAL', 'ACTIVE', 40),
+    (3105, 3001, 'CARDIO', '心内科', 'CLINICAL', 'ACTIVE', 50),
+    (3106, 3001, 'RESP', '呼吸内科', 'CLINICAL', 'ACTIVE', 60),
+    (3107, 3001, 'GASTRO', '消化内科', 'CLINICAL', 'ACTIVE', 70),
+    (3108, 3001, 'DERM', '皮肤科', 'CLINICAL', 'ACTIVE', 80),
+    (3109, 3001, 'ORTHO', '骨科', 'CLINICAL', 'ACTIVE', 90)
 ON CONFLICT (hospital_id, dept_code) DO NOTHING;
 
 INSERT INTO doctors (id, user_id, hospital_id, doctor_code, professional_title, introduction_masked, status)
