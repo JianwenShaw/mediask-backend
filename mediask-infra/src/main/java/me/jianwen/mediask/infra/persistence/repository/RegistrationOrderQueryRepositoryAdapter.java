@@ -48,8 +48,7 @@ public class RegistrationOrderQueryRepositoryAdapter implements RegistrationOrde
                 dataObject.getId(),
                 dataObject.getOrderNo(),
                 RegistrationStatus.valueOf(dataObject.getOrderStatus()),
-                dataObject.getCreatedAt(),
-                dataObject.getSourceAiSessionId());
+                dataObject.getCreatedAt());
     }
 
     private RegistrationDetail toDetail(RegistrationDetailRow row) {
@@ -59,7 +58,6 @@ public class RegistrationOrderQueryRepositoryAdapter implements RegistrationOrde
                 row.getOrderNo(),
                 RegistrationStatus.valueOf(row.getOrderStatus()),
                 row.getCreatedAt(),
-                row.getSourceAiSessionId(),
                 row.getClinicSessionId(),
                 row.getClinicSlotId(),
                 row.getDepartmentId(),

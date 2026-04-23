@@ -1,7 +1,6 @@
 package me.jianwen.mediask.api.controller;
 
 import me.jianwen.mediask.api.assembler.ClinicalAssembler;
-import me.jianwen.mediask.api.dto.EncounterAiSummaryResponse;
 import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
 import me.jianwen.mediask.api.dto.UpdateEncounterStatusRequest;
@@ -9,7 +8,6 @@ import me.jianwen.mediask.api.dto.UpdateEncounterStatusResponse;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.application.authz.AuthorizeScenario;
 import me.jianwen.mediask.application.authz.ScenarioCode;
-import me.jianwen.mediask.application.clinical.usecase.GetEncounterAiSummaryUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusUseCase;
@@ -32,17 +30,14 @@ public class EncounterController {
 
     private final ListEncountersUseCase listEncountersUseCase;
     private final GetEncounterDetailUseCase getEncounterDetailUseCase;
-    private final GetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase;
     private final UpdateEncounterStatusUseCase updateEncounterStatusUseCase;
 
     public EncounterController(
             ListEncountersUseCase listEncountersUseCase,
             GetEncounterDetailUseCase getEncounterDetailUseCase,
-            GetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase,
             UpdateEncounterStatusUseCase updateEncounterStatusUseCase) {
         this.listEncountersUseCase = listEncountersUseCase;
         this.getEncounterDetailUseCase = getEncounterDetailUseCase;
-        this.getEncounterAiSummaryUseCase = getEncounterAiSummaryUseCase;
         this.updateEncounterStatusUseCase = updateEncounterStatusUseCase;
     }
 
@@ -74,21 +69,6 @@ public class EncounterController {
         }
         return Result.ok(ClinicalAssembler.toEncounterDetailResponse(getEncounterDetailUseCase.handle(
                 ClinicalAssembler.toGetEncounterDetailQuery(encounterId, principal.doctorId()))));
-    }
-
-    @GetMapping("/{encounterId}/ai-summary")
-    @AuthorizeScenario(ScenarioCode.ENCOUNTER_LIST)
-    public Result<EncounterAiSummaryResponse> aiSummary(
-            @PathVariable Long encounterId,
-            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
-        if (principal == null) {
-            throw new BizException(ErrorCode.UNAUTHORIZED);
-        }
-        if (principal.doctorId() == null) {
-            throw new BizException(UserErrorCode.ROLE_MISMATCH);
-        }
-        return Result.ok(ClinicalAssembler.toEncounterAiSummaryResponse(getEncounterAiSummaryUseCase.handle(
-                ClinicalAssembler.toGetEncounterAiSummaryQuery(encounterId, principal.doctorId()))));
     }
 
     @PatchMapping("/{encounterId}")

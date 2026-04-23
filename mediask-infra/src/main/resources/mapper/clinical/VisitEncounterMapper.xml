@@ -66,45 +66,6 @@
           AND encounter.id = #{encounterId}
     </select>
 
-    <select id="selectEncounterAiSummary"
-            resultType="me.jianwen.mediask.infra.persistence.mapper.VisitEncounterAiSummaryRow">
-        SELECT
-            encounter.id AS encounter_id,
-            registration.source_ai_session_id AS session_id,
-            session.summary AS structured_summary,
-            run.id AS model_run_id,
-            event.risk_level,
-            run.triage_snapshot_json
-        FROM visit_encounter encounter
-        JOIN registration_order registration ON registration.id = encounter.order_id
-        JOIN ai_session session ON session.id = registration.source_ai_session_id
-        JOIN ai_turn turn ON turn.session_id = session.id
-        JOIN ai_model_run run ON run.turn_id = turn.id
-        JOIN ai_guardrail_event event ON event.run_id = run.id
-        WHERE encounter.deleted_at IS NULL
-          AND registration.deleted_at IS NULL
-          AND session.deleted_at IS NULL
-          AND turn.deleted_at IS NULL
-          AND run.deleted_at IS NULL
-          AND encounter.id = #{encounterId}
-          AND turn.turn_status = 'COMPLETED'
-          AND run.run_status = 'SUCCEEDED'
-          AND run.triage_snapshot_json IS NOT NULL
-        ORDER BY turn.turn_no DESC, run.completed_at DESC, run.id DESC, event.occurred_at DESC, event.id DESC
-        LIMIT 1
-    </select>
-
-    <select id="selectRunCitations" resultType="me.jianwen.mediask.infra.persistence.mapper.AiRunCitationRow">
-        SELECT
-            chunk_id,
-            retrieval_rank,
-            fusion_score,
-            snippet
-        FROM ai_run_citation
-        WHERE model_run_id = #{modelRunId}
-        ORDER BY retrieval_rank ASC, id ASC
-    </select>
-
     <update id="startEncounterWhenScheduledAndRegistrationConfirmed">
         UPDATE visit_encounter encounter
         SET encounter_status = 'IN_PROGRESS',

@@ -107,11 +107,6 @@ class GetPrescriptionDetailUseCaseTest {
                             null,
                             LocalDate.parse("2000-01-01"))));
         }
-
-        @Override
-        public Optional<me.jianwen.mediask.domain.clinical.model.EncounterAiSummary> findAiSummaryByEncounterId(Long encounterId) {
-            throw new UnsupportedOperationException();
-        }
     }
 
     private static class StubPrescriptionOrderQueryRepository implements PrescriptionOrderQueryRepository {

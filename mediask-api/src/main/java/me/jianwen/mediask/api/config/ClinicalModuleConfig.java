@@ -2,7 +2,6 @@ package me.jianwen.mediask.api.config;
 
 import me.jianwen.mediask.application.clinical.usecase.CreateEmrUseCase;
 import me.jianwen.mediask.application.clinical.usecase.CreatePrescriptionUseCase;
-import me.jianwen.mediask.application.clinical.usecase.GetEncounterAiSummaryUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEmrDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetPrescriptionDetailUseCase;
@@ -29,11 +28,6 @@ public class ClinicalModuleConfig {
     @Bean
     public GetEncounterDetailUseCase getEncounterDetailUseCase(EncounterQueryRepository encounterQueryRepository) {
         return new GetEncounterDetailUseCase(encounterQueryRepository);
-    }
-
-    @Bean
-    public GetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase(EncounterQueryRepository encounterQueryRepository) {
-        return new GetEncounterAiSummaryUseCase(encounterQueryRepository);
     }
 
     @Bean

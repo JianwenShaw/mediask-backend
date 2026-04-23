@@ -59,7 +59,6 @@ CREATE TABLE registration_order (
     department_id BIGINT NOT NULL,
     session_id BIGINT NOT NULL,
     slot_id BIGINT NOT NULL,
-    source_ai_session_id BIGINT,
     order_status VARCHAR(16) NOT NULL DEFAULT 'CONFIRMED',
     fee NUMERIC(10,2) NOT NULL DEFAULT 0,
     paid_at TIMESTAMPTZ,
@@ -76,7 +75,6 @@ CREATE TABLE registration_order (
         REFERENCES clinic_session (id, doctor_id, department_id),
     CONSTRAINT fk_registration_order_slot_session FOREIGN KEY (slot_id, session_id)
         REFERENCES clinic_slot (id, session_id),
-    CONSTRAINT fk_registration_order_source_ai_session FOREIGN KEY (source_ai_session_id) REFERENCES ai_session (id),
     CONSTRAINT ck_registration_order_status CHECK (order_status IN ('CONFIRMED', 'CANCELLED', 'COMPLETED')),
     CONSTRAINT ck_registration_order_fee CHECK (fee >= 0)
 );

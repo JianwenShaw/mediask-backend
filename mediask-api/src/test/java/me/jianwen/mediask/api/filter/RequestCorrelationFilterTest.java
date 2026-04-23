@@ -55,7 +55,7 @@ class RequestCorrelationFilterTest {
 
     @Test
     void doFilter_WhenAsyncRequest_DoNotLogCompletionBeforeAsyncEnds() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/ai/chat");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/registrations");
         MockHttpServletResponse response = new MockHttpServletResponse();
         request.setAsyncSupported(true);
         request.addHeader(RequestConstants.REQUEST_ID_HEADER, "req_async_001");
@@ -75,7 +75,7 @@ class RequestCorrelationFilterTest {
 
     @Test
     void doFilter_WhenAsyncRequestCompletes_LogCompletionOnce() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/ai/chat");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/registrations");
         MockHttpServletResponse response = new MockHttpServletResponse();
         request.setAsyncSupported(true);
         request.addHeader(RequestConstants.REQUEST_ID_HEADER, "req_async_002");
@@ -100,7 +100,7 @@ class RequestCorrelationFilterTest {
             ILoggingEvent event = appender.list.getFirst();
             assertEquals("HTTP request completed, method={}, status={}, durationMs={}", event.getMessage());
             assertEquals("req_async_002", event.getMDCPropertyMap().get(RequestConstants.MDC_REQUEST_ID));
-            assertEquals("/api/v1/ai/chat", event.getMDCPropertyMap().get(RequestConstants.MDC_REQUEST_URI));
+            assertEquals("/api/v1/registrations", event.getMDCPropertyMap().get(RequestConstants.MDC_REQUEST_URI));
             assertEquals("user_001", event.getMDCPropertyMap().get(RequestConstants.MDC_USER_ID));
             assertEquals(3, event.getArgumentArray().length);
             assertEquals("POST", event.getArgumentArray()[0]);
@@ -118,7 +118,7 @@ class RequestCorrelationFilterTest {
 
     @Test
     void doFilter_WhenAsyncCompletesBeforeListenerRegistration_LogCompletionOnceWithoutFailure() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/ai/chat") {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/registrations") {
             @Override
             public boolean isAsyncStarted() {
                 return true;
@@ -140,7 +140,7 @@ class RequestCorrelationFilterTest {
             ILoggingEvent event = appender.list.getFirst();
             assertEquals("HTTP request completed, method={}, status={}, durationMs={}", event.getMessage());
             assertEquals("req_async_003", event.getMDCPropertyMap().get(RequestConstants.MDC_REQUEST_ID));
-            assertEquals("/api/v1/ai/chat", event.getMDCPropertyMap().get(RequestConstants.MDC_REQUEST_URI));
+            assertEquals("/api/v1/registrations", event.getMDCPropertyMap().get(RequestConstants.MDC_REQUEST_URI));
         } finally {
             detachAppender(appender);
         }

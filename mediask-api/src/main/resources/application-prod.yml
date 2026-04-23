@@ -1,7 +1,0 @@
-mediask:
-  ai:
-    knowledge-storage:
-      mode: OSS
-      oss:
-        bucket: ${MEDIASK_AI_KNOWLEDGE_STORAGE_OSS_BUCKET}
-        key-prefix: ${MEDIASK_AI_KNOWLEDGE_STORAGE_OSS_KEY_PREFIX:knowledge-documents}

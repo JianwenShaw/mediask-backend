@@ -7,13 +7,11 @@ ON CONFLICT (role_code) DO NOTHING;
 
 INSERT INTO permissions (id, permission_code, permission_name, permission_type, status, sort_order)
 VALUES
-    (1101, 'ai:chat', 'AI问诊', 'API', 'ACTIVE', 10),
     (1102, 'registration:create', '创建挂号', 'API', 'ACTIVE', 20),
     (1103, 'encounter:query', '查询接诊', 'API', 'ACTIVE', 30),
     (1104, 'emr:create', '创建病历', 'API', 'ACTIVE', 40),
     (1105, 'emr:read', '查看病历', 'API', 'ACTIVE', 50),
     (1106, 'auth:refresh', '刷新令牌', 'API', 'ACTIVE', 60),
-    (1107, 'ai:session:read', '查看AI会话', 'API', 'ACTIVE', 70),
     (1108, 'patient:profile:view:self', '查看本人患者资料', 'API', 'ACTIVE', 80),
     (1109, 'doctor:profile:view:self', '查看本人医生资料', 'API', 'ACTIVE', 90),
     (1110, 'patient:profile:update:self', '更新本人患者资料', 'API', 'ACTIVE', 100),
@@ -23,13 +21,6 @@ VALUES
     (1114, 'admin:patient:create', '后台新增患者', 'API', 'ACTIVE', 140),
     (1115, 'admin:patient:update', '后台修改患者', 'API', 'ACTIVE', 150),
     (1116, 'admin:patient:delete', '后台删除患者', 'API', 'ACTIVE', 160),
-    (1117, 'admin:knowledge:document:import', '后台导入知识文档', 'API', 'ACTIVE', 170),
-    (1118, 'admin:knowledge:base:list', '后台知识库列表', 'API', 'ACTIVE', 180),
-    (1119, 'admin:knowledge:base:create', '后台新增知识库', 'API', 'ACTIVE', 190),
-    (1120, 'admin:knowledge:base:update', '后台修改知识库', 'API', 'ACTIVE', 200),
-    (1121, 'admin:knowledge:base:delete', '后台删除知识库', 'API', 'ACTIVE', 210),
-    (1122, 'admin:knowledge:document:list', '后台知识文档列表', 'API', 'ACTIVE', 220),
-    (1123, 'admin:knowledge:document:delete', '后台删除知识文档', 'API', 'ACTIVE', 230),
     (1124, 'encounter:update', '更新接诊状态', 'API', 'ACTIVE', 240),
     (1125, 'prescription:create', '创建处方', 'API', 'ACTIVE', 250),
     (1126, 'prescription:read', '查看处方', 'API', 'ACTIVE', 260)
@@ -37,7 +28,6 @@ ON CONFLICT (permission_code) DO NOTHING;
 
 INSERT INTO role_permissions (id, role_id, permission_id)
 VALUES
-    (1201, 1001, 1101),
     (1202, 1001, 1102),
     (1203, 1002, 1103),
     (1204, 1002, 1104),
@@ -45,8 +35,6 @@ VALUES
     (1206, 1001, 1106),
     (1207, 1002, 1106),
     (1208, 1003, 1106),
-    (1209, 1001, 1107),
-    (1210, 1002, 1107),
     (1211, 1001, 1108),
     (1212, 1002, 1109),
     (1213, 1001, 1110),
@@ -56,13 +44,6 @@ VALUES
     (1217, 1003, 1114),
     (1218, 1003, 1115),
     (1219, 1003, 1116),
-    (1220, 1003, 1117),
-    (1221, 1003, 1118),
-    (1222, 1003, 1119),
-    (1223, 1003, 1120),
-    (1224, 1003, 1121),
-    (1225, 1003, 1122),
-    (1226, 1003, 1123),
     (1227, 1001, 1105),
     (1228, 1002, 1124),
     (1229, 1002, 1125),
@@ -120,7 +101,5 @@ INSERT INTO data_scope_rules (id, role_id, resource_type, scope_type, status)
 VALUES
     (3401, 1001, 'EMR_RECORD', 'SELF', 'ACTIVE'),
     (3402, 1002, 'EMR_RECORD', 'DEPARTMENT', 'ACTIVE'),
-    (3403, 1003, 'AUDIT_EVENT', 'ALL', 'ACTIVE'),
-    (3404, 1001, 'AI_SESSION', 'SELF', 'ACTIVE'),
-    (3405, 1002, 'AI_SESSION', 'DEPARTMENT', 'ACTIVE')
+    (3403, 1003, 'AUDIT_EVENT', 'ALL', 'ACTIVE')
 ON CONFLICT DO NOTHING;

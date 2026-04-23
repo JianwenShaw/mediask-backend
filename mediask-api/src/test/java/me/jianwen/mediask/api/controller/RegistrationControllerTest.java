@@ -37,7 +37,6 @@ import me.jianwen.mediask.domain.outpatient.model.ClinicSessionPeriodCode;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationDetail;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationListItem;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
-import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
 import me.jianwen.mediask.domain.user.model.AccessToken;
 import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
@@ -116,8 +115,7 @@ class RegistrationControllerTest {
                         .content("""
                                 {
                                   "clinicSessionId": 4101,
-                                  "clinicSlotId": 5101,
-                                  "sourceAiSessionId": 7101
+                                  "clinicSlotId": 5101
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -130,24 +128,6 @@ class RegistrationControllerTest {
         assertEquals(2003L, patientCreateRegistrationUseCase.lastCommand.patientUserId());
         assertEquals(4101L, patientCreateRegistrationUseCase.lastCommand.clinicSessionId());
         assertEquals(5101L, patientCreateRegistrationUseCase.lastCommand.clinicSlotId());
-        assertEquals(7101L, patientCreateRegistrationUseCase.lastCommand.sourceAiSessionId());
-    }
-
-    @Test
-    void create_WhenSourceAiSessionIdMissing_StillReturnRegistration() throws Exception {
-        patientMockMvc.perform(post("/api/v1/registrations")
-                        .header("Authorization", "Bearer " + PATIENT_TOKEN)
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "clinicSessionId": 4101,
-                                  "clinicSlotId": 5101
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0));
-
-        assertEquals(null, patientCreateRegistrationUseCase.lastCommand.sourceAiSessionId());
     }
 
     @Test
@@ -161,8 +141,7 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.data.items[0].registrationId").value("6101"))
                 .andExpect(jsonPath("$.data.items[0].orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.items[0].status").value("CONFIRMED"))
-                .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-04-02T10:00:00+08:00"))
-                .andExpect(jsonPath("$.data.items[0].sourceAiSessionId").value("7101"));
+                .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-04-02T10:00:00+08:00"));
 
         assertEquals(2003L, patientListRegistrationsUseCase.lastQuery.patientUserId());
         assertEquals(RegistrationStatus.CONFIRMED, patientListRegistrationsUseCase.lastQuery.status());
@@ -178,7 +157,6 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.data.orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.data.createdAt").value("2026-04-02T10:00:00+08:00"))
-                .andExpect(jsonPath("$.data.sourceAiSessionId").value("7101"))
                 .andExpect(jsonPath("$.data.clinicSessionId").value("4101"))
                 .andExpect(jsonPath("$.data.clinicSlotId").value("5101"))
                 .andExpect(jsonPath("$.data.departmentId").value("3101"))
@@ -234,24 +212,6 @@ class RegistrationControllerTest {
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(2008));
-    }
-
-    @Test
-    void create_WhenAiSourceRejected_ReturnAiErrorMapping() throws Exception {
-        patientCreateRegistrationUseCase.throwable = new BizException(AiErrorCode.AI_SESSION_REGISTRATION_HANDOFF_UNAVAILABLE);
-
-        patientMockMvc.perform(post("/api/v1/registrations")
-                        .header("Authorization", "Bearer " + PATIENT_TOKEN)
-                        .contentType(APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "clinicSessionId": 4101,
-                                  "clinicSlotId": 5101,
-                                  "sourceAiSessionId": 7101
-                                }
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(6020));
     }
 
     @Test
@@ -342,7 +302,7 @@ class RegistrationControllerTest {
         private RuntimeException throwable;
 
         private StubCreateRegistrationUseCase() {
-            super(null, null, null, null);
+            super(null, null, null);
         }
 
         @Override
@@ -366,12 +326,12 @@ class RegistrationControllerTest {
         @Override
         public List<RegistrationListItem> handle(me.jianwen.mediask.application.outpatient.query.ListRegistrationsQuery query) {
             this.lastQuery = query;
-            return List.of(new RegistrationListItem(
-                    6101L,
-                    "REG6101",
-                    RegistrationStatus.CONFIRMED,
-                    OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
-                    7101L));
+            return List.of(
+                    new RegistrationListItem(
+                            6101L,
+                            "REG6101",
+                            RegistrationStatus.CONFIRMED,
+                            OffsetDateTime.parse("2026-04-02T10:00:00+08:00")));
         }
     }
 
@@ -396,7 +356,6 @@ class RegistrationControllerTest {
                     "REG6101",
                     RegistrationStatus.CONFIRMED,
                     OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
-                    7101L,
                     4101L,
                     5101L,
                     3101L,

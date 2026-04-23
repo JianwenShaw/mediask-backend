@@ -12,9 +12,6 @@
 \echo '[mediask] create hospital org tables'
 \ir 02-hospital-org.sql
 
-\echo '[mediask] create ai and knowledge tables'
-\ir 05-ai.sql
-
 \echo '[mediask] create appointment tables'
 \ir 04-appointment.sql
 

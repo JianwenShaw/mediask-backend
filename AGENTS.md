@@ -42,7 +42,8 @@ Additional Maven testing note:
 - Do not add test dependencies just to simplify a small repository/adapter test. Stay within the repo’s existing dependency set.
 
 ### when changing AI APIs or SSE.
-`docs/docs/10A-JAVA_AI_API_CONTRACT.md` 
+`docs/proposals/rag-python-service-design/02-integration-contract.md`
+`docs/proposals/rag-python-service-design/03-java-boundary-and-owned-data.md`
 
 ## Architecture Rules
 Dependency direction:

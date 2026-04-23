@@ -204,10 +204,5 @@ class CreateEmrUseCaseTest {
                     )
             ));
         }
-
-        @Override
-        public Optional<me.jianwen.mediask.domain.clinical.model.EncounterAiSummary> findAiSummaryByEncounterId(Long encounterId) {
-            throw new UnsupportedOperationException();
-        }
     }
 }

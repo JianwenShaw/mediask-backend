@@ -12,7 +12,6 @@
             registration.order_no,
             registration.order_status,
             registration.created_at,
-            registration.source_ai_session_id,
             registration.session_id AS clinic_session_id,
             registration.slot_id AS clinic_slot_id,
             registration.department_id,

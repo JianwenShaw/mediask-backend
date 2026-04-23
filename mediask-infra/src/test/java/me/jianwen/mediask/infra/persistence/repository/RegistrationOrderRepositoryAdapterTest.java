@@ -27,8 +27,8 @@ class RegistrationOrderRepositoryAdapterTest {
                         "selectById", handler::selectById,
                         "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
 
-        RegistrationOrder registrationOrder = RegistrationOrder.createConfirmed(
-                2201L, 2101L, 3101L, 4101L, 5101L, 7101L, new BigDecimal("18.00"));
+        RegistrationOrder registrationOrder =
+                RegistrationOrder.createConfirmed(2201L, 2101L, 3101L, 4101L, 5101L, new BigDecimal("18.00"));
         adapter.save(registrationOrder);
 
         assertEquals(registrationOrder.registrationId(), handler.inserted.getId());
@@ -38,7 +38,6 @@ class RegistrationOrderRepositoryAdapterTest {
         assertEquals(registrationOrder.departmentId(), handler.inserted.getDepartmentId());
         assertEquals(registrationOrder.sessionId(), handler.inserted.getSessionId());
         assertEquals(registrationOrder.slotId(), handler.inserted.getSlotId());
-        assertEquals(registrationOrder.sourceAiSessionId(), handler.inserted.getSourceAiSessionId());
         assertEquals("CONFIRMED", handler.inserted.getOrderStatus());
         assertEquals(new BigDecimal("18.00"), handler.inserted.getFee());
     }
@@ -64,7 +63,6 @@ class RegistrationOrderRepositoryAdapterTest {
                         3101L,
                         4101L,
                         5101L,
-                        7101L,
                         me.jianwen.mediask.domain.outpatient.model.RegistrationStatus.CONFIRMED,
                         new BigDecimal("18.00"),
                         null,
@@ -90,7 +88,6 @@ class RegistrationOrderRepositoryAdapterTest {
                 3101L,
                 4101L,
                 5101L,
-                7101L,
                 me.jianwen.mediask.domain.outpatient.model.RegistrationStatus.CANCELLED,
                 new BigDecimal("18.00"),
                 OffsetDateTime.parse("2026-04-03T11:00:00+08:00"),
@@ -175,7 +172,6 @@ class RegistrationOrderRepositoryAdapterTest {
             dataObject.setDepartmentId(3101L);
             dataObject.setSessionId(4101L);
             dataObject.setSlotId(5101L);
-            dataObject.setSourceAiSessionId(7101L);
             dataObject.setOrderStatus("CONFIRMED");
             dataObject.setFee(new BigDecimal("18.00"));
             return dataObject;

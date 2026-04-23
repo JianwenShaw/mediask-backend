@@ -11,7 +11,6 @@ import java.util.Optional;
 import me.jianwen.mediask.application.clinical.command.UpdateEncounterStatusCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
-import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterListItem;
 import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
@@ -166,11 +165,6 @@ class UpdateEncounterStatusUseCaseTest {
                             OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
                             null,
                             LocalDate.parse("1990-05-15"))));
-        }
-
-        @Override
-        public Optional<EncounterAiSummary> findAiSummaryByEncounterId(Long encounterId) {
-            throw new UnsupportedOperationException();
         }
     }
 

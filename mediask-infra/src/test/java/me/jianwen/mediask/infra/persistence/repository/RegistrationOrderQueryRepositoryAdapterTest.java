@@ -33,7 +33,6 @@ class RegistrationOrderQueryRepositoryAdapterTest {
         assertEquals(6101L, result.getFirst().registrationId());
         assertEquals("REG6101", result.getFirst().orderNo());
         assertEquals(RegistrationStatus.CONFIRMED, result.getFirst().status());
-        assertEquals(7101L, result.getFirst().sourceAiSessionId());
         assertEquals(1, handler.selectListInvocations);
     }
 
@@ -120,7 +119,6 @@ class RegistrationOrderQueryRepositoryAdapterTest {
             dataObject.setOrderNo("REG6101");
             dataObject.setOrderStatus("CONFIRMED");
             dataObject.setCreatedAt(OffsetDateTime.parse("2026-04-02T10:00:00+08:00"));
-            dataObject.setSourceAiSessionId(7101L);
             dataObject.setFee(new BigDecimal("18.00"));
             return List.of(dataObject);
         }
@@ -132,7 +130,6 @@ class RegistrationOrderQueryRepositoryAdapterTest {
             row.setOrderNo("REG6101");
             row.setOrderStatus("CONFIRMED");
             row.setCreatedAt(OffsetDateTime.parse("2026-04-02T10:00:00+08:00"));
-            row.setSourceAiSessionId(7101L);
             row.setClinicSessionId(4101L);
             row.setClinicSlotId(5101L);
             row.setDepartmentId(3101L);

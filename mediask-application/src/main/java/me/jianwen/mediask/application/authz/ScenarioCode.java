@@ -6,13 +6,6 @@ public enum ScenarioCode {
     ADMIN_PATIENT_CREATE(ActionType.CREATE, CombinationMode.ALL, "admin:patient:create", false, false),
     ADMIN_PATIENT_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "admin:patient:update", false, false),
     ADMIN_PATIENT_DELETE(ActionType.DELETE, CombinationMode.ALL, "admin:patient:delete", false, false),
-    ADMIN_KNOWLEDGE_BASE_LIST(ActionType.READ, CombinationMode.ALL, "admin:knowledge:base:list", false, false),
-    ADMIN_KNOWLEDGE_BASE_CREATE(ActionType.CREATE, CombinationMode.ALL, "admin:knowledge:base:create", false, false),
-    ADMIN_KNOWLEDGE_BASE_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "admin:knowledge:base:update", false, false),
-    ADMIN_KNOWLEDGE_BASE_DELETE(ActionType.DELETE, CombinationMode.ALL, "admin:knowledge:base:delete", false, false),
-    ADMIN_KNOWLEDGE_DOCUMENT_LIST(ActionType.READ, CombinationMode.ALL, "admin:knowledge:document:list", false, false),
-    ADMIN_KNOWLEDGE_DOCUMENT_IMPORT(ActionType.CREATE, CombinationMode.ALL, "admin:knowledge:document:import", false, false),
-    ADMIN_KNOWLEDGE_DOCUMENT_DELETE(ActionType.DELETE, CombinationMode.ALL, "admin:knowledge:document:delete", false, false),
     DOCTOR_SELF_PROFILE_VIEW(ActionType.READ, CombinationMode.ALL, "doctor:profile:view:self", false, false),
     DOCTOR_SELF_PROFILE_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "doctor:profile:update:self", false, false),
     PATIENT_SELF_PROFILE_VIEW(ActionType.READ, CombinationMode.ALL, "patient:profile:view:self", false, false),
@@ -23,9 +16,7 @@ public enum ScenarioCode {
     EMR_RECORD_READ(ActionType.READ, CombinationMode.ALL, "emr:read", true, false),
     EMR_RECORD_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "emr:update", true, false),
     PRESCRIPTION_CREATE(ActionType.CREATE, CombinationMode.ALL, "prescription:create", false, false),
-    PRESCRIPTION_READ(ActionType.READ, CombinationMode.ALL, "prescription:read", false, false),
-    AI_SESSION_READ(ActionType.READ, CombinationMode.ALL, "ai:session:read", true, true),
-    AI_SESSION_EXPORT(ActionType.EXPORT, CombinationMode.ALL, "ai:session:export", true, true);
+    PRESCRIPTION_READ(ActionType.READ, CombinationMode.ALL, "prescription:read", false, false);
 
     private final ActionType actionType;
     private final CombinationMode combinationMode;

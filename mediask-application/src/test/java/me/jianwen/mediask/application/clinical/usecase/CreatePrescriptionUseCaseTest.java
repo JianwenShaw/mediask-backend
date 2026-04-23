@@ -164,11 +164,6 @@ class CreatePrescriptionUseCaseTest {
                             null,
                             LocalDate.parse("2002-03-18"))));
         }
-
-        @Override
-        public Optional<me.jianwen.mediask.domain.clinical.model.EncounterAiSummary> findAiSummaryByEncounterId(Long encounterId) {
-            throw new UnsupportedOperationException();
-        }
     }
 
     private static class StubEmrRecordQueryRepository implements EmrRecordQueryRepository {

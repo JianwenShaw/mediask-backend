@@ -7,7 +7,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
-import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterListItem;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
@@ -53,11 +52,6 @@ class ListEncountersUseCaseTest {
 
         @Override
         public Optional<EncounterDetail> findDetailByEncounterId(Long encounterId) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Optional<EncounterAiSummary> findAiSummaryByEncounterId(Long encounterId) {
             throw new UnsupportedOperationException();
         }
     }

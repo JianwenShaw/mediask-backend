@@ -97,7 +97,6 @@ public class RegistrationOrderRepositoryAdapter implements RegistrationOrderRepo
         dataObject.setDepartmentId(registrationOrder.departmentId());
         dataObject.setSessionId(registrationOrder.sessionId());
         dataObject.setSlotId(registrationOrder.slotId());
-        dataObject.setSourceAiSessionId(registrationOrder.sourceAiSessionId());
         dataObject.setOrderStatus(registrationOrder.status().name());
         dataObject.setFee(registrationOrder.fee());
         dataObject.setCancelledAt(registrationOrder.cancelledAt());
@@ -113,7 +112,6 @@ public class RegistrationOrderRepositoryAdapter implements RegistrationOrderRepo
                 dataObject.getDepartmentId(),
                 dataObject.getSessionId(),
                 dataObject.getSlotId(),
-                dataObject.getSourceAiSessionId(),
                 RegistrationStatus.valueOf(dataObject.getOrderStatus()),
                 dataObject.getFee(),
                 dataObject.getCancelledAt(),

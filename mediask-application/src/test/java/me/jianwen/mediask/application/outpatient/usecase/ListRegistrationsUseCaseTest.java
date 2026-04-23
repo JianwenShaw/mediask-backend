@@ -40,8 +40,7 @@ class ListRegistrationsUseCaseTest {
                     6101L,
                     "REG6101",
                     RegistrationStatus.CONFIRMED,
-                    OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
-                    7101L));
+                    OffsetDateTime.parse("2026-04-02T10:00:00+08:00")));
         }
 
         @Override
