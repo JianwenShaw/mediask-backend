@@ -7,7 +7,7 @@ services:
     container_name: mediask-postgres
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5432:5432"
+      - 5432:5432
     environment:
       POSTGRES_DB: mediask_dev
       POSTGRES_USER: mediask
@@ -39,7 +39,7 @@ services:
     container_name: mediask-redis
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6379:6379"
+      - 16379:6379
     command:
       [
         "redis-server",
