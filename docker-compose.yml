@@ -25,9 +25,9 @@ services:
       ]
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      # Keep a single init entrypoint at the top level; the modular SQL files are mounted outside entrypoint scan.
+      # Keep a single init entrypoint at the top level; docs/sql is the authoritative SQL source.
       - ./docker/postgres/initdb/00-init-dev.sql:/docker-entrypoint-initdb.d/00-init-dev.sql:ro
-      - ./sql:/mediask-init/sql:ro
+      - ./docs/sql:/mediask-init/sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mediask -d mediask_dev"]
       interval: 10s

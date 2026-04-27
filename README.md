@@ -12,6 +12,12 @@
 - `PG_PASSWORD`
 - `REDIS_PASSWORD`
 
+可以直接基于示例文件创建：
+
+```bash
+cp .env.example .env
+```
+
 首次构建自定义 PostgreSQL 镜像：
 
 ```bash
@@ -55,7 +61,7 @@ docker compose down
 
 以下情况通常不需要重新 `build`：
 
-- 只改了 `sql/` 里的 SQL 文件
+- 只改了 `docs/sql/` 里的 SQL 文件
 - 只改了 Java 代码
 - 只是想重新启动容器
 
@@ -71,7 +77,8 @@ PostgreSQL 使用官方 entrypoint 初始化机制。
 
 - `docker/postgres/initdb/00-init-dev.sql` 是唯一顶层入口文件
 - 它会加载 `/mediask-init/sql/init-dev.sql`
-- 完整初始化 SQL 位于项目根目录 `sql/`
+- `/mediask-init/sql` 对应宿主目录 `docs/sql/`
+- `docs/sql/` 是数据库初始化的唯一真相源
 
 需要特别注意：初始化 SQL 只会在 PostgreSQL 数据目录为空时自动执行。
 
@@ -120,6 +127,7 @@ PostgreSQL 使用官方 entrypoint 初始化机制。
 ### 1. 第一次本地启动
 
 ```bash
+cp .env.example .env
 docker compose build postgres
 docker compose up -d
 ```
@@ -141,11 +149,16 @@ docker compose up -d postgres
 ### 4. 完全重置本地数据库并重新执行初始化 SQL
 
 ```bash
-docker compose down -v
-docker compose up -d
+./scripts/dev-db-reset.sh
 ```
 
 ## 数据库检查
+
+快速检查 schema、RAG 表和种子数据：
+
+```bash
+./scripts/dev-db-check.sh
+```
 
 进入 PostgreSQL 容器内的 `psql`：
 
@@ -184,6 +197,6 @@ docker compose exec redis redis-cli -a "$REDIS_PASSWORD" ping
 
 ## 说明
 
-- 修改 `sql/` 后，不会自动重新应用到一个已经存在的 PostgreSQL 数据卷
+- 修改 `docs/sql/` 后，不会自动重新应用到一个已经存在的 PostgreSQL 数据卷
 - 如果你改了初始化 SQL，且希望从头生效，最直接的方式是重置卷再启动
 - 目前直接使用容器内的 `psql` 就够了，不一定需要在 macOS 本机额外安装 PostgreSQL 客户端
