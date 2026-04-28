@@ -22,4 +22,16 @@ public final class CacheKeyGenerator {
     public static String patientProfileByUserId(Long userId) {
         return String.join(DELIMITER, "user", "patient-profile", String.valueOf(userId));
     }
+
+    public static String triageCatalogActiveVersion(String hospitalScope) {
+        return String.join(DELIMITER, "triage_catalog", "active", hospitalScope);
+    }
+
+    public static String triageCatalogContent(String hospitalScope, String catalogVersion) {
+        return String.join(DELIMITER, "triage_catalog", hospitalScope, catalogVersion);
+    }
+
+    public static String triageCatalogSequenceCounter(String hospitalScope, String dateStr) {
+        return String.join(DELIMITER, "triage_catalog", "seq", hospitalScope, dateStr);
+    }
 }

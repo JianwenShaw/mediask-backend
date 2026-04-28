@@ -16,7 +16,8 @@ public enum ScenarioCode {
     EMR_RECORD_READ(ActionType.READ, CombinationMode.ALL, "emr:read", true, false),
     EMR_RECORD_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "emr:update", true, false),
     PRESCRIPTION_CREATE(ActionType.CREATE, CombinationMode.ALL, "prescription:create", false, false),
-    PRESCRIPTION_READ(ActionType.READ, CombinationMode.ALL, "prescription:read", false, false);
+    PRESCRIPTION_READ(ActionType.READ, CombinationMode.ALL, "prescription:read", false, false),
+    ADMIN_TRIAGE_CATALOG_PUBLISH(ActionType.CREATE, CombinationMode.ALL, "admin:triage-catalog:publish", false, false);
 
     private final ActionType actionType;
     private final CombinationMode combinationMode;

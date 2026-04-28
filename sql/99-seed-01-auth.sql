@@ -23,7 +23,8 @@ VALUES
     (1116, 'admin:patient:delete', '后台删除患者', 'API', 'ACTIVE', 160),
     (1124, 'encounter:update', '更新接诊状态', 'API', 'ACTIVE', 240),
     (1125, 'prescription:create', '创建处方', 'API', 'ACTIVE', 250),
-    (1126, 'prescription:read', '查看处方', 'API', 'ACTIVE', 260)
+    (1126, 'prescription:read', '查看处方', 'API', 'ACTIVE', 260),
+    (1127, 'admin:triage-catalog:publish', '发布导诊目录', 'API', 'ACTIVE', 270)
 ON CONFLICT (permission_code) DO NOTHING;
 
 INSERT INTO role_permissions (id, role_id, permission_id)
@@ -47,7 +48,8 @@ VALUES
     (1227, 1001, 1105),
     (1228, 1002, 1124),
     (1229, 1002, 1125),
-    (1230, 1002, 1126)
+    (1230, 1002, 1126),
+    (1231, 1003, 1127)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- admin / admin123

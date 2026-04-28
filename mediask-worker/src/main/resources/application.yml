@@ -55,15 +55,15 @@ mediask:
     issuer: ${MEDIASK_JWT_ISSUER:mediask}
     access-token-expire-seconds: ${MEDIASK_JWT_ACCESS_TOKEN_EXPIRE_SECONDS:1800}
     refresh-token-expire-days: ${MEDIASK_JWT_REFRESH_TOKEN_EXPIRE_DAYS:7}
-  redisson:
-    address: redis://${MEDIASK_DEV_MIDWARE_HOST}:${REDIS_PORT:16379}
-    password: ${REDIS_PASSWORD}
-    database: 0
-    connection-pool-size: 16
-    connection-minimum-idle-size: 4
-    timeout: 3000
-    retry-attempts: 3
-    retry-interval: 1500
+#  redisson:
+#    address: redis://${MEDIASK_DEV_MIDWARE_HOST}:${REDIS_PORT:16379}
+#    password: ${REDIS_PASSWORD}
+#    database: 0
+#    connection-pool-size: 16
+#    connection-minimum-idle-size: 4
+#    timeout: 3000
+#    retry-attempts: 3
+#    retry-interval: 1500
 
 management:
   endpoints:
