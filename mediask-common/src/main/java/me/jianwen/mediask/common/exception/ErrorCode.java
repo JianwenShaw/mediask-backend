@@ -11,6 +11,11 @@ public enum ErrorCode implements ErrorCodeType {
     RESOURCE_NOT_FOUND(1004, "resource not found", ErrorCodeCategory.NOT_FOUND),
     INVALID_PHONE_NUMBER(1005, "invalid phone number", ErrorCodeCategory.BAD_REQUEST),
 
+    // 6xxx: AI / RAG integration
+    AI_SERVICE_UNAVAILABLE(6001, "AI service unavailable", ErrorCodeCategory.INTERNAL_ERROR),
+    AI_SERVICE_TIMEOUT(6002, "AI service timeout", ErrorCodeCategory.INTERNAL_ERROR),
+    AI_RESPONSE_INVALID(6003, "AI response invalid", ErrorCodeCategory.INTERNAL_ERROR),
+
     // 9xxx: system
     SYSTEM_ERROR(9999, "system error", ErrorCodeCategory.INTERNAL_ERROR);
 

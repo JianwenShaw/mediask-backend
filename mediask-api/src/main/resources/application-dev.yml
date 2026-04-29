@@ -25,3 +25,5 @@ mediask:
 #    password: ${REDIS_PASSWORD}
   security:
     public-docs-enabled: true
+  ai:
+    base-url: http://localhost:8000

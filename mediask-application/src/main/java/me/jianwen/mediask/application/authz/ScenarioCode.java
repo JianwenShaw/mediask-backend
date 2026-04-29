@@ -17,7 +17,20 @@ public enum ScenarioCode {
     EMR_RECORD_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "emr:update", true, false),
     PRESCRIPTION_CREATE(ActionType.CREATE, CombinationMode.ALL, "prescription:create", false, false),
     PRESCRIPTION_READ(ActionType.READ, CombinationMode.ALL, "prescription:read", false, false),
-    ADMIN_TRIAGE_CATALOG_PUBLISH(ActionType.CREATE, CombinationMode.ALL, "admin:triage-catalog:publish", false, false);
+    ADMIN_TRIAGE_CATALOG_PUBLISH(ActionType.CREATE, CombinationMode.ALL, "admin:triage-catalog:publish", false, false),
+    ADMIN_KNOWLEDGE_BASE_LIST(ActionType.READ, CombinationMode.ALL, "admin:knowledge-base:list", false, false),
+    ADMIN_KNOWLEDGE_BASE_CREATE(ActionType.CREATE, CombinationMode.ALL, "admin:knowledge-base:create", false, false),
+    ADMIN_KNOWLEDGE_BASE_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "admin:knowledge-base:update", false, false),
+    ADMIN_KNOWLEDGE_BASE_DELETE(ActionType.DELETE, CombinationMode.ALL, "admin:knowledge-base:delete", false, false),
+    ADMIN_KNOWLEDGE_DOCUMENT_IMPORT(ActionType.CREATE, CombinationMode.ALL, "admin:knowledge-document:import", false, false),
+    ADMIN_KNOWLEDGE_DOCUMENT_LIST(ActionType.READ, CombinationMode.ALL, "admin:knowledge-document:list", false, false),
+    ADMIN_KNOWLEDGE_DOCUMENT_DELETE(ActionType.DELETE, CombinationMode.ALL, "admin:knowledge-document:delete", false, false),
+    ADMIN_KNOWLEDGE_INGEST_JOB_VIEW(ActionType.READ, CombinationMode.ALL, "admin:knowledge-ingest-job:view", false, false),
+    ADMIN_KNOWLEDGE_INDEX_VERSION_LIST(
+            ActionType.READ, CombinationMode.ALL, "admin:knowledge-index-version:list", false, false),
+    ADMIN_KNOWLEDGE_RELEASE_LIST(ActionType.READ, CombinationMode.ALL, "admin:knowledge-release:list", false, false),
+    ADMIN_KNOWLEDGE_RELEASE_PUBLISH(
+            ActionType.CREATE, CombinationMode.ALL, "admin:knowledge-release:publish", false, false);
 
     private final ActionType actionType;
     private final CombinationMode combinationMode;
