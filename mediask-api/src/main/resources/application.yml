@@ -50,6 +50,10 @@ mybatis-plus:
       logic-delete-value: "now()"
 
 mediask:
+  ai:
+    base-url: ${MEDIASK_AI_BASE_URL:http://localhost:8000}
+    api-key: ${MEDIASK_AI_API_KEY:}
+    timeout-seconds: ${MEDIASK_AI_TIMEOUT_SECONDS:30}
   encryption:
     key: ${MEDIASK_ENCRYPTION_KEY}
   jwt:
