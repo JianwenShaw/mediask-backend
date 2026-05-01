@@ -1,6 +1,7 @@
 package me.jianwen.mediask.infra.ai.adapter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,8 +33,10 @@ import me.jianwen.mediask.domain.ai.model.AiTriageGatewayContext;
 import me.jianwen.mediask.domain.ai.model.AiTriageQuery;
 import me.jianwen.mediask.domain.ai.model.AiTriageQueryResponse;
 import me.jianwen.mediask.domain.ai.port.AiTriageGatewayPort;
+import me.jianwen.mediask.common.exception.BizException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.HttpHeaders;
@@ -71,7 +74,7 @@ class PythonAiTriageGatewayAdapterTest {
                 "http://python.test",
                 "dev-api-key",
                 30,
-                RestClient.builder().requestFactory(requestFactory).build(),
+                restClient(),
                 httpClient,
                 new ObjectMapper().findAndRegisterModules());
     }
@@ -86,6 +89,7 @@ class PythonAiTriageGatewayAdapterTest {
         assertEquals("http://python.test/api/v1/query", requestFactory.capturedRequest.uri.toString());
         assertEquals("req-1", requestFactory.capturedRequest.headers.getFirst("X-Request-Id"));
         assertEquals("dev-api-key", requestFactory.capturedRequest.headers.getFirst("X-API-Key"));
+        assertEquals("2201", requestFactory.capturedRequest.headers.getFirst("X-Patient-User-Id"));
         assertTrue(requestFactory.capturedRequest.body.contains("\"scene\":\"AI_TRIAGE\""));
         assertTrue(requestFactory.capturedRequest.body.contains("\"session_id\":null"));
         assertTrue(requestFactory.capturedRequest.body.contains("\"hospital_scope\":\"default\""));
@@ -114,11 +118,96 @@ class PythonAiTriageGatewayAdapterTest {
 
         assertEquals("http://python.test/api/v1/query/stream", httpClient.lastRequest.uri().toString());
         assertEquals("req-1", httpClient.lastRequest.headers().firstValue("X-Request-Id").orElseThrow());
+        assertEquals("2201", httpClient.lastRequest.headers().firstValue("X-Patient-User-Id").orElseThrow());
         assertTrue(readBody(httpClient.lastRequest).contains("\"session_id\":null"));
         assertEquals(3, events.size());
         assertEquals("start", events.get(0).event());
         assertEquals("READY", events.get(1).finalResponse().triageResult().triageStage());
         assertEquals("done", events.get(2).event());
+    }
+
+    @Test
+    void listSessions_MapsSnakeCasePayloadAndForwardsPatientHeader() {
+        requestFactory = new CapturingClientHttpRequestFactory(200, """
+                {
+                  "items": [
+                    {
+                      "session_id": "session-1",
+                      "scene": "AI_TRIAGE",
+                      "status": "COLLECTING",
+                      "department_id": 3101,
+                      "chief_complaint_summary": "头痛",
+                      "summary": "建议继续补充症状"
+                    }
+                  ]
+                }
+                """);
+        adapter = new PythonAiTriageGatewayAdapter(
+                "http://python.test",
+                "dev-api-key",
+                30,
+                restClient(),
+                httpClient,
+                new ObjectMapper().findAndRegisterModules());
+
+        var response = adapter.listSessions(new AiTriageGatewayContext("req-2", 2201L));
+
+        assertEquals("http://python.test/api/v1/sessions", requestFactory.capturedRequest.uri.toString());
+        assertEquals("2201", requestFactory.capturedRequest.headers.getFirst("X-Patient-User-Id"));
+        assertEquals("session-1", response.items().getFirst().sessionId());
+        assertEquals(3101L, response.items().getFirst().departmentId());
+    }
+
+    @Test
+    void getSessionDetail_Maps404ToResourceNotFound() {
+        requestFactory = new CapturingClientHttpRequestFactory(404, """
+                {
+                  "request_id": "req-3",
+                  "error": {
+                    "code": "SESSION_NOT_FOUND",
+                    "message": "session not found"
+                  }
+                }
+                """);
+        adapter = new PythonAiTriageGatewayAdapter(
+                "http://python.test",
+                "dev-api-key",
+                30,
+                restClient(),
+                httpClient,
+                new ObjectMapper().findAndRegisterModules());
+
+        BizException exception = assertThrows(BizException.class, () -> adapter.getSessionDetail(
+                new AiTriageGatewayContext("req-3", 2201L),
+                "session-404"));
+
+        assertEquals(1004, exception.getCode());
+    }
+
+    @Test
+    void getSessionTriageResult_Maps409ToResultNotReady() {
+        requestFactory = new CapturingClientHttpRequestFactory(409, """
+                {
+                  "request_id": "req-4",
+                  "error": {
+                    "code": "TRIAGE_RESULT_NOT_READY",
+                    "message": "triage result not ready"
+                  }
+                }
+                """);
+        adapter = new PythonAiTriageGatewayAdapter(
+                "http://python.test",
+                "dev-api-key",
+                30,
+                restClient(),
+                httpClient,
+                new ObjectMapper().findAndRegisterModules());
+
+        BizException exception = assertThrows(BizException.class, () -> adapter.getSessionTriageResult(
+                new AiTriageGatewayContext("req-4", 2201L),
+                "session-409"));
+
+        assertEquals(6101, exception.getCode());
     }
 
     private static String readBody(HttpRequest request) {
@@ -146,6 +235,18 @@ class PythonAiTriageGatewayAdapterTest {
             }
         });
         return outputStream.toString(StandardCharsets.UTF_8);
+    }
+
+    private RestClient restClient() {
+        MappingJackson2HttpMessageConverter converter =
+                new MappingJackson2HttpMessageConverter(new ObjectMapper().findAndRegisterModules());
+        return RestClient.builder()
+                .requestFactory(requestFactory)
+                .messageConverters(converters -> {
+                    converters.removeIf(MappingJackson2HttpMessageConverter.class::isInstance);
+                    converters.add(converter);
+                })
+                .build();
     }
 
     private static final class CapturingClientHttpRequestFactory implements ClientHttpRequestFactory {

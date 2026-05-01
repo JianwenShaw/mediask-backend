@@ -3,6 +3,7 @@ package me.jianwen.mediask.api.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,8 +20,17 @@ import me.jianwen.mediask.api.dto.AiTriageQueryRequest;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.application.ai.command.SubmitAiTriageQueryCommand;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
+import me.jianwen.mediask.application.ai.usecase.ListAiSessionsUseCase;
 import me.jianwen.mediask.application.ai.usecase.StreamAiTriageQueryUseCase;
 import me.jianwen.mediask.application.ai.usecase.SubmitAiTriageQueryUseCase;
+import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
+import me.jianwen.mediask.domain.ai.model.AiSessionSummary;
+import me.jianwen.mediask.domain.ai.model.AiSessionSummaryList;
+import me.jianwen.mediask.domain.ai.model.AiSessionTriageResult;
+import me.jianwen.mediask.domain.ai.model.AiSessionTurn;
 import me.jianwen.mediask.domain.ai.model.AiTriageCitation;
 import me.jianwen.mediask.domain.ai.model.AiTriageGatewayContext;
 import me.jianwen.mediask.domain.ai.model.AiTriageQuery;
@@ -100,10 +110,48 @@ class AiTriageControllerTest {
     }
 
     @Test
+    void listSessions_WhenPatientAuthenticated_ReturnsCamelCaseResponse() throws Exception {
+        patientMockMvc.perform(get("/api/v1/ai/sessions")
+                        .header("X-Request-Id", "req-session-list"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requestId").value("req-session-list"))
+                .andExpect(jsonPath("$.data.items[0].sessionId").value("session-1"))
+                .andExpect(jsonPath("$.data.items[0].sceneType").value("AI_TRIAGE"))
+                .andExpect(jsonPath("$.data.items[0].departmentId").value("3101"))
+                .andExpect(jsonPath("$.data.items[0].startedAt").value("2026-05-01T09:00:00+08:00"));
+    }
+
+    @Test
+    void getSessionDetail_WhenPatientAuthenticated_ReturnsMessages() throws Exception {
+        patientMockMvc.perform(get("/api/v1/ai/sessions/session-1")
+                        .header("X-Request-Id", "req-session-detail"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requestId").value("req-session-detail"))
+                .andExpect(jsonPath("$.data.sessionId").value("session-1"))
+                .andExpect(jsonPath("$.data.turns[0].turnId").value("turn-1"))
+                .andExpect(jsonPath("$.data.turns[0].messages[0].createdAt").value("2026-05-01T09:00:00+08:00"));
+    }
+
+    @Test
+    void getSessionTriageResult_WhenPatientAuthenticated_ReturnsStructuredResult() throws Exception {
+        patientMockMvc.perform(get("/api/v1/ai/sessions/session-1/triage-result")
+                        .header("X-Request-Id", "req-session-result"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requestId").value("req-session-result"))
+                .andExpect(jsonPath("$.data.sessionId").value("session-1"))
+                .andExpect(jsonPath("$.data.resultStatus").value("CURRENT"))
+                .andExpect(jsonPath("$.data.recommendedDepartments[0].departmentId").value("3101"))
+                .andExpect(jsonPath("$.data.finalizedAt").value("2026-05-01T09:03:00+08:00"));
+    }
+
+    @Test
     void streamQuery_WhenPatientAuthenticated_ConvertsSnakeCaseToCamelCase() throws Exception {
         AiTriageController controller = new AiTriageController(
                 submitUseCase,
                 new StreamAiTriageQueryUseCase(new StreamingGatewayPort(), submitUseCase),
+                new ListAiSessionsUseCase(new SessionGatewayPort()),
+                new GetAiSessionDetailUseCase(new SessionGatewayPort()),
+                new GetAiSessionTriageResultUseCase(new SessionGatewayPort()),
                 objectMapper);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -129,6 +177,9 @@ class AiTriageControllerTest {
         AiTriageController controller = new AiTriageController(
                 submitUseCase,
                 new StreamAiTriageQueryUseCase(new StreamingGatewayPort(), submitUseCase),
+                new ListAiSessionsUseCase(new SessionGatewayPort()),
+                new GetAiSessionDetailUseCase(new SessionGatewayPort()),
+                new GetAiSessionTriageResultUseCase(new SessionGatewayPort()),
                 objectMapper);
         Filter testAuthenticationFilter = (request, response, chain) -> {
             try {
@@ -222,6 +273,21 @@ class AiTriageControllerTest {
         public void streamQuery(AiTriageGatewayContext context, AiTriageQuery query, StreamEventHandler handler) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public AiSessionSummaryList listSessions(AiTriageGatewayContext context) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionDetail getSessionDetail(AiTriageGatewayContext context, String sessionId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionTriageResult getSessionTriageResult(AiTriageGatewayContext context, String sessionId) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final class StreamingGatewayPort implements AiTriageGatewayPort {
@@ -262,6 +328,97 @@ class AiTriageControllerTest {
                                     "deptcat-v20260501-01",
                                     List.of()))));
             handler.onEvent(new StreamEvent("done", "{}", null));
+        }
+
+        @Override
+        public AiSessionSummaryList listSessions(AiTriageGatewayContext context) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionDetail getSessionDetail(AiTriageGatewayContext context, String sessionId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionTriageResult getSessionTriageResult(AiTriageGatewayContext context, String sessionId) {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static final class SessionGatewayPort implements AiTriageGatewayPort {
+
+        @Override
+        public AiTriageQueryResponse query(AiTriageGatewayContext context, AiTriageQuery query) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void streamQuery(AiTriageGatewayContext context, AiTriageQuery query, StreamEventHandler handler) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionSummaryList listSessions(AiTriageGatewayContext context) {
+            return new AiSessionSummaryList(List.of(new AiSessionSummary(
+                    "session-1",
+                    "AI_TRIAGE",
+                    "COLLECTING",
+                    3101L,
+                    "头痛",
+                    "建议继续补充症状",
+                    OffsetDateTime.parse("2026-05-01T09:00:00+08:00"),
+                    OffsetDateTime.parse("2026-05-01T09:03:00+08:00"))));
+        }
+
+        @Override
+        public AiSessionDetail getSessionDetail(AiTriageGatewayContext context, String sessionId) {
+            return new AiSessionDetail(
+                    sessionId,
+                    "AI_TRIAGE",
+                    "COLLECTING",
+                    3101L,
+                    "头痛",
+                    "建议继续补充症状",
+                    OffsetDateTime.parse("2026-05-01T09:00:00+08:00"),
+                    OffsetDateTime.parse("2026-05-01T09:03:00+08:00"),
+                    List.of(new AiSessionTurn(
+                            "turn-1",
+                            1,
+                            "COLLECTING",
+                            OffsetDateTime.parse("2026-05-01T09:00:00+08:00"),
+                            OffsetDateTime.parse("2026-05-01T09:00:05+08:00"),
+                            null,
+                            null,
+                            List.of(new AiSessionMessage(
+                                            "user",
+                                            "头痛两天",
+                                            OffsetDateTime.parse("2026-05-01T09:00:00+08:00")),
+                                    new AiSessionMessage(
+                                            "assistant",
+                                            "请再描述是否伴随恶心",
+                                            OffsetDateTime.parse("2026-05-01T09:00:05+08:00"))))));
+        }
+
+        @Override
+        public AiSessionTriageResult getSessionTriageResult(AiTriageGatewayContext context, String sessionId) {
+            return new AiSessionTriageResult(
+                    sessionId,
+                    "CURRENT",
+                    "READY",
+                    "low",
+                    "allow",
+                    "VIEW_TRIAGE_RESULT",
+                    "turn-1",
+                    OffsetDateTime.parse("2026-05-01T09:03:00+08:00"),
+                    false,
+                    null,
+                    "头痛",
+                    List.of(new AiTriageRecommendedDepartment(3101L, "神经内科", 1, "头痛优先神经内科")),
+                    "建议门诊就诊",
+                    List.of(new AiTriageCitation(1, "chunk-1", "头痛优先神经内科")),
+                    null,
+                    "deptcat-v20260501-01");
         }
     }
 

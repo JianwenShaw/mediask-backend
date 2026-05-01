@@ -4,10 +4,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import me.jianwen.mediask.api.dto.AiSessionDetailResponse;
+import me.jianwen.mediask.api.dto.AiSessionListResponse;
+import me.jianwen.mediask.api.dto.AiSessionTriageResultResponse;
 import me.jianwen.mediask.api.assembler.AiTriageAssembler;
 import me.jianwen.mediask.api.dto.AiTriageQueryRequest;
 import me.jianwen.mediask.api.dto.AiTriageQueryResponse;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
+import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
+import me.jianwen.mediask.application.ai.usecase.ListAiSessionsUseCase;
 import me.jianwen.mediask.application.ai.command.SubmitAiTriageQueryCommand;
 import me.jianwen.mediask.application.ai.usecase.StreamAiTriageQueryUseCase;
 import me.jianwen.mediask.application.ai.usecase.SubmitAiTriageQueryUseCase;
@@ -19,29 +25,40 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
-@RequestMapping("/api/v1/ai/triage")
+@RequestMapping("/api/v1/ai")
 public class AiTriageController {
 
     private final SubmitAiTriageQueryUseCase submitAiTriageQueryUseCase;
     private final StreamAiTriageQueryUseCase streamAiTriageQueryUseCase;
+    private final ListAiSessionsUseCase listAiSessionsUseCase;
+    private final GetAiSessionDetailUseCase getAiSessionDetailUseCase;
+    private final GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase;
     private final ObjectMapper objectMapper;
 
     public AiTriageController(
             SubmitAiTriageQueryUseCase submitAiTriageQueryUseCase,
             StreamAiTriageQueryUseCase streamAiTriageQueryUseCase,
+            ListAiSessionsUseCase listAiSessionsUseCase,
+            GetAiSessionDetailUseCase getAiSessionDetailUseCase,
+            GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase,
             ObjectMapper objectMapper) {
         this.submitAiTriageQueryUseCase = submitAiTriageQueryUseCase;
         this.streamAiTriageQueryUseCase = streamAiTriageQueryUseCase;
+        this.listAiSessionsUseCase = listAiSessionsUseCase;
+        this.getAiSessionDetailUseCase = getAiSessionDetailUseCase;
+        this.getAiSessionTriageResultUseCase = getAiSessionTriageResultUseCase;
         this.objectMapper = objectMapper;
     }
 
-    @PostMapping("/query")
+    @PostMapping("/triage/query")
     public Result<AiTriageQueryResponse> query(
             @RequestBody AiTriageQueryRequest request,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
@@ -50,7 +67,33 @@ public class AiTriageController {
         return Result.ok(AiTriageAssembler.toResponse(submitAiTriageQueryUseCase.handle(command)));
     }
 
-    @PostMapping(value = "/query/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping("/sessions")
+    public Result<AiSessionListResponse> listSessions(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        ensurePatient(principal);
+        return Result.ok(AiTriageAssembler.toResponse(
+                listAiSessionsUseCase.handle(AiTriageAssembler.toListSessionsQuery(principal.userId()))));
+    }
+
+    @GetMapping("/sessions/{sessionId}")
+    public Result<AiSessionDetailResponse> getSessionDetail(
+            @PathVariable String sessionId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        ensurePatient(principal);
+        return Result.ok(AiTriageAssembler.toResponse(getAiSessionDetailUseCase.handle(
+                AiTriageAssembler.toGetSessionDetailQuery(principal.userId(), sessionId))));
+    }
+
+    @GetMapping("/sessions/{sessionId}/triage-result")
+    public Result<AiSessionTriageResultResponse> getSessionTriageResult(
+            @PathVariable String sessionId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        ensurePatient(principal);
+        return Result.ok(AiTriageAssembler.toResponse(getAiSessionTriageResultUseCase.handle(
+                AiTriageAssembler.toGetSessionTriageResultQuery(principal.userId(), sessionId))));
+    }
+
+    @PostMapping(value = "/triage/query/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> streamQuery(
             @RequestBody AiTriageQueryRequest request,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {

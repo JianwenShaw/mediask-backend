@@ -27,3 +27,5 @@ mediask:
     public-docs-enabled: true
   ai:
     base-url: http://localhost:8000
+    api-key: 123123
+    timeout-seconds: {MEDIASK_AI_TIMEOUT_SECONDS: 30}

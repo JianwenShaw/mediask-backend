@@ -13,6 +13,9 @@ import me.jianwen.mediask.domain.ai.model.AiTriageQueryResponse;
 import me.jianwen.mediask.domain.ai.model.AiTriageRecommendedDepartment;
 import me.jianwen.mediask.domain.ai.model.AiTriageResult;
 import me.jianwen.mediask.domain.ai.model.AiTriageResultSnapshot;
+import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
+import me.jianwen.mediask.domain.ai.model.AiSessionSummaryList;
+import me.jianwen.mediask.domain.ai.model.AiSessionTriageResult;
 import me.jianwen.mediask.domain.ai.port.AiTriageGatewayPort;
 import me.jianwen.mediask.domain.ai.port.AiTriageResultSnapshotRepository;
 import me.jianwen.mediask.domain.triage.model.CatalogVersion;
@@ -84,6 +87,21 @@ class StreamAiTriageQueryUseCaseTest {
                                     List.of()))));
             handler.onEvent(new StreamEvent("done", "{}", null));
         }
+
+        @Override
+        public AiSessionSummaryList listSessions(AiTriageGatewayContext context) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionDetail getSessionDetail(AiTriageGatewayContext context, String sessionId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionTriageResult getSessionTriageResult(AiTriageGatewayContext context, String sessionId) {
+            throw new UnsupportedOperationException();
+        }
     }
 
     private static final class NoopGatewayPort implements AiTriageGatewayPort {
@@ -95,6 +113,21 @@ class StreamAiTriageQueryUseCaseTest {
 
         @Override
         public void streamQuery(AiTriageGatewayContext context, AiTriageQuery query, StreamEventHandler handler) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionSummaryList listSessions(AiTriageGatewayContext context) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionDetail getSessionDetail(AiTriageGatewayContext context, String sessionId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public AiSessionTriageResult getSessionTriageResult(AiTriageGatewayContext context, String sessionId) {
             throw new UnsupportedOperationException();
         }
     }
