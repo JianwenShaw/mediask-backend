@@ -25,8 +25,8 @@ public class GenerateDevSeedData {
     private static final ZoneOffset ZONE_OFFSET = ZoneOffset.ofHours(8);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final DateTimeFormatter OFFSET_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssXXX");
-    private static final Path OUTPATIENT_SQL = Path.of("sql/99-seed-04-outpatient.sql");
-    private static final Path MEDICAL_SQL = Path.of("sql/99-seed-05-medical.sql");
+    private static final Path OUTPATIENT_SQL = Path.of("docs/sql/99-seed-04-outpatient.sql");
+    private static final Path MEDICAL_SQL = Path.of("docs/sql/99-seed-05-medical.sql");
 
     public static void main(String[] args) throws Exception {
         byte[] encryptionKey = readEncryptionKey();
