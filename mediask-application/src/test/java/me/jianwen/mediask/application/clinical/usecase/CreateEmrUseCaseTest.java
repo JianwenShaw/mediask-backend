@@ -1,5 +1,6 @@
 package me.jianwen.mediask.application.clinical.usecase;
 
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.clinical.command.CreateEmrCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
@@ -27,7 +28,8 @@ class CreateEmrUseCaseTest {
         StubRepositories repositories = new StubRepositories();
         CreateEmrUseCase useCase = new CreateEmrUseCase(
                 repositories.emrRecordRepository,
-                repositories.encounterQueryRepository
+                repositories.encounterQueryRepository,
+                TestAuditSupport.auditTrailService()
         );
 
         CreateEmrCommand command = new CreateEmrCommand(
@@ -41,7 +43,7 @@ class CreateEmrUseCaseTest {
                 )
         );
 
-        EmrRecord result = useCase.handle(command);
+        EmrRecord result = useCase.handle(command, TestAuditSupport.auditContext());
 
         assertNotNull(result);
         assertEquals(EmrRecordStatus.DRAFT, result.recordStatus());
@@ -64,7 +66,8 @@ class CreateEmrUseCaseTest {
 
         CreateEmrUseCase useCase = new CreateEmrUseCase(
                 repositories.emrRecordRepository,
-                repositories.encounterQueryRepository
+                repositories.encounterQueryRepository,
+                TestAuditSupport.auditTrailService()
         );
 
         CreateEmrCommand command = new CreateEmrCommand(
@@ -75,7 +78,8 @@ class CreateEmrUseCaseTest {
                 List.of(new CreateEmrCommand.EmrDiagnosisCommand(EmrDiagnosis.DiagnosisType.PRIMARY, null, "Diagnosis", true, 0))
         );
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(command));
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(command, TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.EMR_ENCOUNTER_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -87,7 +91,8 @@ class CreateEmrUseCaseTest {
 
         CreateEmrUseCase useCase = new CreateEmrUseCase(
                 repositories.emrRecordRepository,
-                repositories.encounterQueryRepository
+                repositories.encounterQueryRepository,
+                TestAuditSupport.auditTrailService()
         );
 
         CreateEmrCommand command = new CreateEmrCommand(
@@ -98,7 +103,8 @@ class CreateEmrUseCaseTest {
                 List.of(new CreateEmrCommand.EmrDiagnosisCommand(EmrDiagnosis.DiagnosisType.PRIMARY, null, "Diagnosis", true, 0))
         );
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(command));
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(command, TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.EMR_ENCOUNTER_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -110,7 +116,8 @@ class CreateEmrUseCaseTest {
 
         CreateEmrUseCase useCase = new CreateEmrUseCase(
                 repositories.emrRecordRepository,
-                repositories.encounterQueryRepository
+                repositories.encounterQueryRepository,
+                TestAuditSupport.auditTrailService()
         );
 
         CreateEmrCommand command = new CreateEmrCommand(
@@ -121,7 +128,8 @@ class CreateEmrUseCaseTest {
                 List.of(new CreateEmrCommand.EmrDiagnosisCommand(EmrDiagnosis.DiagnosisType.PRIMARY, null, "Diagnosis", true, 0))
         );
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(command));
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(command, TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.EMR_RECORD_ALREADY_EXISTS.getCode(), exception.getCode());
     }
@@ -132,7 +140,8 @@ class CreateEmrUseCaseTest {
 
         CreateEmrUseCase useCase = new CreateEmrUseCase(
                 repositories.emrRecordRepository,
-                repositories.encounterQueryRepository
+                repositories.encounterQueryRepository,
+                TestAuditSupport.auditTrailService()
         );
 
         CreateEmrCommand command = new CreateEmrCommand(
@@ -143,7 +152,7 @@ class CreateEmrUseCaseTest {
                 List.of()
         );
 
-        EmrRecord result = useCase.handle(command);
+        EmrRecord result = useCase.handle(command, TestAuditSupport.auditContext());
 
         assertNotNull(result);
         assertTrue(result.diagnoses().isEmpty());

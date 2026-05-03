@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
@@ -99,13 +100,22 @@ class AdminPatientControllerTest {
 
         AdminPatientController target = new AdminPatientController(
                 new ListAdminPatientsUseCase(new StubAdminPatientQueryRepository()),
-                new GetAdminPatientDetailUseCase(new StubAdminPatientQueryRepository()),
-                new CreateAdminPatientUseCase(new StubAdminPatientWriteRepository(), rawPassword -> "ignored"),
-                new UpdateAdminPatientUseCase(new StubAdminPatientWriteRepository()),
-                new DeleteAdminPatientUseCase(new StubAdminPatientWriteRepository()));
+                new GetAdminPatientDetailUseCase(new StubAdminPatientQueryRepository(), TestAuditSupport.auditTrailService()),
+                new CreateAdminPatientUseCase(
+                        new StubAdminPatientWriteRepository(), rawPassword -> "ignored", TestAuditSupport.auditTrailService()),
+                new UpdateAdminPatientUseCase(new StubAdminPatientWriteRepository(), TestAuditSupport.auditTrailService()),
+                new DeleteAdminPatientUseCase(
+                        new StubAdminPatientQueryRepository(),
+                        new StubAdminPatientWriteRepository(),
+                        TestAuditSupport.auditTrailService()),
+                TestAuditSupport.auditApiSupport());
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(new ScenarioAuthorizationAspect(new AuthorizationDecisionService(List.of(), List.of())));
+        proxyFactory.addAspect(new ScenarioAuthorizationAspect(
+                new AuthorizationDecisionService(List.of(), List.of()),
+                TestAuditSupport.auditApiSupport(),
+                TestAuditSupport.emptyEncounterQueryRepository(),
+                TestAuditSupport.emptyAdminPatientQueryRepository()));
         AdminPatientController controller = proxyFactory.getProxy();
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);

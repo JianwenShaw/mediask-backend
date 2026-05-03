@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
@@ -68,7 +69,11 @@ class KnowledgeAdminControllerTest {
         KnowledgeAdminController target = new KnowledgeAdminController(new KnowledgeAdminGatewayUseCase(gatewayPort));
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(new ScenarioAuthorizationAspect(new AuthorizationDecisionService(List.of(), List.of())));
+        proxyFactory.addAspect(new ScenarioAuthorizationAspect(
+                new AuthorizationDecisionService(List.of(), List.of()),
+                TestAuditSupport.auditApiSupport(),
+                TestAuditSupport.emptyEncounterQueryRepository(),
+                TestAuditSupport.emptyAdminPatientQueryRepository()));
         KnowledgeAdminController controller = proxyFactory.getProxy();
 
         Filter testAuthenticationFilter = (request, response, chain) -> {

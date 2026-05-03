@@ -1,6 +1,9 @@
 package me.jianwen.mediask.application.user.usecase;
 
 import java.time.Clock;
+import me.jianwen.mediask.application.audit.AuditActionCodes;
+import me.jianwen.mediask.application.audit.AuditResourceTypes;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.user.command.LogoutCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.user.exception.UserErrorCode;
@@ -17,20 +20,23 @@ public class LogoutUseCase {
     private final AccessTokenBlocklistPort accessTokenBlocklistPort;
     private final AccessTokenCodec accessTokenCodec;
     private final Clock clock;
+    private final me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService;
 
     public LogoutUseCase(
             RefreshTokenStore refreshTokenStore,
             AccessTokenBlocklistPort accessTokenBlocklistPort,
             AccessTokenCodec accessTokenCodec,
-            Clock clock) {
+            Clock clock,
+            me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService) {
         this.refreshTokenStore = refreshTokenStore;
         this.accessTokenBlocklistPort = accessTokenBlocklistPort;
         this.accessTokenCodec = accessTokenCodec;
         this.clock = clock;
+        this.auditTrailService = auditTrailService;
     }
 
     @Transactional
-    public void handle(LogoutCommand command) {
+    public void handle(LogoutCommand command, AuditContext auditContext) {
         RefreshTokenSession refreshTokenSession = refreshTokenStore.findByTokenValue(command.refreshToken())
                 .orElseThrow(() -> new BizException(UserErrorCode.INVALID_REFRESH_TOKEN));
         if (refreshTokenSession.isExpiredAt(clock.instant())) {
@@ -59,6 +65,14 @@ public class LogoutUseCase {
             accessTokenBlocklistPort.block(accessTokenClaims.tokenId(), accessTokenClaims.expiresAt());
         }
         refreshTokenStore.deleteByTokenValue(command.refreshToken());
+        auditTrailService.recordAuditSuccess(
+                auditContext,
+                AuditActionCodes.AUTH_LOGOUT,
+                AuditResourceTypes.AUTH_SESSION,
+                command.authenticatedUserId() == null ? null : String.valueOf(command.authenticatedUserId()),
+                null,
+                null,
+                null);
     }
 
     private AccessTokenClaims parseOptionalAccessToken(String accessToken) {

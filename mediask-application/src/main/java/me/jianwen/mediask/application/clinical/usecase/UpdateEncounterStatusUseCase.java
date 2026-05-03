@@ -1,6 +1,9 @@
 package me.jianwen.mediask.application.clinical.usecase;
 
 import java.time.OffsetDateTime;
+import me.jianwen.mediask.application.audit.AuditActionCodes;
+import me.jianwen.mediask.application.audit.AuditResourceTypes;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.clinical.command.UpdateEncounterStatusCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
@@ -15,18 +18,21 @@ public class UpdateEncounterStatusUseCase {
     private final EncounterQueryRepository encounterQueryRepository;
     private final VisitEncounterRepository visitEncounterRepository;
     private final RegistrationOrderRepository registrationOrderRepository;
+    private final me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService;
 
     public UpdateEncounterStatusUseCase(
             EncounterQueryRepository encounterQueryRepository,
             VisitEncounterRepository visitEncounterRepository,
-            RegistrationOrderRepository registrationOrderRepository) {
+            RegistrationOrderRepository registrationOrderRepository,
+            me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService) {
         this.encounterQueryRepository = encounterQueryRepository;
         this.visitEncounterRepository = visitEncounterRepository;
         this.registrationOrderRepository = registrationOrderRepository;
+        this.auditTrailService = auditTrailService;
     }
 
     @Transactional
-    public UpdateEncounterStatusResult handle(UpdateEncounterStatusCommand command) {
+    public UpdateEncounterStatusResult handle(UpdateEncounterStatusCommand command, AuditContext auditContext) {
         var encounter = encounterQueryRepository
                 .findDetailByEncounterId(command.encounterId())
                 .orElseThrow(() -> new BizException(ClinicalErrorCode.ENCOUNTER_NOT_FOUND));
@@ -35,7 +41,7 @@ public class UpdateEncounterStatusUseCase {
         }
 
         OffsetDateTime now = OffsetDateTime.now();
-        return switch (command.action()) {
+        UpdateEncounterStatusResult result = switch (command.action()) {
             case START -> startEncounter(command.encounterId(), encounter.patientSummary().encounterStatus(), now);
             case COMPLETE -> completeEncounter(
                     command.encounterId(),
@@ -44,6 +50,15 @@ public class UpdateEncounterStatusUseCase {
                     encounter.patientSummary().startedAt(),
                     now);
         };
+        auditTrailService.recordAuditSuccess(
+                auditContext,
+                AuditActionCodes.ENCOUNTER_UPDATE,
+                AuditResourceTypes.ENCOUNTER,
+                String.valueOf(command.encounterId()),
+                encounter.patientSummary().patientUserId(),
+                command.encounterId(),
+                command.action().name());
+        return result;
     }
 
     private UpdateEncounterStatusResult startEncounter(

@@ -1,5 +1,8 @@
 package me.jianwen.mediask.application.clinical.usecase;
 
+import me.jianwen.mediask.application.audit.AuditActionCodes;
+import me.jianwen.mediask.application.audit.AuditResourceTypes;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.clinical.command.CreateEmrCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.id.SnowflakeIdGenerator;
@@ -14,16 +17,19 @@ public class CreateEmrUseCase {
 
     private final EmrRecordRepository emrRecordRepository;
     private final EncounterQueryRepository encounterQueryRepository;
+    private final me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService;
 
     public CreateEmrUseCase(
             EmrRecordRepository emrRecordRepository,
-            EncounterQueryRepository encounterQueryRepository) {
+            EncounterQueryRepository encounterQueryRepository,
+            me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService) {
         this.emrRecordRepository = emrRecordRepository;
         this.encounterQueryRepository = encounterQueryRepository;
+        this.auditTrailService = auditTrailService;
     }
 
     @Transactional
-    public EmrRecord handle(CreateEmrCommand command) {
+    public EmrRecord handle(CreateEmrCommand command, AuditContext auditContext) {
         // Validate encounter exists and belongs to the doctor
         var encounter = encounterQueryRepository
                 .findDetailByEncounterId(command.encounterId())
@@ -64,6 +70,14 @@ public class CreateEmrUseCase {
 
         // Save EMR record
         emrRecordRepository.save(emrRecord);
+        auditTrailService.recordAuditSuccess(
+                auditContext,
+                AuditActionCodes.EMR_CREATE,
+                AuditResourceTypes.EMR_RECORD,
+                String.valueOf(emrRecord.recordId()),
+                emrRecord.patientId(),
+                emrRecord.encounterId(),
+                null);
 
         return emrRecord;
     }

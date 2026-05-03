@@ -9,8 +9,10 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.clinical.query.GetPrescriptionDetailQuery;
 import me.jianwen.mediask.common.exception.BizException;
+import me.jianwen.mediask.domain.audit.model.DataAccessPurposeCode;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
@@ -29,9 +31,12 @@ class GetPrescriptionDetailUseCaseTest {
         StubEncounterQueryRepository encounterQueryRepository = new StubEncounterQueryRepository();
         StubPrescriptionOrderQueryRepository prescriptionOrderQueryRepository = new StubPrescriptionOrderQueryRepository();
         GetPrescriptionDetailUseCase useCase = new GetPrescriptionDetailUseCase(
-                prescriptionOrderQueryRepository, encounterQueryRepository);
+                prescriptionOrderQueryRepository, encounterQueryRepository, TestAuditSupport.auditTrailService());
 
-        PrescriptionOrder result = useCase.handle(new GetPrescriptionDetailQuery(8101L, 2101L));
+        PrescriptionOrder result = useCase.handle(
+                new GetPrescriptionDetailQuery(8101L, 2101L),
+                TestAuditSupport.auditContext(),
+                DataAccessPurposeCode.TREATMENT);
 
         assertEquals(8101L, result.encounterId());
         assertEquals("阿莫西林胶囊", result.items().getFirst().drugName());
@@ -42,10 +47,16 @@ class GetPrescriptionDetailUseCaseTest {
         StubEncounterQueryRepository encounterQueryRepository = new StubEncounterQueryRepository();
         encounterQueryRepository.returnEmpty = true;
         GetPrescriptionDetailUseCase useCase = new GetPrescriptionDetailUseCase(
-                new StubPrescriptionOrderQueryRepository(), encounterQueryRepository);
+                new StubPrescriptionOrderQueryRepository(),
+                encounterQueryRepository,
+                TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class,
-                () -> useCase.handle(new GetPrescriptionDetailQuery(8101L, 2101L)));
+        BizException exception = assertThrows(
+                BizException.class,
+                () -> useCase.handle(
+                        new GetPrescriptionDetailQuery(8101L, 2101L),
+                        TestAuditSupport.auditContext(),
+                        DataAccessPurposeCode.TREATMENT));
 
         assertEquals(ClinicalErrorCode.PRESCRIPTION_ENCOUNTER_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -55,10 +66,16 @@ class GetPrescriptionDetailUseCaseTest {
         StubEncounterQueryRepository encounterQueryRepository = new StubEncounterQueryRepository();
         encounterQueryRepository.doctorId = 9999L;
         GetPrescriptionDetailUseCase useCase = new GetPrescriptionDetailUseCase(
-                new StubPrescriptionOrderQueryRepository(), encounterQueryRepository);
+                new StubPrescriptionOrderQueryRepository(),
+                encounterQueryRepository,
+                TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class,
-                () -> useCase.handle(new GetPrescriptionDetailQuery(8101L, 2101L)));
+        BizException exception = assertThrows(
+                BizException.class,
+                () -> useCase.handle(
+                        new GetPrescriptionDetailQuery(8101L, 2101L),
+                        TestAuditSupport.auditContext(),
+                        DataAccessPurposeCode.TREATMENT));
 
         assertEquals(ClinicalErrorCode.PRESCRIPTION_ENCOUNTER_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -68,10 +85,16 @@ class GetPrescriptionDetailUseCaseTest {
         StubPrescriptionOrderQueryRepository prescriptionOrderQueryRepository = new StubPrescriptionOrderQueryRepository();
         prescriptionOrderQueryRepository.returnEmpty = true;
         GetPrescriptionDetailUseCase useCase = new GetPrescriptionDetailUseCase(
-                prescriptionOrderQueryRepository, new StubEncounterQueryRepository());
+                prescriptionOrderQueryRepository,
+                new StubEncounterQueryRepository(),
+                TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class,
-                () -> useCase.handle(new GetPrescriptionDetailQuery(8101L, 2101L)));
+        BizException exception = assertThrows(
+                BizException.class,
+                () -> useCase.handle(
+                        new GetPrescriptionDetailQuery(8101L, 2101L),
+                        TestAuditSupport.auditContext(),
+                        DataAccessPurposeCode.TREATMENT));
 
         assertEquals(ClinicalErrorCode.PRESCRIPTION_NOT_FOUND.getCode(), exception.getCode());
     }

@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
@@ -53,7 +54,11 @@ class TriageCatalogControllerTest {
                 new PublishTriageCatalogUseCase(publishPort, sourcePort));
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(new ScenarioAuthorizationAspect(new AuthorizationDecisionService(List.of(), List.of())));
+        proxyFactory.addAspect(new ScenarioAuthorizationAspect(
+                new AuthorizationDecisionService(List.of(), List.of()),
+                TestAuditSupport.auditApiSupport(),
+                TestAuditSupport.emptyEncounterQueryRepository(),
+                TestAuditSupport.emptyAdminPatientQueryRepository()));
         TriageCatalogController controller = proxyFactory.getProxy();
 
         Filter testAuthenticationFilter = (request, response, chain) -> {

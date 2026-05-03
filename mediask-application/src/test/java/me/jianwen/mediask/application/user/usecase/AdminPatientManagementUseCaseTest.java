@@ -4,8 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import me.jianwen.mediask.application.TestAuditSupport;
+import me.jianwen.mediask.application.audit.usecase.AuditTrailService;
+import me.jianwen.mediask.application.audit.usecase.RecordAuditEventUseCase;
+import me.jianwen.mediask.application.audit.usecase.RecordDataAccessLogUseCase;
 import me.jianwen.mediask.application.user.command.CreateAdminPatientCommand;
 import me.jianwen.mediask.application.user.command.DeleteAdminPatientCommand;
 import me.jianwen.mediask.application.user.command.UpdateAdminPatientCommand;
@@ -13,6 +18,7 @@ import me.jianwen.mediask.application.user.query.GetAdminPatientDetailQuery;
 import me.jianwen.mediask.application.user.query.ListAdminPatientsQuery;
 import me.jianwen.mediask.common.pagination.PageData;
 import me.jianwen.mediask.common.pagination.PageQuery;
+import me.jianwen.mediask.domain.audit.model.AuditEventRecord;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.user.exception.UserErrorCode;
 import me.jianwen.mediask.domain.user.model.AdminPatientCreateDraft;
@@ -29,10 +35,15 @@ class AdminPatientManagementUseCaseTest {
     @Test
     void create_WhenCommandValid_HashPasswordAndPersistDraft() {
         StubAdminPatientWriteRepository writeRepository = new StubAdminPatientWriteRepository();
-        CreateAdminPatientUseCase useCase = new CreateAdminPatientUseCase(writeRepository, rawPassword -> "hash<" + rawPassword + ">");
+        CreateAdminPatientUseCase useCase = new CreateAdminPatientUseCase(
+                writeRepository,
+                rawPassword -> "hash<" + rawPassword + ">",
+                TestAuditSupport.auditTrailService());
 
-        AdminPatientDetail result = useCase.handle(new CreateAdminPatientCommand(
-                "patient_new", "patient123", "李新患者", "137****1234", "female", LocalDate.of(1995, 6, 1), "A", "Peanut"));
+        AdminPatientDetail result = useCase.handle(
+                new CreateAdminPatientCommand(
+                        "patient_new", "patient123", "李新患者", "137****1234", "female", LocalDate.of(1995, 6, 1), "A", "Peanut"),
+                TestAuditSupport.auditContext());
 
         assertEquals("patient_new", writeRepository.lastCreateDraft.username());
         assertEquals("hash<patient123>", writeRepository.lastCreateDraft.passwordHash());
@@ -44,10 +55,13 @@ class AdminPatientManagementUseCaseTest {
     void create_WhenPasswordHasEdgeSpaces_PreserveRawPasswordBeforeHashing() {
         StubAdminPatientWriteRepository writeRepository = new StubAdminPatientWriteRepository();
         CapturingPasswordHasher passwordHasher = new CapturingPasswordHasher();
-        CreateAdminPatientUseCase useCase = new CreateAdminPatientUseCase(writeRepository, passwordHasher);
+        CreateAdminPatientUseCase useCase =
+                new CreateAdminPatientUseCase(writeRepository, passwordHasher, TestAuditSupport.auditTrailService());
 
-        useCase.handle(new CreateAdminPatientCommand(
-                "patient_new", "  patient123  ", "李新患者", "137****1234", "female", LocalDate.of(1995, 6, 1), "A", "Peanut"));
+        useCase.handle(
+                new CreateAdminPatientCommand(
+                        "patient_new", "  patient123  ", "李新患者", "137****1234", "female", LocalDate.of(1995, 6, 1), "A", "Peanut"),
+                TestAuditSupport.auditContext());
 
         assertEquals("  patient123  ", passwordHasher.lastRawPassword);
         assertEquals("hash<  patient123  >", writeRepository.lastCreateDraft.passwordHash());
@@ -56,10 +70,12 @@ class AdminPatientManagementUseCaseTest {
     @Test
     void update_WhenCommandValid_PersistUpdateDraft() {
         StubAdminPatientWriteRepository writeRepository = new StubAdminPatientWriteRepository();
-        UpdateAdminPatientUseCase useCase = new UpdateAdminPatientUseCase(writeRepository);
+        UpdateAdminPatientUseCase useCase =
+                new UpdateAdminPatientUseCase(writeRepository, TestAuditSupport.auditTrailService());
 
-        AdminPatientDetail result = useCase.handle(new UpdateAdminPatientCommand(
-                2208L, "李修改", "137****9999", "MALE", LocalDate.of(1990, 1, 2), "B", "Dust"));
+        AdminPatientDetail result = useCase.handle(
+                new UpdateAdminPatientCommand(2208L, "李修改", "137****9999", "MALE", LocalDate.of(1990, 1, 2), "B", "Dust"),
+                TestAuditSupport.auditContext());
 
         assertEquals(2208L, writeRepository.lastUpdatedPatientId);
         assertEquals("李修改", writeRepository.lastUpdateDraft.displayName());
@@ -69,9 +85,12 @@ class AdminPatientManagementUseCaseTest {
 
     @Test
     void detail_WhenPatientMissing_ThrowNotFound() {
-        GetAdminPatientDetailUseCase useCase = new GetAdminPatientDetailUseCase(new StubAdminPatientQueryRepository(Optional.empty(), List.of()));
+        GetAdminPatientDetailUseCase useCase = new GetAdminPatientDetailUseCase(
+                new StubAdminPatientQueryRepository(Optional.empty(), List.of()), TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(new GetAdminPatientDetailQuery(2208L)));
+        BizException exception = assertThrows(
+                BizException.class,
+                () -> useCase.handle(new GetAdminPatientDetailQuery(2208L), TestAuditSupport.auditContext()));
 
         assertEquals(UserErrorCode.ADMIN_PATIENT_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -121,11 +140,19 @@ class AdminPatientManagementUseCaseTest {
     @Test
     void delete_WhenCommandValid_DeleteByPatientId() {
         StubAdminPatientWriteRepository writeRepository = new StubAdminPatientWriteRepository();
-        DeleteAdminPatientUseCase useCase = new DeleteAdminPatientUseCase(writeRepository);
+        StubAdminPatientQueryRepository queryRepository =
+                new StubAdminPatientQueryRepository(Optional.of(detail()), List.of());
+        List<AuditEventRecord> auditEvents = new ArrayList<>();
+        AuditTrailService auditTrailService = new AuditTrailService(
+                new RecordAuditEventUseCase(auditEvents::add),
+                new RecordDataAccessLogUseCase(record -> {}));
+        DeleteAdminPatientUseCase useCase =
+                new DeleteAdminPatientUseCase(queryRepository, writeRepository, auditTrailService);
 
-        useCase.handle(new DeleteAdminPatientCommand(2208L));
+        useCase.handle(new DeleteAdminPatientCommand(2208L), TestAuditSupport.auditContext());
 
         assertEquals(2208L, writeRepository.lastDeletedPatientId);
+        assertEquals(2008L, auditEvents.getLast().patientUserId());
     }
 
     private static AdminPatientDetail detail() {

@@ -13,12 +13,19 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import me.jianwen.mediask.api.TestAuditSupport;
+import me.jianwen.mediask.api.authz.EmrRecordResourceAccessResolver;
+import me.jianwen.mediask.api.authz.EmrRecordResourceReferenceAssembler;
+import me.jianwen.mediask.api.authz.PrescriptionResourceAccessResolver;
+import me.jianwen.mediask.api.authz.PrescriptionResourceReferenceAssembler;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
 import me.jianwen.mediask.api.security.JsonAuthenticationEntryPoint;
 import me.jianwen.mediask.api.security.JwtAuthenticationFilter;
 import me.jianwen.mediask.api.security.ScenarioAuthorizationAspect;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.authz.AuthorizationDecisionService;
 import me.jianwen.mediask.application.clinical.command.CreatePrescriptionCommand;
 import me.jianwen.mediask.application.clinical.query.GetPrescriptionDetailQuery;
@@ -26,9 +33,15 @@ import me.jianwen.mediask.application.clinical.usecase.CreatePrescriptionUseCase
 import me.jianwen.mediask.application.clinical.usecase.GetPrescriptionDetailUseCase;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
+import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
+import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
 import me.jianwen.mediask.domain.clinical.model.PrescriptionItem;
 import me.jianwen.mediask.domain.clinical.model.PrescriptionOrder;
 import me.jianwen.mediask.domain.clinical.model.PrescriptionStatus;
+import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
+import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
+import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import me.jianwen.mediask.domain.user.model.AccessToken;
 import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
@@ -61,12 +74,16 @@ class PrescriptionControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private final StubCreatePrescriptionUseCase createPrescriptionUseCase = new StubCreatePrescriptionUseCase();
     private final StubGetPrescriptionDetailUseCase getPrescriptionDetailUseCase = new StubGetPrescriptionDetailUseCase();
+    private final StubEmrRecordQueryRepository emrRecordQueryRepository = new StubEmrRecordQueryRepository();
+    private final StubEncounterQueryRepository encounterQueryRepository = new StubEncounterQueryRepository();
 
     @BeforeEach
     void setUp() {
         SecurityContextHolder.clearContext();
         createPrescriptionUseCase.throwErrorCode = null;
         getPrescriptionDetailUseCase.throwErrorCode = null;
+        emrRecordQueryRepository.reset();
+        encounterQueryRepository.reset();
         doctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2001L,
                 "doctor_li",
@@ -74,7 +91,7 @@ class PrescriptionControllerTest {
                 UserType.DOCTOR,
                 new LinkedHashSet<>(List.of(RoleCode.DOCTOR)),
                 Set.of("prescription:create", "prescription:read"),
-                Set.of(new DataScopeRule("EMR_RECORD", DataScopeType.DEPARTMENT, 3101L)),
+                Set.of(new DataScopeRule("PRESCRIPTION_ORDER", DataScopeType.DEPARTMENT, 3101L)),
                 null,
                 2101L,
                 3101L));
@@ -85,7 +102,7 @@ class PrescriptionControllerTest {
                 UserType.DOCTOR,
                 new LinkedHashSet<>(List.of(RoleCode.DOCTOR)),
                 Set.of(),
-                Set.of(new DataScopeRule("EMR_RECORD", DataScopeType.DEPARTMENT, 3101L)),
+                Set.of(new DataScopeRule("PRESCRIPTION_ORDER", DataScopeType.DEPARTMENT, 3101L)),
                 null,
                 2108L,
                 3101L));
@@ -97,7 +114,7 @@ class PrescriptionControllerTest {
                 UserType.PATIENT,
                 new LinkedHashSet<>(List.of(RoleCode.PATIENT)),
                 Set.of("prescription:create", "prescription:read"),
-                Set.of(new DataScopeRule("EMR_RECORD", DataScopeType.SELF, null)),
+                Set.of(new DataScopeRule("PRESCRIPTION_ORDER", DataScopeType.SELF, null)),
                 1101L,
                 null,
                 null));
@@ -195,6 +212,17 @@ class PrescriptionControllerTest {
     }
 
     @Test
+    void detail_WhenAuthenticatedPatientWithPermission_ReturnsPrescription() throws Exception {
+        patientMockMvc.perform(get("/api/v1/prescriptions/8101")
+                        .header("Authorization", "Bearer " + PATIENT_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.prescriptionOrderId").value(7101));
+
+        assertEquals(1001L, getPrescriptionDetailUseCase.lastQuery.patientUserId());
+    }
+
+    @Test
     void detail_WhenPrescriptionMissing_ReturnsNotFound() throws Exception {
         getPrescriptionDetailUseCase.throwErrorCode = ClinicalErrorCode.PRESCRIPTION_NOT_FOUND;
 
@@ -226,9 +254,14 @@ class PrescriptionControllerTest {
                 objectMapper,
                 request -> false);
 
-        PrescriptionController controller = new PrescriptionController(createPrescriptionUseCase, getPrescriptionDetailUseCase);
+        PrescriptionController controller = new PrescriptionController(
+                createPrescriptionUseCase, getPrescriptionDetailUseCase, TestAuditSupport.auditApiSupport());
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(controller);
-        proxyFactory.addAspect(new ScenarioAuthorizationAspect(new AuthorizationDecisionService(List.of(), List.of())));
+        proxyFactory.addAspect(new ScenarioAuthorizationAspect(
+                buildAuthorizationDecisionService(),
+                TestAuditSupport.auditApiSupport(),
+                TestAuditSupport.emptyEncounterQueryRepository(),
+                TestAuditSupport.emptyAdminPatientQueryRepository()));
         Object proxiedController = proxyFactory.getProxy();
 
         return MockMvcBuilders.standaloneSetup(proxiedController)
@@ -240,16 +273,26 @@ class PrescriptionControllerTest {
                 .build();
     }
 
+    private AuthorizationDecisionService buildAuthorizationDecisionService() {
+        return new AuthorizationDecisionService(
+                List.of(
+                        new EmrRecordResourceReferenceAssembler(emrRecordQueryRepository),
+                        new PrescriptionResourceReferenceAssembler()),
+                List.of(
+                        new EmrRecordResourceAccessResolver(emrRecordQueryRepository),
+                        new PrescriptionResourceAccessResolver(encounterQueryRepository)));
+    }
+
     private static class StubCreatePrescriptionUseCase extends CreatePrescriptionUseCase {
         private CreatePrescriptionCommand lastCommand;
         private ClinicalErrorCode throwErrorCode;
 
         private StubCreatePrescriptionUseCase() {
-            super(null, null, null);
+            super(null, null, null, TestAuditSupport.auditTrailService());
         }
 
         @Override
-        public PrescriptionOrder handle(CreatePrescriptionCommand command) {
+        public PrescriptionOrder handle(CreatePrescriptionCommand command, AuditContext auditContext) {
             this.lastCommand = command;
             if (throwErrorCode != null) {
                 throw new BizException(throwErrorCode);
@@ -275,11 +318,14 @@ class PrescriptionControllerTest {
         private ClinicalErrorCode throwErrorCode;
 
         private StubGetPrescriptionDetailUseCase() {
-            super(null, null);
+            super(null, null, TestAuditSupport.auditTrailService());
         }
 
         @Override
-        public PrescriptionOrder handle(GetPrescriptionDetailQuery query) {
+        public PrescriptionOrder handle(
+                GetPrescriptionDetailQuery query,
+                AuditContext auditContext,
+                me.jianwen.mediask.domain.audit.model.DataAccessPurposeCode purposeCode) {
             this.lastQuery = query;
             if (throwErrorCode != null) {
                 throw new BizException(throwErrorCode);
@@ -290,13 +336,97 @@ class PrescriptionControllerTest {
                     6102L,
                     query.encounterId(),
                     1001L,
-                    query.doctorId(),
+                    query.doctorId() == null ? 2101L : query.doctorId(),
                     PrescriptionStatus.DRAFT,
                     List.of(new PrescriptionItem(
                             8101L, 0, "阿莫西林胶囊", "0.25g*24粒", "每次2粒", "每日3次", "5天", new BigDecimal("30"), "粒", "口服")),
                     0,
                     Instant.parse("2026-04-18T02:00:00Z"),
                     Instant.parse("2026-04-18T02:00:00Z"));
+        }
+    }
+
+    private static class StubEmrRecordQueryRepository implements EmrRecordQueryRepository {
+        private Long recordId = 7101L;
+        private EmrRecordAccess access = new EmrRecordAccess(7101L, 1001L, 3101L);
+
+        void reset() {
+            this.recordId = 7101L;
+            this.access = new EmrRecordAccess(7101L, 1001L, 3101L);
+        }
+
+        @Override
+        public Optional<me.jianwen.mediask.domain.clinical.model.EmrRecord> findByEncounterId(Long encounterId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<Long> findRecordIdByEncounterId(Long encounterId) {
+            if (encounterId == 8101L && recordId != null) {
+                return Optional.of(recordId);
+            }
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<EmrRecordAccess> findAccessByRecordId(Long recordId) {
+            if (access != null && access.recordId().equals(recordId)) {
+                return Optional.of(access);
+            }
+            return Optional.empty();
+        }
+    }
+
+    private static class StubEncounterQueryRepository implements EncounterQueryRepository {
+
+        private Optional<EncounterDetail> encounter = Optional.of(new EncounterDetail(
+                8101L,
+                6101L,
+                2101L,
+                new EncounterPatientSummary(
+                        1001L,
+                        "张患者",
+                        "FEMALE",
+                        3101L,
+                        "神经内科",
+                        java.time.LocalDate.parse("2026-04-18"),
+                        "MORNING",
+                        VisitEncounterStatus.SCHEDULED,
+                        null,
+                        null,
+                        null)));
+
+        private void reset() {
+            this.encounter = Optional.of(new EncounterDetail(
+                    8101L,
+                    6101L,
+                    2101L,
+                    new EncounterPatientSummary(
+                            1001L,
+                            "张患者",
+                            "FEMALE",
+                            3101L,
+                            "神经内科",
+                            java.time.LocalDate.parse("2026-04-18"),
+                            "MORNING",
+                            VisitEncounterStatus.SCHEDULED,
+                            null,
+                            null,
+                            null)));
+        }
+
+        @Override
+        public List<me.jianwen.mediask.domain.clinical.model.EncounterListItem> listByDoctorId(
+                Long doctorId, VisitEncounterStatus status) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<EncounterDetail> findDetailByEncounterId(Long encounterId) {
+            if (encounter.isPresent() && encounter.get().encounterId().equals(encounterId)) {
+                return encounter;
+            }
+            return Optional.empty();
         }
     }
 

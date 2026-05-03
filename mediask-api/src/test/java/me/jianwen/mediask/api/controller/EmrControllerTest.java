@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.authz.EmrRecordResourceAccessResolver;
 import me.jianwen.mediask.api.authz.EmrRecordResourceReferenceAssembler;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
@@ -16,6 +17,7 @@ import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
 import me.jianwen.mediask.api.security.JsonAuthenticationEntryPoint;
 import me.jianwen.mediask.api.security.JwtAuthenticationFilter;
 import me.jianwen.mediask.api.security.ScenarioAuthorizationAspect;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.authz.AuthorizationDecisionService;
 import me.jianwen.mediask.api.dto.CreateEmrRequest;
 import me.jianwen.mediask.application.clinical.command.CreateEmrCommand;
@@ -367,9 +369,14 @@ class EmrControllerTest {
                 objectMapper,
                 request -> false);
 
-        EmrController controller = new EmrController(createEmrUseCase, getEmrDetailUseCase);
+        EmrController controller =
+                new EmrController(createEmrUseCase, getEmrDetailUseCase, TestAuditSupport.auditApiSupport());
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(controller);
-        proxyFactory.addAspect(new ScenarioAuthorizationAspect(buildAuthorizationDecisionService(emrRecordQueryRepository)));
+        proxyFactory.addAspect(new ScenarioAuthorizationAspect(
+                buildAuthorizationDecisionService(emrRecordQueryRepository),
+                TestAuditSupport.auditApiSupport(),
+                TestAuditSupport.emptyEncounterQueryRepository(),
+                TestAuditSupport.emptyAdminPatientQueryRepository()));
         Object proxiedController = proxyFactory.getProxy();
 
         return MockMvcBuilders.standaloneSetup(proxiedController)
@@ -392,11 +399,11 @@ class EmrControllerTest {
         ClinicalErrorCode throwErrorCode;
 
         StubCreateEmrUseCase() {
-            super(null, null);
+            super(null, null, TestAuditSupport.auditTrailService());
         }
 
         @Override
-        public EmrRecord handle(CreateEmrCommand command) {
+        public EmrRecord handle(CreateEmrCommand command, AuditContext auditContext) {
             this.lastCommand = command;
             if (throwErrorCode != null) {
                 throw new me.jianwen.mediask.common.exception.BizException(throwErrorCode);
@@ -429,11 +436,14 @@ class EmrControllerTest {
         ClinicalErrorCode throwErrorCode;
 
         StubGetEmrDetailUseCase() {
-            super(null);
+            super(null, TestAuditSupport.auditTrailService());
         }
 
         @Override
-        public EmrRecord handle(GetEmrDetailQuery query) {
+        public EmrRecord handle(
+                GetEmrDetailQuery query,
+                AuditContext auditContext,
+                me.jianwen.mediask.domain.audit.model.DataAccessPurposeCode purposeCode) {
             this.lastQuery = query;
             if (throwErrorCode != null) {
                 throw new me.jianwen.mediask.common.exception.BizException(throwErrorCode);

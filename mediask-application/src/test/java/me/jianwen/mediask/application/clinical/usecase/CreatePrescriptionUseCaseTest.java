@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.clinical.command.CreatePrescriptionCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
@@ -31,9 +32,10 @@ class CreatePrescriptionUseCaseTest {
         CreatePrescriptionUseCase useCase = new CreatePrescriptionUseCase(
                 repositories.prescriptionOrderRepository,
                 repositories.encounterQueryRepository,
-                repositories.emrRecordQueryRepository);
+                repositories.emrRecordQueryRepository,
+                TestAuditSupport.auditTrailService());
 
-        PrescriptionOrder result = useCase.handle(command());
+        PrescriptionOrder result = useCase.handle(command(), TestAuditSupport.auditContext());
 
         assertNotNull(result);
         assertEquals(PrescriptionStatus.DRAFT, result.prescriptionStatus());
@@ -51,9 +53,11 @@ class CreatePrescriptionUseCaseTest {
         CreatePrescriptionUseCase useCase = new CreatePrescriptionUseCase(
                 repositories.prescriptionOrderRepository,
                 repositories.encounterQueryRepository,
-                repositories.emrRecordQueryRepository);
+                repositories.emrRecordQueryRepository,
+                TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(command()));
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(command(), TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.PRESCRIPTION_ENCOUNTER_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -65,9 +69,11 @@ class CreatePrescriptionUseCaseTest {
         CreatePrescriptionUseCase useCase = new CreatePrescriptionUseCase(
                 repositories.prescriptionOrderRepository,
                 repositories.encounterQueryRepository,
-                repositories.emrRecordQueryRepository);
+                repositories.emrRecordQueryRepository,
+                TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(command()));
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(command(), TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.PRESCRIPTION_ENCOUNTER_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -79,9 +85,11 @@ class CreatePrescriptionUseCaseTest {
         CreatePrescriptionUseCase useCase = new CreatePrescriptionUseCase(
                 repositories.prescriptionOrderRepository,
                 repositories.encounterQueryRepository,
-                repositories.emrRecordQueryRepository);
+                repositories.emrRecordQueryRepository,
+                TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(command()));
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(command(), TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.PRESCRIPTION_EMR_RECORD_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -93,9 +101,11 @@ class CreatePrescriptionUseCaseTest {
         CreatePrescriptionUseCase useCase = new CreatePrescriptionUseCase(
                 repositories.prescriptionOrderRepository,
                 repositories.encounterQueryRepository,
-                repositories.emrRecordQueryRepository);
+                repositories.emrRecordQueryRepository,
+                TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(command()));
+        BizException exception = assertThrows(
+                BizException.class, () -> useCase.handle(command(), TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.PRESCRIPTION_ALREADY_EXISTS.getCode(), exception.getCode());
     }

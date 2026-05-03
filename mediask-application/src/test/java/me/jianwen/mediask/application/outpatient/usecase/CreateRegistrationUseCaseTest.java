@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounter;
@@ -26,9 +27,14 @@ class CreateRegistrationUseCaseTest {
         CapturingRegistrationOrderRepository orderRepository = new CapturingRegistrationOrderRepository();
         CapturingVisitEncounterRepository visitEncounterRepository = new CapturingVisitEncounterRepository();
         CreateRegistrationUseCase useCase =
-                new CreateRegistrationUseCase(reservationRepository, orderRepository, visitEncounterRepository);
+                new CreateRegistrationUseCase(
+                        reservationRepository,
+                        orderRepository,
+                        visitEncounterRepository,
+                        TestAuditSupport.auditTrailService());
 
-        CreateRegistrationResult result = useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L));
+        CreateRegistrationResult result = useCase.handle(
+                new CreateRegistrationCommand(2003L, 4101L, 5101L), TestAuditSupport.auditContext());
 
         assertTrue(reservationRepository.existsOpenSessionCalled);
         assertTrue(reservationRepository.reserveAvailableSlotCalled);
@@ -55,10 +61,12 @@ class CreateRegistrationUseCaseTest {
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(
                 reservationRepository,
                 new CapturingRegistrationOrderRepository(),
-                new CapturingVisitEncounterRepository());
+                new CapturingVisitEncounterRepository(),
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
-                BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L)));
+                BizException.class,
+                () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L), TestAuditSupport.auditContext()));
 
         assertEquals(OutpatientErrorCode.SESSION_NOT_FOUND, exception.getErrorCode());
     }
@@ -70,10 +78,12 @@ class CreateRegistrationUseCaseTest {
         CreateRegistrationUseCase useCase = new CreateRegistrationUseCase(
                 reservationRepository,
                 new CapturingRegistrationOrderRepository(),
-                new CapturingVisitEncounterRepository());
+                new CapturingVisitEncounterRepository(),
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
-                BizException.class, () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L)));
+                BizException.class,
+                () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L), TestAuditSupport.auditContext()));
 
         assertEquals(OutpatientErrorCode.SLOT_NOT_AVAILABLE, exception.getErrorCode());
     }

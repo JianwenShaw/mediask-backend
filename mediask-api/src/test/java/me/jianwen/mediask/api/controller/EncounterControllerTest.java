@@ -18,6 +18,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
@@ -27,6 +28,7 @@ import me.jianwen.mediask.api.security.JsonAuthenticationEntryPoint;
 import me.jianwen.mediask.api.security.JwtAuthenticationFilter;
 import me.jianwen.mediask.api.security.ScenarioAuthorizationAspect;
 import me.jianwen.mediask.api.security.SecurityConfig;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.authz.AuthorizationDecisionService;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
@@ -322,10 +324,15 @@ class EncounterControllerTest {
         EncounterController target = new EncounterController(
                 listEncountersUseCase,
                 getEncounterDetailUseCase,
-                updateEncounterStatusUseCase);
+                updateEncounterStatusUseCase,
+                TestAuditSupport.auditApiSupport());
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
-        proxyFactory.addAspect(new ScenarioAuthorizationAspect(new AuthorizationDecisionService(List.of(), List.of())));
+        proxyFactory.addAspect(new ScenarioAuthorizationAspect(
+                new AuthorizationDecisionService(List.of(), List.of()),
+                TestAuditSupport.auditApiSupport(),
+                TestAuditSupport.emptyEncounterQueryRepository(),
+                TestAuditSupport.emptyAdminPatientQueryRepository()));
         EncounterController controller = proxyFactory.getProxy();
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);
@@ -434,11 +441,11 @@ class EncounterControllerTest {
         private boolean throwTransitionNotAllowed;
 
         private StubUpdateEncounterStatusUseCase() {
-            super(null, null, null);
+            super(null, null, null, TestAuditSupport.auditTrailService());
         }
 
         @Override
-        public UpdateEncounterStatusResult handle(UpdateEncounterStatusCommand command) {
+        public UpdateEncounterStatusResult handle(UpdateEncounterStatusCommand command, AuditContext auditContext) {
             this.lastCommand = command;
             if (throwNotFound) {
                 throw new me.jianwen.mediask.common.exception.BizException(ClinicalErrorCode.ENCOUNTER_NOT_FOUND);

@@ -1,6 +1,9 @@
 package me.jianwen.mediask.api.controller;
 
 import me.jianwen.mediask.api.assembler.ClinicalAssembler;
+import me.jianwen.mediask.api.audit.AuditActionCodes;
+import me.jianwen.mediask.api.audit.AuditApiSupport;
+import me.jianwen.mediask.api.audit.AuditResourceTypes;
 import me.jianwen.mediask.api.dto.CreateEmrRequest;
 import me.jianwen.mediask.api.dto.CreateEmrResponse;
 import me.jianwen.mediask.api.dto.EmrDetailResponse;
@@ -12,6 +15,7 @@ import me.jianwen.mediask.application.clinical.usecase.GetEmrDetailUseCase;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
 import me.jianwen.mediask.common.result.Result;
+import me.jianwen.mediask.domain.audit.model.DataAccessPurposeCode;
 import me.jianwen.mediask.domain.user.exception.UserErrorCode;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,10 +31,15 @@ public class EmrController {
 
     private final CreateEmrUseCase createEmrUseCase;
     private final GetEmrDetailUseCase getEmrDetailUseCase;
+    private final AuditApiSupport auditApiSupport;
 
-    public EmrController(CreateEmrUseCase createEmrUseCase, GetEmrDetailUseCase getEmrDetailUseCase) {
+    public EmrController(
+            CreateEmrUseCase createEmrUseCase,
+            GetEmrDetailUseCase getEmrDetailUseCase,
+            AuditApiSupport auditApiSupport) {
         this.createEmrUseCase = createEmrUseCase;
         this.getEmrDetailUseCase = getEmrDetailUseCase;
+        this.auditApiSupport = auditApiSupport;
     }
 
     @PostMapping
@@ -46,8 +55,22 @@ public class EmrController {
         }
 
         var command = ClinicalAssembler.toCreateEmrCommand(request, principal.doctorId());
-        var emrRecord = createEmrUseCase.handle(command);
-        return Result.ok(ClinicalAssembler.toCreateEmrResponse(emrRecord));
+        try {
+            var emrRecord = createEmrUseCase.handle(command, auditApiSupport.currentContext(principal));
+            return Result.ok(ClinicalAssembler.toCreateEmrResponse(emrRecord));
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    AuditActionCodes.EMR_CREATE,
+                    AuditResourceTypes.EMR_RECORD,
+                    auditApiSupport.resourceIdOf(request.encounterId()),
+                    principal,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    null,
+                    request.encounterId(),
+                    null);
+            throw exception;
+        }
     }
 
     @GetMapping("/{encounterId}")
@@ -63,7 +86,10 @@ public class EmrController {
         }
 
         var query = ClinicalAssembler.toGetEmrDetailQuery(encounterId);
-        var emrRecord = getEmrDetailUseCase.handle(query);
+        var emrRecord = getEmrDetailUseCase.handle(
+                query,
+                auditApiSupport.currentContext(principal),
+                principal.patientId() != null ? DataAccessPurposeCode.SELF_SERVICE : DataAccessPurposeCode.TREATMENT);
         return Result.ok(ClinicalAssembler.toEmrDetailResponse(emrRecord));
     }
 }

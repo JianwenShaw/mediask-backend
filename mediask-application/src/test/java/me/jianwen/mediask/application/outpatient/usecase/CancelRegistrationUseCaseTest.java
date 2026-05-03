@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.outpatient.command.CancelRegistrationCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounter;
@@ -28,9 +29,13 @@ class CancelRegistrationUseCaseTest {
         StubClinicSlotReservationRepository clinicSlotReservationRepository = new StubClinicSlotReservationRepository();
         StubVisitEncounterRepository visitEncounterRepository = new StubVisitEncounterRepository();
         CancelRegistrationUseCase useCase = new CancelRegistrationUseCase(
-                registrationOrderRepository, clinicSlotReservationRepository, visitEncounterRepository);
+                registrationOrderRepository,
+                clinicSlotReservationRepository,
+                visitEncounterRepository,
+                TestAuditSupport.auditTrailService());
 
-        CancelRegistrationResult result = useCase.handle(new CancelRegistrationCommand(6101L, 2003L));
+        CancelRegistrationResult result = useCase.handle(
+                new CancelRegistrationCommand(6101L, 2003L), TestAuditSupport.auditContext());
 
         assertEquals(6101L, registrationOrderRepository.lastRegistrationId);
         assertEquals(2003L, registrationOrderRepository.lastPatientUserId);
@@ -50,10 +55,13 @@ class CancelRegistrationUseCaseTest {
         CancelRegistrationUseCase useCase = new CancelRegistrationUseCase(
                 registrationOrderRepository,
                 new StubClinicSlotReservationRepository(),
-                new StubVisitEncounterRepository());
+                new StubVisitEncounterRepository(),
+                TestAuditSupport.auditTrailService());
 
         BizException exception =
-                assertThrows(BizException.class, () -> useCase.handle(new CancelRegistrationCommand(9999L, 2003L)));
+                assertThrows(
+                        BizException.class,
+                        () -> useCase.handle(new CancelRegistrationCommand(9999L, 2003L), TestAuditSupport.auditContext()));
 
         assertEquals(OutpatientErrorCode.REGISTRATION_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -65,10 +73,15 @@ class CancelRegistrationUseCaseTest {
         StubVisitEncounterRepository visitEncounterRepository = new StubVisitEncounterRepository();
         visitEncounterRepository.cancelScheduledResult = false;
         CancelRegistrationUseCase useCase = new CancelRegistrationUseCase(
-                registrationOrderRepository, clinicSlotReservationRepository, visitEncounterRepository);
+                registrationOrderRepository,
+                clinicSlotReservationRepository,
+                visitEncounterRepository,
+                TestAuditSupport.auditTrailService());
 
         BizException exception =
-                assertThrows(BizException.class, () -> useCase.handle(new CancelRegistrationCommand(6101L, 2003L)));
+                assertThrows(
+                        BizException.class,
+                        () -> useCase.handle(new CancelRegistrationCommand(6101L, 2003L), TestAuditSupport.auditContext()));
 
         assertEquals(OutpatientErrorCode.REGISTRATION_CANCEL_NOT_ALLOWED.getCode(), exception.getCode());
         assertFalse(clinicSlotReservationRepository.releaseReservedSlotCalled);
@@ -81,10 +94,15 @@ class CancelRegistrationUseCaseTest {
         clinicSlotReservationRepository.releaseReservedSlotResult = false;
         StubVisitEncounterRepository visitEncounterRepository = new StubVisitEncounterRepository();
         CancelRegistrationUseCase useCase = new CancelRegistrationUseCase(
-                registrationOrderRepository, clinicSlotReservationRepository, visitEncounterRepository);
+                registrationOrderRepository,
+                clinicSlotReservationRepository,
+                visitEncounterRepository,
+                TestAuditSupport.auditTrailService());
 
         BizException exception =
-                assertThrows(BizException.class, () -> useCase.handle(new CancelRegistrationCommand(6101L, 2003L)));
+                assertThrows(
+                        BizException.class,
+                        () -> useCase.handle(new CancelRegistrationCommand(6101L, 2003L), TestAuditSupport.auditContext()));
 
         assertEquals(OutpatientErrorCode.REGISTRATION_CANCEL_NOT_ALLOWED.getCode(), exception.getCode());
         assertFalse(clinicSlotReservationRepository.refreshSessionRemainingCountCalled);
@@ -97,10 +115,15 @@ class CancelRegistrationUseCaseTest {
         clinicSlotReservationRepository.releaseReservedSlotResult = false;
         StubVisitEncounterRepository visitEncounterRepository = new StubVisitEncounterRepository();
         CancelRegistrationUseCase useCase = new CancelRegistrationUseCase(
-                registrationOrderRepository, clinicSlotReservationRepository, visitEncounterRepository);
+                registrationOrderRepository,
+                clinicSlotReservationRepository,
+                visitEncounterRepository,
+                TestAuditSupport.auditTrailService());
 
         BizException exception =
-                assertThrows(BizException.class, () -> useCase.handle(new CancelRegistrationCommand(6101L, 2003L)));
+                assertThrows(
+                        BizException.class,
+                        () -> useCase.handle(new CancelRegistrationCommand(6101L, 2003L), TestAuditSupport.auditContext()));
 
         assertEquals("BOOKED", clinicSlotReservationRepository.lastExpectedCurrentStatus);
         assertEquals(OutpatientErrorCode.REGISTRATION_CANCEL_NOT_ALLOWED.getCode(), exception.getCode());
@@ -124,10 +147,13 @@ class CancelRegistrationUseCaseTest {
         CancelRegistrationUseCase useCase = new CancelRegistrationUseCase(
                 registrationOrderRepository,
                 new StubClinicSlotReservationRepository(),
-                new StubVisitEncounterRepository());
+                new StubVisitEncounterRepository(),
+                TestAuditSupport.auditTrailService());
 
         BizException exception =
-                assertThrows(BizException.class, () -> useCase.handle(new CancelRegistrationCommand(6101L, 2003L)));
+                assertThrows(
+                        BizException.class,
+                        () -> useCase.handle(new CancelRegistrationCommand(6101L, 2003L), TestAuditSupport.auditContext()));
 
         assertEquals(OutpatientErrorCode.INVALID_STATUS_TRANSITION.getCode(), exception.getCode());
     }

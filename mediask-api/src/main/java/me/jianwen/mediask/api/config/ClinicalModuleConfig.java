@@ -1,5 +1,6 @@
 package me.jianwen.mediask.api.config;
 
+import me.jianwen.mediask.application.audit.usecase.AuditTrailService;
 import me.jianwen.mediask.application.clinical.usecase.CreateEmrUseCase;
 import me.jianwen.mediask.application.clinical.usecase.CreatePrescriptionUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
@@ -34,36 +35,42 @@ public class ClinicalModuleConfig {
     public UpdateEncounterStatusUseCase updateEncounterStatusUseCase(
             EncounterQueryRepository encounterQueryRepository,
             VisitEncounterRepository visitEncounterRepository,
-            RegistrationOrderRepository registrationOrderRepository) {
+            RegistrationOrderRepository registrationOrderRepository,
+            AuditTrailService auditTrailService) {
         return new UpdateEncounterStatusUseCase(
-                encounterQueryRepository, visitEncounterRepository, registrationOrderRepository);
+                encounterQueryRepository, visitEncounterRepository, registrationOrderRepository, auditTrailService);
     }
 
     @Bean
     public CreateEmrUseCase createEmrUseCase(
             EmrRecordRepository emrRecordRepository,
-            EncounterQueryRepository encounterQueryRepository) {
-        return new CreateEmrUseCase(emrRecordRepository, encounterQueryRepository);
+            EncounterQueryRepository encounterQueryRepository,
+            AuditTrailService auditTrailService) {
+        return new CreateEmrUseCase(emrRecordRepository, encounterQueryRepository, auditTrailService);
     }
 
     @Bean
-    public GetEmrDetailUseCase getEmrDetailUseCase(EmrRecordQueryRepository emrRecordQueryRepository) {
-        return new GetEmrDetailUseCase(emrRecordQueryRepository);
+    public GetEmrDetailUseCase getEmrDetailUseCase(
+            EmrRecordQueryRepository emrRecordQueryRepository, AuditTrailService auditTrailService) {
+        return new GetEmrDetailUseCase(emrRecordQueryRepository, auditTrailService);
     }
 
     @Bean
     public CreatePrescriptionUseCase createPrescriptionUseCase(
             PrescriptionOrderRepository prescriptionOrderRepository,
             EncounterQueryRepository encounterQueryRepository,
-            EmrRecordQueryRepository emrRecordQueryRepository) {
+            EmrRecordQueryRepository emrRecordQueryRepository,
+            AuditTrailService auditTrailService) {
         return new CreatePrescriptionUseCase(
-                prescriptionOrderRepository, encounterQueryRepository, emrRecordQueryRepository);
+                prescriptionOrderRepository, encounterQueryRepository, emrRecordQueryRepository, auditTrailService);
     }
 
     @Bean
     public GetPrescriptionDetailUseCase getPrescriptionDetailUseCase(
             PrescriptionOrderQueryRepository prescriptionOrderQueryRepository,
-            EncounterQueryRepository encounterQueryRepository) {
-        return new GetPrescriptionDetailUseCase(prescriptionOrderQueryRepository, encounterQueryRepository);
+            EncounterQueryRepository encounterQueryRepository,
+            AuditTrailService auditTrailService) {
+        return new GetPrescriptionDetailUseCase(
+                prescriptionOrderQueryRepository, encounterQueryRepository, auditTrailService);
     }
 }

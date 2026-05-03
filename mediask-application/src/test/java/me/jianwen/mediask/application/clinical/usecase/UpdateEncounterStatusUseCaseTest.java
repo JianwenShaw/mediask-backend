@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.clinical.command.UpdateEncounterStatusCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
@@ -29,10 +30,14 @@ class UpdateEncounterStatusUseCaseTest {
         StubRegistrationOrderRepository registrationOrderRepository = new StubRegistrationOrderRepository();
         encounterQueryRepository.status = VisitEncounterStatus.SCHEDULED;
         UpdateEncounterStatusUseCase useCase = new UpdateEncounterStatusUseCase(
-                encounterQueryRepository, visitEncounterRepository, registrationOrderRepository);
+                encounterQueryRepository,
+                visitEncounterRepository,
+                registrationOrderRepository,
+                TestAuditSupport.auditTrailService());
 
         UpdateEncounterStatusResult result = useCase.handle(
-                new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.START));
+                new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.START),
+                TestAuditSupport.auditContext());
 
         assertEquals(VisitEncounterStatus.IN_PROGRESS, result.encounterStatus());
         assertNotNull(result.startedAt());
@@ -46,10 +51,14 @@ class UpdateEncounterStatusUseCaseTest {
         StubRegistrationOrderRepository registrationOrderRepository = new StubRegistrationOrderRepository();
         encounterQueryRepository.status = VisitEncounterStatus.IN_PROGRESS;
         UpdateEncounterStatusUseCase useCase = new UpdateEncounterStatusUseCase(
-                encounterQueryRepository, visitEncounterRepository, registrationOrderRepository);
+                encounterQueryRepository,
+                visitEncounterRepository,
+                registrationOrderRepository,
+                TestAuditSupport.auditTrailService());
 
         UpdateEncounterStatusResult result = useCase.handle(
-                new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.COMPLETE));
+                new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.COMPLETE),
+                TestAuditSupport.auditContext());
 
         assertEquals(VisitEncounterStatus.COMPLETED, result.encounterStatus());
         assertNotNull(result.endedAt());
@@ -62,11 +71,16 @@ class UpdateEncounterStatusUseCaseTest {
         StubEncounterQueryRepository encounterQueryRepository = new StubEncounterQueryRepository();
         encounterQueryRepository.returnEmpty = true;
         UpdateEncounterStatusUseCase useCase = new UpdateEncounterStatusUseCase(
-                encounterQueryRepository, new StubVisitEncounterRepository(), new StubRegistrationOrderRepository());
+                encounterQueryRepository,
+                new StubVisitEncounterRepository(),
+                new StubRegistrationOrderRepository(),
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new UpdateEncounterStatusCommand(9999L, 2101L, UpdateEncounterStatusCommand.Action.START)));
+                () -> useCase.handle(
+                        new UpdateEncounterStatusCommand(9999L, 2101L, UpdateEncounterStatusCommand.Action.START),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.ENCOUNTER_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -76,11 +90,16 @@ class UpdateEncounterStatusUseCaseTest {
         StubEncounterQueryRepository encounterQueryRepository = new StubEncounterQueryRepository();
         encounterQueryRepository.doctorId = 2102L;
         UpdateEncounterStatusUseCase useCase = new UpdateEncounterStatusUseCase(
-                encounterQueryRepository, new StubVisitEncounterRepository(), new StubRegistrationOrderRepository());
+                encounterQueryRepository,
+                new StubVisitEncounterRepository(),
+                new StubRegistrationOrderRepository(),
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.START)));
+                () -> useCase.handle(
+                        new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.START),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.ENCOUNTER_ACCESS_DENIED.getCode(), exception.getCode());
     }
@@ -90,11 +109,16 @@ class UpdateEncounterStatusUseCaseTest {
         StubEncounterQueryRepository encounterQueryRepository = new StubEncounterQueryRepository();
         encounterQueryRepository.status = VisitEncounterStatus.COMPLETED;
         UpdateEncounterStatusUseCase useCase = new UpdateEncounterStatusUseCase(
-                encounterQueryRepository, new StubVisitEncounterRepository(), new StubRegistrationOrderRepository());
+                encounterQueryRepository,
+                new StubVisitEncounterRepository(),
+                new StubRegistrationOrderRepository(),
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.START)));
+                () -> useCase.handle(
+                        new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.START),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.ENCOUNTER_STATUS_TRANSITION_NOT_ALLOWED.getCode(), exception.getCode());
     }
@@ -106,11 +130,16 @@ class UpdateEncounterStatusUseCaseTest {
         encounterQueryRepository.status = VisitEncounterStatus.SCHEDULED;
         visitEncounterRepository.startResult = false;
         UpdateEncounterStatusUseCase useCase = new UpdateEncounterStatusUseCase(
-                encounterQueryRepository, visitEncounterRepository, new StubRegistrationOrderRepository());
+                encounterQueryRepository,
+                visitEncounterRepository,
+                new StubRegistrationOrderRepository(),
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.START)));
+                () -> useCase.handle(
+                        new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.START),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.ENCOUNTER_STATUS_UPDATE_CONFLICT.getCode(), exception.getCode());
     }
@@ -123,12 +152,16 @@ class UpdateEncounterStatusUseCaseTest {
         encounterQueryRepository.status = VisitEncounterStatus.IN_PROGRESS;
         registrationOrderRepository.completeResult = false;
         UpdateEncounterStatusUseCase useCase = new UpdateEncounterStatusUseCase(
-                encounterQueryRepository, visitEncounterRepository, registrationOrderRepository);
+                encounterQueryRepository,
+                visitEncounterRepository,
+                registrationOrderRepository,
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
                 BizException.class,
                 () -> useCase.handle(
-                        new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.COMPLETE)));
+                        new UpdateEncounterStatusCommand(8101L, 2101L, UpdateEncounterStatusCommand.Action.COMPLETE),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(ClinicalErrorCode.ENCOUNTER_REGISTRATION_SYNC_CONFLICT.getCode(), exception.getCode());
     }

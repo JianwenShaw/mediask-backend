@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.clinical.query.GetEmrDetailQuery;
 import me.jianwen.mediask.common.exception.BizException;
+import me.jianwen.mediask.domain.audit.model.DataAccessPurposeCode;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
 import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
@@ -21,9 +23,10 @@ class GetEmrDetailUseCaseTest {
     @Test
     void handle_WhenRecordExists_ReturnRecord() {
         StubEmrRecordQueryRepository repository = new StubEmrRecordQueryRepository();
-        GetEmrDetailUseCase useCase = new GetEmrDetailUseCase(repository);
+        GetEmrDetailUseCase useCase = new GetEmrDetailUseCase(repository, TestAuditSupport.auditTrailService());
 
-        EmrRecord result = useCase.handle(new GetEmrDetailQuery(8101L));
+        EmrRecord result = useCase.handle(
+                new GetEmrDetailQuery(8101L), TestAuditSupport.auditContext(), DataAccessPurposeCode.TREATMENT);
 
         assertEquals(8101L, repository.lastEncounterId);
         assertEquals(7101L, result.recordId());
@@ -34,9 +37,14 @@ class GetEmrDetailUseCaseTest {
     void handle_WhenRecordMissing_ThrowNotFound() {
         StubEmrRecordQueryRepository repository = new StubEmrRecordQueryRepository();
         repository.returnEmpty = true;
-        GetEmrDetailUseCase useCase = new GetEmrDetailUseCase(repository);
+        GetEmrDetailUseCase useCase = new GetEmrDetailUseCase(repository, TestAuditSupport.auditTrailService());
 
-        BizException exception = assertThrows(BizException.class, () -> useCase.handle(new GetEmrDetailQuery(9999L)));
+        BizException exception = assertThrows(
+                BizException.class,
+                () -> useCase.handle(
+                        new GetEmrDetailQuery(9999L),
+                        TestAuditSupport.auditContext(),
+                        DataAccessPurposeCode.TREATMENT));
 
         assertEquals(ClinicalErrorCode.EMR_RECORD_NOT_FOUND.getCode(), exception.getCode());
     }

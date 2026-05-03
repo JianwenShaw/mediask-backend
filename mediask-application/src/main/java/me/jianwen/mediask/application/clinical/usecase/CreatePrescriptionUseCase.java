@@ -1,6 +1,9 @@
 package me.jianwen.mediask.application.clinical.usecase;
 
 import java.util.List;
+import me.jianwen.mediask.application.audit.AuditActionCodes;
+import me.jianwen.mediask.application.audit.AuditResourceTypes;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.clinical.command.CreatePrescriptionCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.id.SnowflakeIdGenerator;
@@ -17,18 +20,21 @@ public class CreatePrescriptionUseCase {
     private final PrescriptionOrderRepository prescriptionOrderRepository;
     private final EncounterQueryRepository encounterQueryRepository;
     private final EmrRecordQueryRepository emrRecordQueryRepository;
+    private final me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService;
 
     public CreatePrescriptionUseCase(
             PrescriptionOrderRepository prescriptionOrderRepository,
             EncounterQueryRepository encounterQueryRepository,
-            EmrRecordQueryRepository emrRecordQueryRepository) {
+            EmrRecordQueryRepository emrRecordQueryRepository,
+            me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService) {
         this.prescriptionOrderRepository = prescriptionOrderRepository;
         this.encounterQueryRepository = encounterQueryRepository;
         this.emrRecordQueryRepository = emrRecordQueryRepository;
+        this.auditTrailService = auditTrailService;
     }
 
     @Transactional
-    public PrescriptionOrder handle(CreatePrescriptionCommand command) {
+    public PrescriptionOrder handle(CreatePrescriptionCommand command, AuditContext auditContext) {
         var encounter = encounterQueryRepository.findDetailByEncounterId(command.encounterId())
                 .orElseThrow(() -> new BizException(ClinicalErrorCode.PRESCRIPTION_ENCOUNTER_NOT_FOUND));
 
@@ -65,6 +71,14 @@ public class CreatePrescriptionUseCase {
                 command.doctorId(),
                 items);
         prescriptionOrderRepository.save(prescriptionOrder);
+        auditTrailService.recordAuditSuccess(
+                auditContext,
+                AuditActionCodes.PRESCRIPTION_CREATE,
+                AuditResourceTypes.PRESCRIPTION_ORDER,
+                String.valueOf(prescriptionOrder.prescriptionOrderId()),
+                prescriptionOrder.patientId(),
+                prescriptionOrder.encounterId(),
+                null);
         return prescriptionOrder;
     }
 

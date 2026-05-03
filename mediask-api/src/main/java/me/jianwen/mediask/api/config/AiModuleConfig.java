@@ -1,5 +1,6 @@
 package me.jianwen.mediask.api.config;
 
+import me.jianwen.mediask.application.audit.usecase.AuditTrailService;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
 import me.jianwen.mediask.application.ai.usecase.ListAiSessionsUseCase;
@@ -36,12 +37,14 @@ public class AiModuleConfig {
     }
 
     @Bean
-    public GetAiSessionDetailUseCase getAiSessionDetailUseCase(AiTriageGatewayPort aiTriageGatewayPort) {
-        return new GetAiSessionDetailUseCase(aiTriageGatewayPort);
+    public GetAiSessionDetailUseCase getAiSessionDetailUseCase(
+            AiTriageGatewayPort aiTriageGatewayPort, AuditTrailService auditTrailService) {
+        return new GetAiSessionDetailUseCase(aiTriageGatewayPort, auditTrailService);
     }
 
     @Bean
-    public GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase(AiTriageGatewayPort aiTriageGatewayPort) {
-        return new GetAiSessionTriageResultUseCase(aiTriageGatewayPort);
+    public GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase(
+            AiTriageGatewayPort aiTriageGatewayPort, AuditTrailService auditTrailService) {
+        return new GetAiSessionTriageResultUseCase(aiTriageGatewayPort, auditTrailService);
     }
 }

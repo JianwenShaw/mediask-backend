@@ -1,5 +1,8 @@
 package me.jianwen.mediask.api.controller;
 
+import me.jianwen.mediask.api.audit.AuditActionCodes;
+import me.jianwen.mediask.api.audit.AuditApiSupport;
+import me.jianwen.mediask.api.audit.AuditResourceTypes;
 import me.jianwen.mediask.api.assembler.OutpatientAssembler;
 import me.jianwen.mediask.api.dto.CancelRegistrationResponse;
 import me.jianwen.mediask.api.dto.CreateRegistrationRequest;
@@ -35,16 +38,19 @@ public class RegistrationController {
     private final ListRegistrationsUseCase listRegistrationsUseCase;
     private final GetRegistrationDetailUseCase getRegistrationDetailUseCase;
     private final CancelRegistrationUseCase cancelRegistrationUseCase;
+    private final AuditApiSupport auditApiSupport;
 
     public RegistrationController(
             CreateRegistrationUseCase createRegistrationUseCase,
             ListRegistrationsUseCase listRegistrationsUseCase,
             GetRegistrationDetailUseCase getRegistrationDetailUseCase,
-            CancelRegistrationUseCase cancelRegistrationUseCase) {
+            CancelRegistrationUseCase cancelRegistrationUseCase,
+            AuditApiSupport auditApiSupport) {
         this.createRegistrationUseCase = createRegistrationUseCase;
         this.listRegistrationsUseCase = listRegistrationsUseCase;
         this.getRegistrationDetailUseCase = getRegistrationDetailUseCase;
         this.cancelRegistrationUseCase = cancelRegistrationUseCase;
+        this.auditApiSupport = auditApiSupport;
     }
 
     @PostMapping
@@ -59,8 +65,23 @@ public class RegistrationController {
         }
         CreateRegistrationCommand command =
                 OutpatientAssembler.toCreateRegistrationCommand(principal.userId(), request);
-        CreateRegistrationResult result = createRegistrationUseCase.handle(command);
-        return Result.ok(OutpatientAssembler.toCreateRegistrationResponse(result));
+        try {
+            CreateRegistrationResult result =
+                    createRegistrationUseCase.handle(command, auditApiSupport.currentContext(principal));
+            return Result.ok(OutpatientAssembler.toCreateRegistrationResponse(result));
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    AuditActionCodes.REGISTRATION_CREATE,
+                    AuditResourceTypes.REGISTRATION_ORDER,
+                    null,
+                    principal,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    principal.userId(),
+                    null,
+                    null);
+            throw exception;
+        }
     }
 
     @GetMapping
@@ -102,8 +123,23 @@ public class RegistrationController {
         if (principal.patientId() == null) {
             throw new BizException(UserErrorCode.ROLE_MISMATCH);
         }
-        return Result.ok(OutpatientAssembler.toCancelRegistrationResponse(
-                cancelRegistrationUseCase.handle(
-                        OutpatientAssembler.toCancelRegistrationCommand(principal.userId(), registrationId))));
+        try {
+            return Result.ok(OutpatientAssembler.toCancelRegistrationResponse(
+                    cancelRegistrationUseCase.handle(
+                            OutpatientAssembler.toCancelRegistrationCommand(principal.userId(), registrationId),
+                            auditApiSupport.currentContext(principal))));
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    AuditActionCodes.REGISTRATION_CANCEL,
+                    AuditResourceTypes.REGISTRATION_ORDER,
+                    auditApiSupport.resourceIdOf(registrationId),
+                    principal,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    principal.userId(),
+                    null,
+                    null);
+            throw exception;
+        }
     }
 }

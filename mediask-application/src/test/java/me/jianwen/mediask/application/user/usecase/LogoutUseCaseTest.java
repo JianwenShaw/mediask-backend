@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.user.command.LogoutCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.user.exception.UserErrorCode;
@@ -38,11 +39,14 @@ class LogoutUseCaseTest {
                 refreshTokenStore,
                 accessTokenBlocklistPort,
                 new StubAccessTokenCodec(),
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new LogoutCommand(PRIMARY_REFRESH_TOKEN, LEGACY_ACCESS_TOKEN, 2003L)));
+                () -> useCase.handle(
+                        new LogoutCommand(PRIMARY_REFRESH_TOKEN, LEGACY_ACCESS_TOKEN, 2003L),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(UserErrorCode.PERMISSION_DENIED.getCode(), exception.getCode());
         assertTrue(refreshTokenStore.findByTokenValue(PRIMARY_REFRESH_TOKEN).isPresent());
@@ -59,11 +63,14 @@ class LogoutUseCaseTest {
                 refreshTokenStore,
                 accessTokenBlocklistPort,
                 new CurrentSessionAccessTokenCodec(),
-                Clock.fixed(NOW, ZoneOffset.UTC));
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                TestAuditSupport.auditTrailService());
 
         assertThrows(
                 IllegalStateException.class,
-                () -> useCase.handle(new LogoutCommand(PRIMARY_REFRESH_TOKEN, "current-session-access-token", 2003L)));
+                () -> useCase.handle(
+                        new LogoutCommand(PRIMARY_REFRESH_TOKEN, "current-session-access-token", 2003L),
+                        TestAuditSupport.auditContext()));
 
         assertTrue(refreshTokenStore.findByTokenValue(PRIMARY_REFRESH_TOKEN).isPresent());
         assertFalse(accessTokenBlocklistPort.isBlocked(PRIMARY_TOKEN_ID));

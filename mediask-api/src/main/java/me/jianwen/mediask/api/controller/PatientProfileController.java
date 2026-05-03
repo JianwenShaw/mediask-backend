@@ -1,6 +1,9 @@
 package me.jianwen.mediask.api.controller;
 
 import me.jianwen.mediask.api.assembler.AuthAssembler;
+import me.jianwen.mediask.api.audit.AuditActionCodes;
+import me.jianwen.mediask.api.audit.AuditApiSupport;
+import me.jianwen.mediask.api.audit.AuditResourceTypes;
 import me.jianwen.mediask.api.dto.PatientProfileResponse;
 import me.jianwen.mediask.api.dto.UpdatePatientProfileRequest;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
@@ -26,12 +29,15 @@ public class PatientProfileController {
 
     private final GetCurrentPatientProfileUseCase getCurrentPatientProfileUseCase;
     private final UpdateCurrentPatientProfileUseCase updateCurrentPatientProfileUseCase;
+    private final AuditApiSupport auditApiSupport;
 
     public PatientProfileController(
             GetCurrentPatientProfileUseCase getCurrentPatientProfileUseCase,
-            UpdateCurrentPatientProfileUseCase updateCurrentPatientProfileUseCase) {
+            UpdateCurrentPatientProfileUseCase updateCurrentPatientProfileUseCase,
+            AuditApiSupport auditApiSupport) {
         this.getCurrentPatientProfileUseCase = getCurrentPatientProfileUseCase;
         this.updateCurrentPatientProfileUseCase = updateCurrentPatientProfileUseCase;
+        this.auditApiSupport = auditApiSupport;
     }
 
     @GetMapping("/profile")
@@ -41,7 +47,8 @@ public class PatientProfileController {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
         PatientProfileResponse response = AuthAssembler.toPatientProfileResponse(
-                getCurrentPatientProfileUseCase.handle(new GetCurrentUserQuery(principal.userId())));
+                getCurrentPatientProfileUseCase.handle(
+                        new GetCurrentUserQuery(principal.userId()), auditApiSupport.currentContext(principal)));
         return Result.ok(response);
     }
 
@@ -53,12 +60,26 @@ public class PatientProfileController {
         if (principal == null) {
             throw new BizException(ErrorCode.UNAUTHORIZED);
         }
-        updateCurrentPatientProfileUseCase.handle(new UpdateCurrentPatientProfileCommand(
-                principal.userId(),
-                request.gender(),
-                request.birthDate(),
-                request.bloodType(),
-                request.allergySummary()));
-        return Result.ok();
+        try {
+            updateCurrentPatientProfileUseCase.handle(new UpdateCurrentPatientProfileCommand(
+                    principal.userId(),
+                    request.gender(),
+                    request.birthDate(),
+                    request.bloodType(),
+                    request.allergySummary()), auditApiSupport.currentContext(principal));
+            return Result.ok();
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    AuditActionCodes.PATIENT_PROFILE_UPDATE,
+                    AuditResourceTypes.PATIENT_PROFILE,
+                    principal.patientId() == null ? null : String.valueOf(principal.patientId()),
+                    principal,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    principal.userId(),
+                    null,
+                    null);
+            throw exception;
+        }
     }
 }

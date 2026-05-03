@@ -16,7 +16,9 @@ import jakarta.servlet.Filter;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -24,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
+import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
 import me.jianwen.mediask.api.security.ApiCorsProperties;
 import me.jianwen.mediask.api.security.ApiSecurityProperties;
@@ -45,6 +48,7 @@ import me.jianwen.mediask.domain.user.model.LoginAccount;
 import me.jianwen.mediask.domain.user.model.RefreshTokenSession;
 import me.jianwen.mediask.domain.user.model.RoleCode;
 import me.jianwen.mediask.domain.user.model.UserType;
+import me.jianwen.mediask.domain.audit.model.AuditEventRecord;
 import me.jianwen.mediask.domain.user.port.AccessTokenBlocklistPort;
 import me.jianwen.mediask.domain.user.port.AccessTokenCodec;
 import me.jianwen.mediask.domain.user.port.PasswordVerifier;
@@ -88,6 +92,7 @@ class AuthControllerTest {
     private StubAccessTokenBlocklistPort accessTokenBlocklistPort;
     private StubUserAuthenticationRepository repository;
     private StubAccessTokenCodec accessTokenCodec;
+    private List<AuditEventRecord> auditEvents;
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
     private final AuthenticatedUser authenticatedUser = new AuthenticatedUser(
@@ -119,6 +124,7 @@ class AuthControllerTest {
         accessTokenBlocklistPort = new StubAccessTokenBlocklistPort();
         repository = new StubUserAuthenticationRepository(authenticatedUser, otherUser);
         accessTokenCodec = new StubAccessTokenCodec(authenticatedUser);
+        auditEvents = new ArrayList<>();
         PasswordVerifier passwordVerifier = (rawPassword, encodedPassword) ->
                 encodedPassword.equals("hash<" + rawPassword + ">");
 
@@ -133,14 +139,29 @@ class AuthControllerTest {
                 otherUser.userId(), "refresh-token-other-user", "refresh-secret-other-user", TOKEN_EXPIRES_AT));
 
         AuthController authController = new AuthController(
-                new LoginUseCase(repository, passwordVerifier, accessTokenCodec, refreshTokenSupport, refreshTokenSupport),
+                new LoginUseCase(
+                        repository,
+                        passwordVerifier,
+                        accessTokenCodec,
+                        refreshTokenSupport,
+                        refreshTokenSupport,
+                        new me.jianwen.mediask.application.audit.usecase.AuditTrailService(
+                                new me.jianwen.mediask.application.audit.usecase.RecordAuditEventUseCase(auditEvents::add),
+                                new me.jianwen.mediask.application.audit.usecase.RecordDataAccessLogUseCase(record -> {}))),
                 new RefreshTokenUseCase(repository, accessTokenCodec, refreshTokenSupport, refreshTokenSupport, TEST_CLOCK),
                 new LogoutUseCase(
                         refreshTokenSupport,
                         accessTokenBlocklistPort,
                         accessTokenCodec,
-                        TEST_CLOCK),
-                new GetCurrentUserUseCase(repository));
+                        TEST_CLOCK,
+                        new me.jianwen.mediask.application.audit.usecase.AuditTrailService(
+                                new me.jianwen.mediask.application.audit.usecase.RecordAuditEventUseCase(auditEvents::add),
+                                new me.jianwen.mediask.application.audit.usecase.RecordDataAccessLogUseCase(record -> {}))),
+                new GetCurrentUserUseCase(repository),
+                new me.jianwen.mediask.api.audit.AuditApiSupport(
+                        new me.jianwen.mediask.application.audit.usecase.AuditTrailService(
+                                new me.jianwen.mediask.application.audit.usecase.RecordAuditEventUseCase(auditEvents::add),
+                                new me.jianwen.mediask.application.audit.usecase.RecordDataAccessLogUseCase(record -> {}))));
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);
         SecurityConfig securityConfig = new SecurityConfig();
@@ -200,6 +221,11 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.userContext.patientId").value(2201));
 
         assertEquals("refresh-token-2", accessTokenCodec.lastIssuedSessionId());
+        AuditEventRecord auditEvent = auditEvents.getLast();
+        assertEquals("AUTH_LOGIN_SUCCESS", auditEvent.actionCode());
+        assertEquals(2003L, auditEvent.operatorUserId());
+        assertEquals("patient_li", auditEvent.operatorUsername());
+        assertEquals("PATIENT", auditEvent.operatorRoleCode());
     }
 
     @Test
@@ -238,6 +264,26 @@ class AuthControllerTest {
                 .andExpect(header().exists("X-Request-Id"))
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.accessToken").value("issued-access-token-1"));
+    }
+
+    @Test
+    void login_WhenCredentialsInvalid_AuditFailureKeepsAttemptedUsername() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "patient_li",
+                                  "password": "wrong-password"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(2001));
+
+        AuditEventRecord auditEvent = auditEvents.getLast();
+        assertEquals("AUTH_LOGIN_FAILED", auditEvent.actionCode());
+        assertEquals(null, auditEvent.operatorUserId());
+        assertEquals("patient_li", auditEvent.operatorUsername());
     }
 
     @Test

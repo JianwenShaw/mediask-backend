@@ -17,6 +17,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
@@ -25,6 +26,7 @@ import me.jianwen.mediask.api.security.ApiSecurityProperties;
 import me.jianwen.mediask.api.security.JsonAuthenticationEntryPoint;
 import me.jianwen.mediask.api.security.JwtAuthenticationFilter;
 import me.jianwen.mediask.api.security.SecurityConfig;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationResult;
 import me.jianwen.mediask.application.outpatient.usecase.CreateRegistrationUseCase;
 import me.jianwen.mediask.application.outpatient.usecase.CancelRegistrationResult;
@@ -259,7 +261,8 @@ class RegistrationControllerTest {
                 createRegistrationUseCase,
                 listRegistrationsUseCase,
                 getRegistrationDetailUseCase,
-                cancelRegistrationUseCase);
+                cancelRegistrationUseCase,
+                TestAuditSupport.auditApiSupport());
 
         JsonAuthenticationEntryPoint authenticationEntryPoint = new JsonAuthenticationEntryPoint(objectMapper);
         SecurityConfig securityConfig = new SecurityConfig();
@@ -302,11 +305,13 @@ class RegistrationControllerTest {
         private RuntimeException throwable;
 
         private StubCreateRegistrationUseCase() {
-            super(null, null, null);
+            super(null, null, null, TestAuditSupport.auditTrailService());
         }
 
         @Override
-        public CreateRegistrationResult handle(me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand command) {
+        public CreateRegistrationResult handle(
+                me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand command,
+                AuditContext auditContext) {
             this.lastCommand = command;
             if (throwable != null) {
                 throw throwable;
@@ -376,11 +381,13 @@ class RegistrationControllerTest {
         private RuntimeException throwable;
 
         private StubCancelRegistrationUseCase() {
-            super(null, null, null);
+            super(null, null, null, TestAuditSupport.auditTrailService());
         }
 
         @Override
-        public CancelRegistrationResult handle(me.jianwen.mediask.application.outpatient.command.CancelRegistrationCommand command) {
+        public CancelRegistrationResult handle(
+                me.jianwen.mediask.application.outpatient.command.CancelRegistrationCommand command,
+                AuditContext auditContext) {
             this.lastCommand = command;
             if (throwable != null) {
                 throw throwable;

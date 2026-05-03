@@ -1,5 +1,6 @@
 package me.jianwen.mediask.api.config;
 
+import me.jianwen.mediask.application.audit.usecase.AuditTrailService;
 import me.jianwen.mediask.application.outpatient.usecase.ListClinicSessionsUseCase;
 import me.jianwen.mediask.application.outpatient.usecase.ListClinicSessionSlotsUseCase;
 import me.jianwen.mediask.application.outpatient.usecase.CancelRegistrationUseCase;
@@ -32,9 +33,10 @@ public class OutpatientModuleConfig {
     public CreateRegistrationUseCase createRegistrationUseCase(
             ClinicSlotReservationRepository clinicSlotReservationRepository,
             RegistrationOrderRepository registrationOrderRepository,
-            VisitEncounterRepository visitEncounterRepository) {
+            VisitEncounterRepository visitEncounterRepository,
+            AuditTrailService auditTrailService) {
         return new CreateRegistrationUseCase(
-                clinicSlotReservationRepository, registrationOrderRepository, visitEncounterRepository);
+                clinicSlotReservationRepository, registrationOrderRepository, visitEncounterRepository, auditTrailService);
     }
 
     @Bean
@@ -53,8 +55,9 @@ public class OutpatientModuleConfig {
     public CancelRegistrationUseCase cancelRegistrationUseCase(
             RegistrationOrderRepository registrationOrderRepository,
             ClinicSlotReservationRepository clinicSlotReservationRepository,
-            VisitEncounterRepository visitEncounterRepository) {
+            VisitEncounterRepository visitEncounterRepository,
+            AuditTrailService auditTrailService) {
         return new CancelRegistrationUseCase(
-                registrationOrderRepository, clinicSlotReservationRepository, visitEncounterRepository);
+                registrationOrderRepository, clinicSlotReservationRepository, visitEncounterRepository, auditTrailService);
     }
 }

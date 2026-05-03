@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.ai.query.GetAiSessionDetailQuery;
 import me.jianwen.mediask.application.ai.query.GetAiSessionTriageResultQuery;
 import me.jianwen.mediask.application.ai.query.ListAiSessionsQuery;
+import me.jianwen.mediask.domain.audit.model.DataAccessPurposeCode;
 import me.jianwen.mediask.domain.ai.model.AiSessionDetail;
 import me.jianwen.mediask.domain.ai.model.AiSessionMessage;
 import me.jianwen.mediask.domain.ai.model.AiSessionSummary;
@@ -39,8 +41,11 @@ class AiSessionQueryUseCaseTest {
     void getSessionDetail_PassesSessionIdToGateway() {
         CapturingGatewayPort gatewayPort = new CapturingGatewayPort();
 
-        AiSessionDetail response = new GetAiSessionDetailUseCase(gatewayPort)
-                .handle(new GetAiSessionDetailQuery("req-2", 2201L, "session-2"));
+        AiSessionDetail response = new GetAiSessionDetailUseCase(gatewayPort, TestAuditSupport.auditTrailService())
+                .handle(
+                        new GetAiSessionDetailQuery("req-2", 2201L, "session-2"),
+                        TestAuditSupport.auditContext(),
+                        DataAccessPurposeCode.SELF_SERVICE);
 
         assertEquals("req-2", gatewayPort.lastContext.requestId());
         assertEquals("session-2", gatewayPort.lastSessionId);
@@ -51,8 +56,11 @@ class AiSessionQueryUseCaseTest {
     void getSessionTriageResult_PassesSessionIdToGateway() {
         CapturingGatewayPort gatewayPort = new CapturingGatewayPort();
 
-        AiSessionTriageResult response = new GetAiSessionTriageResultUseCase(gatewayPort)
-                .handle(new GetAiSessionTriageResultQuery("req-3", 2201L, "session-3"));
+        AiSessionTriageResult response = new GetAiSessionTriageResultUseCase(gatewayPort, TestAuditSupport.auditTrailService())
+                .handle(
+                        new GetAiSessionTriageResultQuery("req-3", 2201L, "session-3"),
+                        TestAuditSupport.auditContext(),
+                        DataAccessPurposeCode.SELF_SERVICE);
 
         assertEquals("req-3", gatewayPort.lastContext.requestId());
         assertEquals("session-3", gatewayPort.lastSessionId);

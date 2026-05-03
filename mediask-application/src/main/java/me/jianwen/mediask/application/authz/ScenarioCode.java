@@ -16,7 +16,7 @@ public enum ScenarioCode {
     EMR_RECORD_READ(ActionType.READ, CombinationMode.ALL, "emr:read", true, false),
     EMR_RECORD_UPDATE(ActionType.UPDATE, CombinationMode.ALL, "emr:update", true, false),
     PRESCRIPTION_CREATE(ActionType.CREATE, CombinationMode.ALL, "prescription:create", false, false),
-    PRESCRIPTION_READ(ActionType.READ, CombinationMode.ALL, "prescription:read", false, false),
+    PRESCRIPTION_READ(ActionType.READ, CombinationMode.ALL, "prescription:read", true, false),
     ADMIN_TRIAGE_CATALOG_PUBLISH(ActionType.CREATE, CombinationMode.ALL, "admin:triage-catalog:publish", false, false),
     ADMIN_KNOWLEDGE_BASE_LIST(ActionType.READ, CombinationMode.ALL, "admin:knowledge-base:list", false, false),
     ADMIN_KNOWLEDGE_BASE_CREATE(ActionType.CREATE, CombinationMode.ALL, "admin:knowledge-base:create", false, false),
@@ -30,7 +30,9 @@ public enum ScenarioCode {
             ActionType.READ, CombinationMode.ALL, "admin:knowledge-index-version:list", false, false),
     ADMIN_KNOWLEDGE_RELEASE_LIST(ActionType.READ, CombinationMode.ALL, "admin:knowledge-release:list", false, false),
     ADMIN_KNOWLEDGE_RELEASE_PUBLISH(
-            ActionType.CREATE, CombinationMode.ALL, "admin:knowledge-release:publish", false, false);
+            ActionType.CREATE, CombinationMode.ALL, "admin:knowledge-release:publish", false, false),
+    AUDIT_EVENT_QUERY(ActionType.READ, CombinationMode.ALL, "audit:query", false, true),
+    AUDIT_DATA_ACCESS_QUERY(ActionType.READ, CombinationMode.ALL, "audit:query", false, true);
 
     private final ActionType actionType;
     private final CombinationMode combinationMode;

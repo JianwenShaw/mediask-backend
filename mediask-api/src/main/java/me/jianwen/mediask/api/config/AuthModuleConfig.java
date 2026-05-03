@@ -1,6 +1,7 @@
 package me.jianwen.mediask.api.config;
 
 import java.time.Clock;
+import me.jianwen.mediask.application.audit.usecase.AuditTrailService;
 import me.jianwen.mediask.application.user.usecase.CreateAdminPatientUseCase;
 import me.jianwen.mediask.application.user.usecase.DeleteAdminPatientUseCase;
 import me.jianwen.mediask.application.user.usecase.GetAdminPatientDetailUseCase;
@@ -39,13 +40,15 @@ public class AuthModuleConfig {
             PasswordVerifier passwordVerifier,
             AccessTokenCodec accessTokenCodec,
             RefreshTokenManager refreshTokenManager,
-            RefreshTokenStore refreshTokenStore) {
+            RefreshTokenStore refreshTokenStore,
+            AuditTrailService auditTrailService) {
         return new LoginUseCase(
                 userAuthenticationRepository,
                 passwordVerifier,
                 accessTokenCodec,
                 refreshTokenManager,
-                refreshTokenStore);
+                refreshTokenStore,
+                auditTrailService);
     }
 
     @Bean
@@ -69,14 +72,19 @@ public class AuthModuleConfig {
             RefreshTokenStore refreshTokenStore,
             AccessTokenBlocklistPort accessTokenBlocklistPort,
             AccessTokenCodec accessTokenCodec,
-            Clock authClock) {
-        return new LogoutUseCase(refreshTokenStore, accessTokenBlocklistPort, accessTokenCodec, authClock);
+            Clock authClock,
+            AuditTrailService auditTrailService) {
+        return new LogoutUseCase(
+                refreshTokenStore, accessTokenBlocklistPort, accessTokenCodec, authClock, auditTrailService);
     }
 
     @Bean
     public GetCurrentPatientProfileUseCase getCurrentPatientProfileUseCase(
-            UserAuthenticationRepository userAuthenticationRepository, PatientProfileRepository patientProfileRepository) {
-        return new GetCurrentPatientProfileUseCase(userAuthenticationRepository, patientProfileRepository);
+            UserAuthenticationRepository userAuthenticationRepository,
+            PatientProfileRepository patientProfileRepository,
+            AuditTrailService auditTrailService) {
+        return new GetCurrentPatientProfileUseCase(
+                userAuthenticationRepository, patientProfileRepository, auditTrailService);
     }
 
     @Bean
@@ -88,8 +96,10 @@ public class AuthModuleConfig {
     @Bean
     public UpdateCurrentPatientProfileUseCase updateCurrentPatientProfileUseCase(
             UserAuthenticationRepository userAuthenticationRepository,
-            PatientProfileWriteRepository patientProfileWriteRepository) {
-        return new UpdateCurrentPatientProfileUseCase(userAuthenticationRepository, patientProfileWriteRepository);
+            PatientProfileWriteRepository patientProfileWriteRepository,
+            AuditTrailService auditTrailService) {
+        return new UpdateCurrentPatientProfileUseCase(
+                userAuthenticationRepository, patientProfileWriteRepository, auditTrailService);
     }
 
     @Bean
@@ -106,23 +116,28 @@ public class AuthModuleConfig {
 
     @Bean
     public GetAdminPatientDetailUseCase getAdminPatientDetailUseCase(
-            AdminPatientQueryRepository adminPatientQueryRepository) {
-        return new GetAdminPatientDetailUseCase(adminPatientQueryRepository);
+            AdminPatientQueryRepository adminPatientQueryRepository, AuditTrailService auditTrailService) {
+        return new GetAdminPatientDetailUseCase(adminPatientQueryRepository, auditTrailService);
     }
 
     @Bean
     public CreateAdminPatientUseCase createAdminPatientUseCase(
-            AdminPatientWriteRepository adminPatientWriteRepository, PasswordHasher passwordHasher) {
-        return new CreateAdminPatientUseCase(adminPatientWriteRepository, passwordHasher);
+            AdminPatientWriteRepository adminPatientWriteRepository,
+            PasswordHasher passwordHasher,
+            AuditTrailService auditTrailService) {
+        return new CreateAdminPatientUseCase(adminPatientWriteRepository, passwordHasher, auditTrailService);
     }
 
     @Bean
-    public UpdateAdminPatientUseCase updateAdminPatientUseCase(AdminPatientWriteRepository adminPatientWriteRepository) {
-        return new UpdateAdminPatientUseCase(adminPatientWriteRepository);
+    public UpdateAdminPatientUseCase updateAdminPatientUseCase(
+            AdminPatientWriteRepository adminPatientWriteRepository, AuditTrailService auditTrailService) {
+        return new UpdateAdminPatientUseCase(adminPatientWriteRepository, auditTrailService);
     }
 
     @Bean
-    public DeleteAdminPatientUseCase deleteAdminPatientUseCase(AdminPatientWriteRepository adminPatientWriteRepository) {
-        return new DeleteAdminPatientUseCase(adminPatientWriteRepository);
+    public DeleteAdminPatientUseCase deleteAdminPatientUseCase(
+            AdminPatientQueryRepository adminPatientQueryRepository,
+            AdminPatientWriteRepository adminPatientWriteRepository, AuditTrailService auditTrailService) {
+        return new DeleteAdminPatientUseCase(adminPatientQueryRepository, adminPatientWriteRepository, auditTrailService);
     }
 }

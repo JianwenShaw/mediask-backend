@@ -1,5 +1,8 @@
 package me.jianwen.mediask.application.outpatient.usecase;
 
+import me.jianwen.mediask.application.audit.AuditActionCodes;
+import me.jianwen.mediask.application.audit.AuditResourceTypes;
+import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.outpatient.command.CreateRegistrationCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounter;
@@ -16,18 +19,21 @@ public class CreateRegistrationUseCase {
     private final ClinicSlotReservationRepository clinicSlotReservationRepository;
     private final RegistrationOrderRepository registrationOrderRepository;
     private final VisitEncounterRepository visitEncounterRepository;
+    private final me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService;
 
     public CreateRegistrationUseCase(
             ClinicSlotReservationRepository clinicSlotReservationRepository,
             RegistrationOrderRepository registrationOrderRepository,
-            VisitEncounterRepository visitEncounterRepository) {
+            VisitEncounterRepository visitEncounterRepository,
+            me.jianwen.mediask.application.audit.usecase.AuditTrailService auditTrailService) {
         this.clinicSlotReservationRepository = clinicSlotReservationRepository;
         this.registrationOrderRepository = registrationOrderRepository;
         this.visitEncounterRepository = visitEncounterRepository;
+        this.auditTrailService = auditTrailService;
     }
 
     @Transactional
-    public CreateRegistrationResult handle(CreateRegistrationCommand command) {
+    public CreateRegistrationResult handle(CreateRegistrationCommand command, AuditContext auditContext) {
         if (!clinicSlotReservationRepository.existsOpenSession(command.clinicSessionId())) {
             throw new BizException(OutpatientErrorCode.SESSION_NOT_FOUND);
         }
@@ -50,7 +56,16 @@ public class CreateRegistrationUseCase {
                 registrationOrder.doctorId(),
                 registrationOrder.departmentId()));
         clinicSlotReservationRepository.refreshSessionRemainingCount(command.clinicSessionId());
-        return new CreateRegistrationResult(
+        CreateRegistrationResult result = new CreateRegistrationResult(
                 registrationOrder.registrationId(), registrationOrder.orderNo(), registrationOrder.status());
+        auditTrailService.recordAuditSuccess(
+                auditContext,
+                AuditActionCodes.REGISTRATION_CREATE,
+                AuditResourceTypes.REGISTRATION_ORDER,
+                String.valueOf(registrationOrder.registrationId()),
+                registrationOrder.patientId(),
+                null,
+                null);
+        return result;
     }
 }

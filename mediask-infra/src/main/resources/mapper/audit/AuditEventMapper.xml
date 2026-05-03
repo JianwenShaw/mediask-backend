@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="me.jianwen.mediask.infra.persistence.mapper.AuditEventMapper">
+
+    <select id="selectAuditEvents" resultType="me.jianwen.mediask.infra.persistence.dataobject.AuditEventDO">
+        SELECT id,
+               request_id,
+               trace_id,
+               actor_type,
+               operator_user_id,
+               operator_username,
+               operator_role_code,
+               actor_department_id,
+               action_code,
+               resource_type,
+               resource_id,
+               patient_user_id,
+               encounter_id,
+               success_flag,
+               error_code,
+               error_message,
+               client_ip,
+               user_agent,
+               reason_text,
+               occurred_at,
+               created_at
+        FROM audit.audit_event
+        WHERE 1 = 1
+        <if test="from != null">
+            AND occurred_at <![CDATA[>=]]> #{from}
+        </if>
+        <if test="to != null">
+            AND occurred_at <![CDATA[<=]]> #{to}
+        </if>
+        <if test="actionCode != null and actionCode != ''">
+            AND action_code = #{actionCode}
+        </if>
+        <if test="operatorUserId != null">
+            AND operator_user_id = #{operatorUserId}
+        </if>
+        <if test="patientUserId != null">
+            AND patient_user_id = #{patientUserId}
+        </if>
+        <if test="encounterId != null">
+            AND encounter_id = #{encounterId}
+        </if>
+        <if test="resourceType != null and resourceType != ''">
+            AND resource_type = #{resourceType}
+        </if>
+        <if test="resourceId != null and resourceId != ''">
+            AND resource_id = #{resourceId}
+        </if>
+        <if test="successFlag != null">
+            AND success_flag = #{successFlag}
+        </if>
+        <if test="requestId != null and requestId != ''">
+            AND request_id = #{requestId}
+        </if>
+        ORDER BY occurred_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAuditEvents" resultType="long">
+        SELECT COUNT(1)
+        FROM audit.audit_event
+        WHERE 1 = 1
+        <if test="from != null">
+            AND occurred_at <![CDATA[>=]]> #{from}
+        </if>
+        <if test="to != null">
+            AND occurred_at <![CDATA[<=]]> #{to}
+        </if>
+        <if test="actionCode != null and actionCode != ''">
+            AND action_code = #{actionCode}
+        </if>
+        <if test="operatorUserId != null">
+            AND operator_user_id = #{operatorUserId}
+        </if>
+        <if test="patientUserId != null">
+            AND patient_user_id = #{patientUserId}
+        </if>
+        <if test="encounterId != null">
+            AND encounter_id = #{encounterId}
+        </if>
+        <if test="resourceType != null and resourceType != ''">
+            AND resource_type = #{resourceType}
+        </if>
+        <if test="resourceId != null and resourceId != ''">
+            AND resource_id = #{resourceId}
+        </if>
+        <if test="successFlag != null">
+            AND success_flag = #{successFlag}
+        </if>
+        <if test="requestId != null and requestId != ''">
+            AND request_id = #{requestId}
+        </if>
+    </select>
+
+</mapper>

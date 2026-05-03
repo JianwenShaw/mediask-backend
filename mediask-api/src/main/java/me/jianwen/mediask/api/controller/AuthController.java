@@ -1,5 +1,8 @@
 package me.jianwen.mediask.api.controller;
 
+import me.jianwen.mediask.api.audit.AuditActionCodes;
+import me.jianwen.mediask.api.audit.AuditApiSupport;
+import me.jianwen.mediask.api.audit.AuditResourceTypes;
 import me.jianwen.mediask.api.assembler.AuthAssembler;
 import me.jianwen.mediask.api.dto.CurrentUserResponse;
 import me.jianwen.mediask.api.dto.LoginRequest;
@@ -35,23 +38,41 @@ public class AuthController {
     private final RefreshTokenUseCase refreshTokenUseCase;
     private final LogoutUseCase logoutUseCase;
     private final GetCurrentUserUseCase getCurrentUserUseCase;
+    private final AuditApiSupport auditApiSupport;
 
     public AuthController(
             LoginUseCase loginUseCase,
             RefreshTokenUseCase refreshTokenUseCase,
             LogoutUseCase logoutUseCase,
-            GetCurrentUserUseCase getCurrentUserUseCase) {
+            GetCurrentUserUseCase getCurrentUserUseCase,
+            AuditApiSupport auditApiSupport) {
         this.loginUseCase = loginUseCase;
         this.refreshTokenUseCase = refreshTokenUseCase;
         this.logoutUseCase = logoutUseCase;
         this.getCurrentUserUseCase = getCurrentUserUseCase;
+        this.auditApiSupport = auditApiSupport;
     }
 
     @PostMapping("/login")
     public Result<LoginResponse> login(@RequestBody LoginRequest request) {
-        LoginResponse response = AuthAssembler.toLoginResponse(
-                loginUseCase.handle(new LoginCommand(request.username(), request.password())));
-        return Result.ok(response);
+        var auditContext = auditApiSupport.currentContext(null, request.username());
+        try {
+            var result = loginUseCase.handle(new LoginCommand(request.username(), request.password()), auditContext);
+            LoginResponse response = AuthAssembler.toLoginResponse(result);
+            return Result.ok(response);
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    auditContext,
+                    AuditActionCodes.AUTH_LOGIN_FAILED,
+                    AuditResourceTypes.AUTH_SESSION,
+                    null,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    null,
+                    null,
+                    null);
+            throw exception;
+        }
     }
 
     @PostMapping("/refresh")
@@ -76,7 +97,7 @@ public class AuthController {
         logoutUseCase.handle(new LogoutCommand(
                 request.refreshToken(),
                 accessToken,
-                principal.userId()));
+                principal.userId()), auditApiSupport.currentContext(principal));
         return Result.ok();
     }
 

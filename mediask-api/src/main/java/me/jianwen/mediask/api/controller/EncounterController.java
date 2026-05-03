@@ -1,6 +1,9 @@
 package me.jianwen.mediask.api.controller;
 
 import me.jianwen.mediask.api.assembler.ClinicalAssembler;
+import me.jianwen.mediask.api.audit.AuditActionCodes;
+import me.jianwen.mediask.api.audit.AuditApiSupport;
+import me.jianwen.mediask.api.audit.AuditResourceTypes;
 import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
 import me.jianwen.mediask.api.dto.UpdateEncounterStatusRequest;
@@ -31,14 +34,17 @@ public class EncounterController {
     private final ListEncountersUseCase listEncountersUseCase;
     private final GetEncounterDetailUseCase getEncounterDetailUseCase;
     private final UpdateEncounterStatusUseCase updateEncounterStatusUseCase;
+    private final AuditApiSupport auditApiSupport;
 
     public EncounterController(
             ListEncountersUseCase listEncountersUseCase,
             GetEncounterDetailUseCase getEncounterDetailUseCase,
-            UpdateEncounterStatusUseCase updateEncounterStatusUseCase) {
+            UpdateEncounterStatusUseCase updateEncounterStatusUseCase,
+            AuditApiSupport auditApiSupport) {
         this.listEncountersUseCase = listEncountersUseCase;
         this.getEncounterDetailUseCase = getEncounterDetailUseCase;
         this.updateEncounterStatusUseCase = updateEncounterStatusUseCase;
+        this.auditApiSupport = auditApiSupport;
     }
 
     @GetMapping
@@ -83,7 +89,22 @@ public class EncounterController {
         if (principal.doctorId() == null) {
             throw new BizException(UserErrorCode.ROLE_MISMATCH);
         }
-        return Result.ok(ClinicalAssembler.toUpdateEncounterStatusResponse(updateEncounterStatusUseCase.handle(
-                ClinicalAssembler.toUpdateEncounterStatusCommand(encounterId, principal.doctorId(), request))));
+        try {
+            return Result.ok(ClinicalAssembler.toUpdateEncounterStatusResponse(updateEncounterStatusUseCase.handle(
+                    ClinicalAssembler.toUpdateEncounterStatusCommand(encounterId, principal.doctorId(), request),
+                    auditApiSupport.currentContext(principal))));
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    AuditActionCodes.ENCOUNTER_UPDATE,
+                    AuditResourceTypes.ENCOUNTER,
+                    auditApiSupport.resourceIdOf(encounterId),
+                    principal,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    null,
+                    encounterId,
+                    request.action());
+            throw exception;
+        }
     }
 }

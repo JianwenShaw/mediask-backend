@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import me.jianwen.mediask.application.TestAuditSupport;
 import me.jianwen.mediask.application.user.command.UpdateCurrentPatientProfileCommand;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.domain.user.exception.UserErrorCode;
@@ -28,9 +29,12 @@ class UpdateCurrentPatientProfileUseCaseTest {
         StubPatientProfileWriteRepository writeRepository = new StubPatientProfileWriteRepository();
         UpdateCurrentPatientProfileUseCase useCase = new UpdateCurrentPatientProfileUseCase(
                 new StubUserAuthenticationRepository(authenticatedUser(RoleCode.PATIENT, UserType.PATIENT)),
-                writeRepository);
+                writeRepository,
+                TestAuditSupport.auditTrailService());
 
-        useCase.handle(new UpdateCurrentPatientProfileCommand(2003L, "  FEMALE  ", LocalDate.of(1992, 5, 1), "  A  ", "  Peanut  "));
+        useCase.handle(
+                new UpdateCurrentPatientProfileCommand(2003L, "  FEMALE  ", LocalDate.of(1992, 5, 1), "  A  ", "  Peanut  "),
+                TestAuditSupport.auditContext());
 
         assertEquals(2003L, writeRepository.lastUserId);
         assertEquals("FEMALE", writeRepository.lastDraft.gender());
@@ -43,11 +47,14 @@ class UpdateCurrentPatientProfileUseCaseTest {
         StubPatientProfileWriteRepository writeRepository = new StubPatientProfileWriteRepository();
         UpdateCurrentPatientProfileUseCase useCase = new UpdateCurrentPatientProfileUseCase(
                 new StubUserAuthenticationRepository(authenticatedUser(RoleCode.DOCTOR, UserType.DOCTOR)),
-                writeRepository);
+                writeRepository,
+                TestAuditSupport.auditTrailService());
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new UpdateCurrentPatientProfileCommand(2003L, "FEMALE", null, "A", null)));
+                () -> useCase.handle(
+                        new UpdateCurrentPatientProfileCommand(2003L, "FEMALE", null, "A", null),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(UserErrorCode.ROLE_MISMATCH.getCode(), exception.getCode());
         assertNull(writeRepository.lastDraft);
@@ -58,11 +65,14 @@ class UpdateCurrentPatientProfileUseCaseTest {
         StubPatientProfileWriteRepository writeRepository = new StubPatientProfileWriteRepository();
         UpdateCurrentPatientProfileUseCase useCase = new UpdateCurrentPatientProfileUseCase(
                 new StubUserAuthenticationRepository(authenticatedUser(RoleCode.PATIENT, UserType.PATIENT)),
-                writeRepository);
+                writeRepository,
+                TestAuditSupport.auditTrailService());
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> useCase.handle(new UpdateCurrentPatientProfileCommand(2003L, "UNKNOWN", null, null, null)));
+                () -> useCase.handle(
+                        new UpdateCurrentPatientProfileCommand(2003L, "UNKNOWN", null, null, null),
+                        TestAuditSupport.auditContext()));
 
         assertEquals("gender must be one of MALE, FEMALE, OTHER", exception.getMessage());
         assertNull(writeRepository.lastDraft);

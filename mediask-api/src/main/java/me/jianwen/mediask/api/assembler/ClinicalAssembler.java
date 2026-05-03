@@ -49,8 +49,9 @@ public final class ClinicalAssembler {
         return new GetEmrDetailQuery(encounterId);
     }
 
-    public static GetPrescriptionDetailQuery toGetPrescriptionDetailQuery(Long encounterId, Long doctorId) {
-        return new GetPrescriptionDetailQuery(encounterId, doctorId);
+    public static GetPrescriptionDetailQuery toGetPrescriptionDetailQuery(
+            Long encounterId, Long doctorId, Long patientUserId) {
+        return new GetPrescriptionDetailQuery(encounterId, doctorId, patientUserId);
     }
 
     public static CreateEmrCommand toCreateEmrCommand(CreateEmrRequest request, Long doctorId) {

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import me.jianwen.mediask.api.audit.AuditActionCodes;
+import me.jianwen.mediask.api.audit.AuditApiSupport;
+import me.jianwen.mediask.api.audit.AuditResourceTypes;
 import me.jianwen.mediask.api.dto.AiSessionDetailResponse;
 import me.jianwen.mediask.api.dto.AiSessionListResponse;
 import me.jianwen.mediask.api.dto.AiSessionTriageResultResponse;
@@ -19,7 +22,9 @@ import me.jianwen.mediask.application.ai.usecase.StreamAiTriageQueryUseCase;
 import me.jianwen.mediask.application.ai.usecase.SubmitAiTriageQueryUseCase;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.exception.ErrorCode;
+import me.jianwen.mediask.common.exception.ErrorCodeCategory;
 import me.jianwen.mediask.common.result.Result;
+import me.jianwen.mediask.domain.audit.model.DataAccessPurposeCode;
 import me.jianwen.mediask.domain.user.exception.UserErrorCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +47,7 @@ public class AiTriageController {
     private final GetAiSessionDetailUseCase getAiSessionDetailUseCase;
     private final GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase;
     private final ObjectMapper objectMapper;
+    private final AuditApiSupport auditApiSupport;
 
     public AiTriageController(
             SubmitAiTriageQueryUseCase submitAiTriageQueryUseCase,
@@ -49,13 +55,15 @@ public class AiTriageController {
             ListAiSessionsUseCase listAiSessionsUseCase,
             GetAiSessionDetailUseCase getAiSessionDetailUseCase,
             GetAiSessionTriageResultUseCase getAiSessionTriageResultUseCase,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            AuditApiSupport auditApiSupport) {
         this.submitAiTriageQueryUseCase = submitAiTriageQueryUseCase;
         this.streamAiTriageQueryUseCase = streamAiTriageQueryUseCase;
         this.listAiSessionsUseCase = listAiSessionsUseCase;
         this.getAiSessionDetailUseCase = getAiSessionDetailUseCase;
         this.getAiSessionTriageResultUseCase = getAiSessionTriageResultUseCase;
         this.objectMapper = objectMapper;
+        this.auditApiSupport = auditApiSupport;
     }
 
     @PostMapping("/triage/query")
@@ -80,8 +88,16 @@ public class AiTriageController {
             @PathVariable String sessionId,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
         ensurePatient(principal);
-        return Result.ok(AiTriageAssembler.toResponse(getAiSessionDetailUseCase.handle(
-                AiTriageAssembler.toGetSessionDetailQuery(principal.userId(), sessionId))));
+        try {
+            var detail = getAiSessionDetailUseCase.handle(
+                    AiTriageAssembler.toGetSessionDetailQuery(principal.userId(), sessionId),
+                    auditApiSupport.currentContext(principal),
+                    DataAccessPurposeCode.SELF_SERVICE);
+            return Result.ok(AiTriageAssembler.toResponse(detail));
+        } catch (BizException exception) {
+            recordAiReadFailure(principal, sessionId, exception, AuditActionCodes.AI_SESSION_VIEW_FAILED);
+            throw exception;
+        }
     }
 
     @GetMapping("/sessions/{sessionId}/triage-result")
@@ -89,8 +105,15 @@ public class AiTriageController {
             @PathVariable String sessionId,
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
         ensurePatient(principal);
-        return Result.ok(AiTriageAssembler.toResponse(getAiSessionTriageResultUseCase.handle(
-                AiTriageAssembler.toGetSessionTriageResultQuery(principal.userId(), sessionId))));
+        try {
+            return Result.ok(AiTriageAssembler.toResponse(getAiSessionTriageResultUseCase.handle(
+                    AiTriageAssembler.toGetSessionTriageResultQuery(principal.userId(), sessionId),
+                    auditApiSupport.currentContext(principal),
+                    DataAccessPurposeCode.SELF_SERVICE)));
+        } catch (BizException exception) {
+            recordAiReadFailure(principal, sessionId, exception, AuditActionCodes.AI_TRIAGE_RESULT_VIEW_FAILED);
+            throw exception;
+        }
     }
 
     @PostMapping(value = "/triage/query/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -124,6 +147,34 @@ public class AiTriageController {
         if (principal.patientId() == null) {
             throw new BizException(UserErrorCode.ROLE_MISMATCH);
         }
+    }
+
+    private void recordAiReadFailure(
+            AuthenticatedUserPrincipal principal,
+            String sessionId,
+            BizException exception,
+            String failureActionCode) {
+        if (exception.getErrorCode().getCategory() == ErrorCodeCategory.FORBIDDEN) {
+            auditApiSupport.recordDeniedDataAccess(
+                    AuditResourceTypes.AI_SESSION,
+                    sessionId,
+                    principal,
+                    principal.userId(),
+                    null,
+                    DataAccessPurposeCode.SELF_SERVICE,
+                    String.valueOf(exception.getCode()));
+            return;
+        }
+        auditApiSupport.recordAuditFailure(
+                failureActionCode,
+                AuditResourceTypes.AI_SESSION,
+                sessionId,
+                principal,
+                String.valueOf(exception.getCode()),
+                exception.getMessage(),
+                principal.userId(),
+                null,
+                null);
     }
 
     private void writeEvent(

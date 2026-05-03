@@ -2,6 +2,7 @@ package me.jianwen.mediask.api.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,12 +14,18 @@ import jakarta.servlet.Filter;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
+import me.jianwen.mediask.api.audit.AuditApiSupport;
 import me.jianwen.mediask.api.dto.AiTriageQueryRequest;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
+import me.jianwen.mediask.application.audit.usecase.AuditTrailService;
+import me.jianwen.mediask.application.audit.usecase.RecordAuditEventUseCase;
+import me.jianwen.mediask.application.audit.usecase.RecordDataAccessLogUseCase;
 import me.jianwen.mediask.application.ai.command.SubmitAiTriageQueryCommand;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionDetailUseCase;
 import me.jianwen.mediask.application.ai.usecase.GetAiSessionTriageResultUseCase;
@@ -39,6 +46,9 @@ import me.jianwen.mediask.domain.ai.model.AiTriageRecommendedDepartment;
 import me.jianwen.mediask.domain.ai.model.AiTriageResult;
 import me.jianwen.mediask.domain.ai.port.AiTriageGatewayPort;
 import me.jianwen.mediask.domain.ai.port.AiTriageResultSnapshotRepository;
+import me.jianwen.mediask.domain.ai.exception.AiErrorCode;
+import me.jianwen.mediask.domain.audit.model.AuditEventRecord;
+import me.jianwen.mediask.domain.audit.model.DataAccessLogRecord;
 import me.jianwen.mediask.domain.triage.model.CatalogVersion;
 import me.jianwen.mediask.domain.triage.model.DepartmentCandidate;
 import me.jianwen.mediask.domain.triage.model.TriageCatalog;
@@ -46,6 +56,8 @@ import me.jianwen.mediask.domain.triage.port.TriageCatalogPublishPort;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
 import me.jianwen.mediask.domain.user.model.RoleCode;
 import me.jianwen.mediask.domain.user.model.UserType;
+import me.jianwen.mediask.common.exception.BizException;
+import me.jianwen.mediask.common.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -61,10 +73,14 @@ class AiTriageControllerTest {
     private StubSubmitUseCase submitUseCase;
     private MockMvc patientMockMvc;
     private MockMvc doctorMockMvc;
+    private List<AuditEventRecord> auditEvents;
+    private List<DataAccessLogRecord> dataAccessLogs;
 
     @BeforeEach
     void setUp() {
         submitUseCase = new StubSubmitUseCase();
+        auditEvents = new ArrayList<>();
+        dataAccessLogs = new ArrayList<>();
         patientMockMvc = buildMockMvc(patientUser(), submitUseCase);
         doctorMockMvc = buildMockMvc(doctorUser(), new StubSubmitUseCase());
     }
@@ -145,14 +161,56 @@ class AiTriageControllerTest {
     }
 
     @Test
+    void getSessionDetail_WhenNotFound_RecordFailureAuditInsteadOfDeniedAccess() throws Exception {
+        AiTriageController controller = new AiTriageController(
+                submitUseCase,
+                new StreamAiTriageQueryUseCase(new StreamingGatewayPort(), submitUseCase),
+                new ListAiSessionsUseCase(new SessionGatewayPort()),
+                new GetAiSessionDetailUseCase(new MissingSessionGatewayPort(), auditTrailService()),
+                new GetAiSessionTriageResultUseCase(new SessionGatewayPort(), auditTrailService()),
+                objectMapper,
+                auditApiSupport());
+        MockMvc failingMockMvc = buildMockMvc(patientUser(), controller);
+
+        failingMockMvc.perform(get("/api/v1/ai/sessions/missing-session"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(6101));
+
+        assertEquals("AI_SESSION_VIEW_FAILED", auditEvents.getLast().actionCode());
+        assertFalse(auditEvents.getLast().successFlag());
+        assertTrue(dataAccessLogs.isEmpty());
+    }
+
+    @Test
+    void getSessionTriageResult_WhenForbidden_RecordDeniedAccess() throws Exception {
+        AiTriageController controller = new AiTriageController(
+                submitUseCase,
+                new StreamAiTriageQueryUseCase(new StreamingGatewayPort(), submitUseCase),
+                new ListAiSessionsUseCase(new SessionGatewayPort()),
+                new GetAiSessionDetailUseCase(new SessionGatewayPort(), auditTrailService()),
+                new GetAiSessionTriageResultUseCase(new ForbiddenSessionGatewayPort(), auditTrailService()),
+                objectMapper,
+                auditApiSupport());
+        MockMvc failingMockMvc = buildMockMvc(patientUser(), controller);
+
+        failingMockMvc.perform(get("/api/v1/ai/sessions/session-1/triage-result"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(1003));
+
+        assertEquals("DENIED", dataAccessLogs.getLast().accessResult());
+        assertEquals("1003", dataAccessLogs.getLast().denyReasonCode());
+    }
+
+    @Test
     void streamQuery_WhenPatientAuthenticated_ConvertsSnakeCaseToCamelCase() throws Exception {
         AiTriageController controller = new AiTriageController(
                 submitUseCase,
                 new StreamAiTriageQueryUseCase(new StreamingGatewayPort(), submitUseCase),
                 new ListAiSessionsUseCase(new SessionGatewayPort()),
-                new GetAiSessionDetailUseCase(new SessionGatewayPort()),
-                new GetAiSessionTriageResultUseCase(new SessionGatewayPort()),
-                objectMapper);
+                new GetAiSessionDetailUseCase(new SessionGatewayPort(), TestAuditSupport.auditTrailService()),
+                new GetAiSessionTriageResultUseCase(new SessionGatewayPort(), TestAuditSupport.auditTrailService()),
+                objectMapper,
+                TestAuditSupport.auditApiSupport());
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         controller.streamQuery(
@@ -174,13 +232,17 @@ class AiTriageControllerTest {
     }
 
     private MockMvc buildMockMvc(AuthenticatedUser user, StubSubmitUseCase submitUseCase) {
-        AiTriageController controller = new AiTriageController(
+        return buildMockMvc(user, new AiTriageController(
                 submitUseCase,
                 new StreamAiTriageQueryUseCase(new StreamingGatewayPort(), submitUseCase),
                 new ListAiSessionsUseCase(new SessionGatewayPort()),
-                new GetAiSessionDetailUseCase(new SessionGatewayPort()),
-                new GetAiSessionTriageResultUseCase(new SessionGatewayPort()),
-                objectMapper);
+                new GetAiSessionDetailUseCase(new SessionGatewayPort(), auditTrailService()),
+                new GetAiSessionTriageResultUseCase(new SessionGatewayPort(), auditTrailService()),
+                objectMapper,
+                auditApiSupport()));
+    }
+
+    private MockMvc buildMockMvc(AuthenticatedUser user, AiTriageController controller) {
         Filter testAuthenticationFilter = (request, response, chain) -> {
             try {
                 AuthenticatedUserPrincipal principal = AuthenticatedUserPrincipal.from(user);
@@ -197,6 +259,16 @@ class AiTriageControllerTest {
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .addFilters(testAuthenticationFilter)
                 .build();
+    }
+
+    private AuditTrailService auditTrailService() {
+        return new AuditTrailService(
+                new RecordAuditEventUseCase(auditEvents::add),
+                new RecordDataAccessLogUseCase(dataAccessLogs::add));
+    }
+
+    private AuditApiSupport auditApiSupport() {
+        return new AuditApiSupport(auditTrailService());
     }
 
     private AuthenticatedUser patientUser() {
@@ -346,7 +418,7 @@ class AiTriageControllerTest {
         }
     }
 
-    private static final class SessionGatewayPort implements AiTriageGatewayPort {
+    private static class SessionGatewayPort implements AiTriageGatewayPort {
 
         @Override
         public AiTriageQueryResponse query(AiTriageGatewayContext context, AiTriageQuery query) {
@@ -419,6 +491,22 @@ class AiTriageControllerTest {
                     List.of(new AiTriageCitation(1, "chunk-1", "头痛优先神经内科")),
                     null,
                     "deptcat-v20260501-01");
+        }
+    }
+
+    private static final class MissingSessionGatewayPort extends SessionGatewayPort {
+
+        @Override
+        public AiSessionDetail getSessionDetail(AiTriageGatewayContext context, String sessionId) {
+            throw new BizException(AiErrorCode.TRIAGE_RESULT_NOT_READY);
+        }
+    }
+
+    private static final class ForbiddenSessionGatewayPort extends SessionGatewayPort {
+
+        @Override
+        public AiSessionTriageResult getSessionTriageResult(AiTriageGatewayContext context, String sessionId) {
+            throw new BizException(ErrorCode.FORBIDDEN);
         }
     }
 

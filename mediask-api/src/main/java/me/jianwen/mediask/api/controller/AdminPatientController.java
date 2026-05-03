@@ -1,6 +1,9 @@
 package me.jianwen.mediask.api.controller;
 
 import me.jianwen.mediask.api.assembler.AuthAssembler;
+import me.jianwen.mediask.api.audit.AuditActionCodes;
+import me.jianwen.mediask.api.audit.AuditApiSupport;
+import me.jianwen.mediask.api.audit.AuditResourceTypes;
 import me.jianwen.mediask.api.dto.AdminPatientDetailResponse;
 import me.jianwen.mediask.api.dto.AdminPatientListItemResponse;
 import me.jianwen.mediask.api.dto.CreateAdminPatientRequest;
@@ -18,7 +21,10 @@ import me.jianwen.mediask.application.user.usecase.GetAdminPatientDetailUseCase;
 import me.jianwen.mediask.application.user.usecase.ListAdminPatientsUseCase;
 import me.jianwen.mediask.application.user.usecase.UpdateAdminPatientUseCase;
 import me.jianwen.mediask.common.pagination.PageData;
+import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.result.Result;
+import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,18 +44,21 @@ public class AdminPatientController {
     private final CreateAdminPatientUseCase createAdminPatientUseCase;
     private final UpdateAdminPatientUseCase updateAdminPatientUseCase;
     private final DeleteAdminPatientUseCase deleteAdminPatientUseCase;
+    private final AuditApiSupport auditApiSupport;
 
     public AdminPatientController(
             ListAdminPatientsUseCase listAdminPatientsUseCase,
             GetAdminPatientDetailUseCase getAdminPatientDetailUseCase,
             CreateAdminPatientUseCase createAdminPatientUseCase,
             UpdateAdminPatientUseCase updateAdminPatientUseCase,
-            DeleteAdminPatientUseCase deleteAdminPatientUseCase) {
+            DeleteAdminPatientUseCase deleteAdminPatientUseCase,
+            AuditApiSupport auditApiSupport) {
         this.listAdminPatientsUseCase = listAdminPatientsUseCase;
         this.getAdminPatientDetailUseCase = getAdminPatientDetailUseCase;
         this.createAdminPatientUseCase = createAdminPatientUseCase;
         this.updateAdminPatientUseCase = updateAdminPatientUseCase;
         this.deleteAdminPatientUseCase = deleteAdminPatientUseCase;
+        this.auditApiSupport = auditApiSupport;
     }
 
     @GetMapping
@@ -66,45 +75,99 @@ public class AdminPatientController {
 
     @GetMapping("/{patientId}")
     @AuthorizeScenario(ScenarioCode.ADMIN_PATIENT_VIEW)
-    public Result<AdminPatientDetailResponse> detail(@PathVariable Long patientId) {
+    public Result<AdminPatientDetailResponse> detail(
+            @PathVariable Long patientId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
         return Result.ok(AuthAssembler.toAdminPatientDetailResponse(
-                getAdminPatientDetailUseCase.handle(new GetAdminPatientDetailQuery(patientId))));
+                getAdminPatientDetailUseCase.handle(
+                        new GetAdminPatientDetailQuery(patientId), auditApiSupport.currentContext(principal))));
     }
 
     @PostMapping
     @AuthorizeScenario(ScenarioCode.ADMIN_PATIENT_CREATE)
-    public Result<AdminPatientDetailResponse> create(@RequestBody CreateAdminPatientRequest request) {
-        return Result.ok(AuthAssembler.toAdminPatientDetailResponse(createAdminPatientUseCase.handle(
-                new CreateAdminPatientCommand(
-                        request.username(),
-                        request.password(),
-                        request.displayName(),
-                        request.mobileMasked(),
-                        request.gender(),
-                        request.birthDate(),
-                        request.bloodType(),
-                        request.allergySummary()))));
+    public Result<AdminPatientDetailResponse> create(
+            @RequestBody CreateAdminPatientRequest request,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        try {
+            return Result.ok(AuthAssembler.toAdminPatientDetailResponse(createAdminPatientUseCase.handle(
+                    new CreateAdminPatientCommand(
+                            request.username(),
+                            request.password(),
+                            request.displayName(),
+                            request.mobileMasked(),
+                            request.gender(),
+                            request.birthDate(),
+                            request.bloodType(),
+                            request.allergySummary()),
+                    auditApiSupport.currentContext(principal))));
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    AuditActionCodes.ADMIN_PATIENT_CREATE,
+                    AuditResourceTypes.PATIENT_PROFILE,
+                    null,
+                    principal,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    null,
+                    null,
+                    null);
+            throw exception;
+        }
     }
 
     @PutMapping("/{patientId}")
     @AuthorizeScenario(ScenarioCode.ADMIN_PATIENT_UPDATE)
     public Result<AdminPatientDetailResponse> update(
-            @PathVariable Long patientId, @RequestBody UpdateAdminPatientRequest request) {
-        return Result.ok(AuthAssembler.toAdminPatientDetailResponse(updateAdminPatientUseCase.handle(
-                new UpdateAdminPatientCommand(
-                        patientId,
-                        request.displayName(),
-                        request.mobileMasked(),
-                        request.gender(),
-                        request.birthDate(),
-                        request.bloodType(),
-                        request.allergySummary()))));
+            @PathVariable Long patientId,
+            @RequestBody UpdateAdminPatientRequest request,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        try {
+            return Result.ok(AuthAssembler.toAdminPatientDetailResponse(updateAdminPatientUseCase.handle(
+                    new UpdateAdminPatientCommand(
+                            patientId,
+                            request.displayName(),
+                            request.mobileMasked(),
+                            request.gender(),
+                            request.birthDate(),
+                            request.bloodType(),
+                            request.allergySummary()),
+                    auditApiSupport.currentContext(principal))));
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    AuditActionCodes.ADMIN_PATIENT_UPDATE,
+                    AuditResourceTypes.PATIENT_PROFILE,
+                    auditApiSupport.resourceIdOf(patientId),
+                    principal,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    null,
+                    null,
+                    null);
+            throw exception;
+        }
     }
 
     @DeleteMapping("/{patientId}")
     @AuthorizeScenario(ScenarioCode.ADMIN_PATIENT_DELETE)
-    public Result<Void> delete(@PathVariable Long patientId) {
-        deleteAdminPatientUseCase.handle(new DeleteAdminPatientCommand(patientId));
-        return Result.ok();
+    public Result<Void> delete(
+            @PathVariable Long patientId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        try {
+            deleteAdminPatientUseCase.handle(
+                    new DeleteAdminPatientCommand(patientId), auditApiSupport.currentContext(principal));
+            return Result.ok();
+        } catch (BizException exception) {
+            auditApiSupport.recordAuditFailure(
+                    AuditActionCodes.ADMIN_PATIENT_DELETE,
+                    AuditResourceTypes.PATIENT_PROFILE,
+                    auditApiSupport.resourceIdOf(patientId),
+                    principal,
+                    String.valueOf(exception.getCode()),
+                    exception.getMessage(),
+                    null,
+                    null,
+                    null);
+            throw exception;
+        }
     }
 }
