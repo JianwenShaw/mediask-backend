@@ -4,6 +4,8 @@ import me.jianwen.mediask.application.audit.command.RecordDataAccessLogCommand;
 import me.jianwen.mediask.common.id.SnowflakeIdGenerator;
 import me.jianwen.mediask.domain.audit.model.DataAccessLogRecord;
 import me.jianwen.mediask.domain.audit.port.DataAccessLogRepository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 public class RecordDataAccessLogUseCase {
 
@@ -13,6 +15,7 @@ public class RecordDataAccessLogUseCase {
         this.dataAccessLogRepository = dataAccessLogRepository;
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handle(RecordDataAccessLogCommand command) {
         dataAccessLogRepository.save(new DataAccessLogRecord(
                 SnowflakeIdGenerator.nextId(),

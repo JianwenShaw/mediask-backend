@@ -1,13 +1,16 @@
 package me.jianwen.mediask.api.config;
 
 import me.jianwen.mediask.application.audit.usecase.AuditTrailService;
+import me.jianwen.mediask.application.clinical.usecase.CancelPrescriptionUseCase;
 import me.jianwen.mediask.application.clinical.usecase.CreateEmrUseCase;
 import me.jianwen.mediask.application.clinical.usecase.CreatePrescriptionUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEmrDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetPrescriptionDetailUseCase;
+import me.jianwen.mediask.application.clinical.usecase.IssuePrescriptionUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusUseCase;
+import me.jianwen.mediask.application.clinical.usecase.UpdatePrescriptionItemsUseCase;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordRepository;
 import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
@@ -72,5 +75,38 @@ public class ClinicalModuleConfig {
             AuditTrailService auditTrailService) {
         return new GetPrescriptionDetailUseCase(
                 prescriptionOrderQueryRepository, encounterQueryRepository, auditTrailService);
+    }
+
+    @Bean
+    public UpdatePrescriptionItemsUseCase updatePrescriptionItemsUseCase(
+            PrescriptionOrderQueryRepository prescriptionOrderQueryRepository,
+            PrescriptionOrderRepository prescriptionOrderRepository,
+            EncounterQueryRepository encounterQueryRepository,
+            AuditTrailService auditTrailService) {
+        return new UpdatePrescriptionItemsUseCase(
+                prescriptionOrderQueryRepository, prescriptionOrderRepository,
+                encounterQueryRepository, auditTrailService);
+    }
+
+    @Bean
+    public IssuePrescriptionUseCase issuePrescriptionUseCase(
+            PrescriptionOrderQueryRepository prescriptionOrderQueryRepository,
+            PrescriptionOrderRepository prescriptionOrderRepository,
+            EncounterQueryRepository encounterQueryRepository,
+            AuditTrailService auditTrailService) {
+        return new IssuePrescriptionUseCase(
+                prescriptionOrderQueryRepository, prescriptionOrderRepository,
+                encounterQueryRepository, auditTrailService);
+    }
+
+    @Bean
+    public CancelPrescriptionUseCase cancelPrescriptionUseCase(
+            PrescriptionOrderQueryRepository prescriptionOrderQueryRepository,
+            PrescriptionOrderRepository prescriptionOrderRepository,
+            EncounterQueryRepository encounterQueryRepository,
+            AuditTrailService auditTrailService) {
+        return new CancelPrescriptionUseCase(
+                prescriptionOrderQueryRepository, prescriptionOrderRepository,
+                encounterQueryRepository, auditTrailService);
     }
 }

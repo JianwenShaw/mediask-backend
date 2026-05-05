@@ -13,7 +13,10 @@ public class PrescriptionResourceReferenceAssembler implements ResourceReference
 
     @Override
     public boolean supports(ScenarioCode scenarioCode) {
-        return scenarioCode == ScenarioCode.PRESCRIPTION_READ;
+        return scenarioCode == ScenarioCode.PRESCRIPTION_READ
+                || scenarioCode == ScenarioCode.PRESCRIPTION_UPDATE
+                || scenarioCode == ScenarioCode.PRESCRIPTION_ISSUE
+                || scenarioCode == ScenarioCode.PRESCRIPTION_CANCEL;
     }
 
     @Override

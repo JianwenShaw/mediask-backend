@@ -1,5 +1,6 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -73,6 +74,78 @@ public class PrescriptionOrderRepositoryAdapter implements PrescriptionOrderRepo
     @Override
     public Optional<PrescriptionOrder> findByEncounterId(Long encounterId) {
         return prescriptionOrderMapper.selectByEncounterId(encounterId)
+                .map(orderDO -> new PrescriptionOrder(
+                        orderDO.getId(),
+                        orderDO.getPrescriptionNo(),
+                        orderDO.getRecordId(),
+                        orderDO.getEncounterId(),
+                        orderDO.getPatientId(),
+                        orderDO.getDoctorId(),
+                        PrescriptionStatus.valueOf(orderDO.getPrescriptionStatus()),
+                        prescriptionOrderMapper.selectItemsByPrescriptionId(orderDO.getId()).stream()
+                                .map(itemDO -> new PrescriptionItem(
+                                        itemDO.getId(),
+                                        itemDO.getSortOrder(),
+                                        itemDO.getDrugName(),
+                                        itemDO.getDrugSpecification(),
+                                        itemDO.getDosageText(),
+                                        itemDO.getFrequencyText(),
+                                        itemDO.getDurationText(),
+                                        itemDO.getQuantity(),
+                                        itemDO.getUnit(),
+                                        itemDO.getRoute()))
+                                .toList(),
+                        orderDO.getVersion(),
+                        orderDO.getCreatedAt().toInstant(),
+                        orderDO.getUpdatedAt().toInstant()));
+    }
+
+    @Override
+    public boolean update(PrescriptionOrder prescriptionOrder) {
+        PrescriptionOrderDO orderDO = new PrescriptionOrderDO();
+        orderDO.setId(prescriptionOrder.prescriptionOrderId());
+        orderDO.setPrescriptionNo(prescriptionOrder.prescriptionNo());
+        orderDO.setRecordId(prescriptionOrder.recordId());
+        orderDO.setEncounterId(prescriptionOrder.encounterId());
+        orderDO.setPatientId(prescriptionOrder.patientId());
+        orderDO.setDoctorId(prescriptionOrder.doctorId());
+        orderDO.setPrescriptionStatus(prescriptionOrder.prescriptionStatus().name());
+        orderDO.setVersion(prescriptionOrder.version());
+        orderDO.setCreatedAt(prescriptionOrder.createdAt().atOffset(ZoneOffset.UTC));
+        orderDO.setUpdatedAt(prescriptionOrder.updatedAt().atOffset(ZoneOffset.UTC));
+        int rows = prescriptionOrderMapper.updateById(orderDO);
+        if (rows == 0) {
+            return false;
+        }
+
+        prescriptionOrderMapper.deleteItemsByPrescriptionId(prescriptionOrder.prescriptionOrderId());
+        List<PrescriptionItemDO> itemDOs = prescriptionOrder.items().stream()
+                .map(item -> {
+                    PrescriptionItemDO itemDO = new PrescriptionItemDO();
+                    itemDO.setId(item.itemId());
+                    itemDO.setPrescriptionId(prescriptionOrder.prescriptionOrderId());
+                    itemDO.setSortOrder(item.sortOrder());
+                    itemDO.setDrugName(item.drugName());
+                    itemDO.setDrugSpecification(item.drugSpecification());
+                    itemDO.setDosageText(item.dosageText());
+                    itemDO.setFrequencyText(item.frequencyText());
+                    itemDO.setDurationText(item.durationText());
+                    itemDO.setQuantity(item.quantity());
+                    itemDO.setUnit(item.unit());
+                    itemDO.setRoute(item.route());
+                    itemDO.setCreatedAt(OffsetDateTime.now(ZoneOffset.UTC));
+                    return itemDO;
+                })
+                .toList();
+        if (!itemDOs.isEmpty()) {
+            prescriptionOrderMapper.insertItems(itemDOs);
+        }
+        return true;
+    }
+
+    @Override
+    public Optional<PrescriptionOrder> findById(Long prescriptionOrderId) {
+        return prescriptionOrderMapper.selectById(prescriptionOrderId)
                 .map(orderDO -> new PrescriptionOrder(
                         orderDO.getId(),
                         orderDO.getPrescriptionNo(),

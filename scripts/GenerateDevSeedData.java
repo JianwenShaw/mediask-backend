@@ -350,7 +350,6 @@ public class GenerateDevSeedData {
                 .append("    department_id,\n")
                 .append("    session_id,\n")
                 .append("    slot_id,\n")
-                .append("    source_ai_session_id,\n")
                 .append("    order_status,\n")
                 .append("    fee,\n")
                 .append("    paid_at,\n")
@@ -394,22 +393,14 @@ public class GenerateDevSeedData {
                 .append("    department_id,\n")
                 .append("    record_status,\n")
                 .append("    chief_complaint_summary,\n")
-                .append("    created_at,\n")
-                .append("    updated_at\n")
-                .append(")\nVALUES\n");
-        appendRows(sql, emrs, GenerateDevSeedData::renderEmrRecordRow);
-        sql.append("ON CONFLICT (id) DO NOTHING;\n\n");
-
-        sql.append("INSERT INTO emr_record_content (\n")
-                .append("    record_id,\n")
                 .append("    content_encrypted,\n")
                 .append("    content_masked,\n")
                 .append("    content_hash,\n")
                 .append("    created_at,\n")
                 .append("    updated_at\n")
                 .append(")\nVALUES\n");
-        appendRows(sql, emrs, GenerateDevSeedData::renderEmrContentRow);
-        sql.append("ON CONFLICT (record_id) DO NOTHING;\n\n");
+        appendRows(sql, emrs, GenerateDevSeedData::renderEmrRecordRow);
+        sql.append("ON CONFLICT (id) DO NOTHING;\n\n");
 
         List<DiagnosisSeed> diagnoses = emrs.stream().flatMap(emr -> emr.diagnoses().stream()).toList();
         sql.append("INSERT INTO emr_diagnosis (\n")
@@ -483,7 +474,7 @@ public class GenerateDevSeedData {
     private static String renderRegistrationRow(RegistrationSeed registration) {
         return "    (" + registration.id() + ", '" + registration.orderNo() + "', " + registration.patientId() + ", "
                 + registration.doctorId() + ", " + registration.departmentId() + ", " + registration.sessionId() + ", "
-                + registration.slotId() + ", NULL, '" + registration.orderStatus() + "', " + decimal(registration.fee())
+                + registration.slotId() + ", '" + registration.orderStatus() + "', " + decimal(registration.fee())
                 + ", TIMESTAMPTZ '" + timestamp(registration.paidAt()) + "', TIMESTAMPTZ '"
                 + timestamp(registration.createdAt()) + "', TIMESTAMPTZ '" + timestamp(registration.updatedAt()) + "')";
     }
@@ -499,14 +490,9 @@ public class GenerateDevSeedData {
     private static String renderEmrRecordRow(EmrSeed emr) {
         return "    (" + emr.id() + ", '" + emr.recordNo() + "', " + emr.encounterId() + ", " + emr.patientId() + ", "
                 + emr.doctorId() + ", " + emr.departmentId() + ", '" + emr.recordStatus() + "', "
-                + sqlString(emr.chiefComplaintSummary()) + ", TIMESTAMPTZ '" + timestamp(emr.createdAt())
-                + "', TIMESTAMPTZ '" + timestamp(emr.updatedAt()) + "')";
-    }
-
-    private static String renderEmrContentRow(EmrSeed emr) {
-        return "    (" + emr.id() + ", " + sqlString(emr.contentEncrypted()) + ", " + sqlString(emr.contentMasked())
-                + ", '" + emr.contentHash() + "', TIMESTAMPTZ '" + timestamp(emr.createdAt()) + "', TIMESTAMPTZ '"
-                + timestamp(emr.updatedAt()) + "')";
+                + sqlString(emr.chiefComplaintSummary()) + ", " + sqlString(emr.contentEncrypted()) + ", "
+                + sqlString(emr.contentMasked()) + ", '" + emr.contentHash() + "', TIMESTAMPTZ '"
+                + timestamp(emr.createdAt()) + "', TIMESTAMPTZ '" + timestamp(emr.updatedAt()) + "')";
     }
 
     private static String renderDiagnosisRow(DiagnosisSeed diagnosis) {

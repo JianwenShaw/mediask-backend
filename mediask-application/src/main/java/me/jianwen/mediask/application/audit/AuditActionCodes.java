@@ -10,6 +10,9 @@ public final class AuditActionCodes {
     public static final String ENCOUNTER_UPDATE = "ENCOUNTER_UPDATE";
     public static final String EMR_CREATE = "EMR_CREATE";
     public static final String PRESCRIPTION_CREATE = "PRESCRIPTION_CREATE";
+    public static final String PRESCRIPTION_UPDATE = "PRESCRIPTION_UPDATE";
+    public static final String PRESCRIPTION_ISSUE = "PRESCRIPTION_ISSUE";
+    public static final String PRESCRIPTION_CANCEL = "PRESCRIPTION_CANCEL";
     public static final String AI_SESSION_VIEW_FAILED = "AI_SESSION_VIEW_FAILED";
     public static final String AI_TRIAGE_RESULT_VIEW_FAILED = "AI_TRIAGE_RESULT_VIEW_FAILED";
     public static final String PATIENT_PROFILE_UPDATE = "PATIENT_PROFILE_UPDATE";

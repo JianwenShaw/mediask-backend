@@ -136,6 +136,11 @@ class GetPrescriptionDetailUseCaseTest {
         private boolean returnEmpty;
 
         @Override
+        public Optional<PrescriptionOrder> findById(Long prescriptionOrderId) {
+            return Optional.empty();
+        }
+
+        @Override
         public Optional<PrescriptionOrder> findByEncounterId(Long encounterId) {
             if (returnEmpty) {
                 return Optional.empty();

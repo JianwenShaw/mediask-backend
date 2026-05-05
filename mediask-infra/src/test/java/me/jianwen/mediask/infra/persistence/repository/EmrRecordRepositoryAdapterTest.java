@@ -8,7 +8,6 @@ import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordStatus;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrDiagnosisDO;
-import me.jianwen.mediask.infra.persistence.dataobject.EmrRecordContentDO;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrRecordDO;
 import me.jianwen.mediask.infra.persistence.mapper.EmrRecordMapper;
 import org.junit.jupiter.api.Test;
@@ -32,7 +31,6 @@ class EmrRecordRepositoryAdapterTest {
                 new StubAiContentEncryptor(),
                 proxy(EmrRecordMapper.class, Map.of(
                         "insert", handler::insertRecord,
-                        "insertContent", handler::insertContent,
                         "insertDiagnoses", handler::insertDiagnoses
                 ))
         );
@@ -62,15 +60,10 @@ class EmrRecordRepositoryAdapterTest {
         assertEquals(1L, handler.insertedRecord.getEncounterId());
         assertEquals(EmrRecordStatus.DRAFT.name(), handler.insertedRecord.getRecordStatus());
         assertEquals("Headache and congestion", handler.insertedRecord.getChiefComplaintSummary());
-
-        // Verify content insert
-        assertNotNull(handler.insertedContent);
-        assertEquals(record.recordId(), handler.insertedContent.getRecordId());
-        assertNotEquals("Detailed medical examination findings...", handler.insertedContent.getContentEncrypted());
-        assertEquals("encrypted:Detailed medical examination findings...", handler.insertedContent.getContentEncrypted());
-        assertNotNull(handler.insertedContent.getContentMasked());
-        assertNotNull(handler.insertedContent.getContentHash());
-        assertEquals(64, handler.insertedContent.getContentHash().length());
+        assertEquals("encrypted:Detailed medical examination findings...", handler.insertedRecord.getContentEncrypted());
+        assertNotNull(handler.insertedRecord.getContentMasked());
+        assertNotNull(handler.insertedRecord.getContentHash());
+        assertEquals(64, handler.insertedRecord.getContentHash().length());
 
         // Verify diagnoses insert
         assertNotNull(handler.insertedDiagnoses);
@@ -130,10 +123,7 @@ class EmrRecordRepositoryAdapterTest {
         handler.selectedRecord.setVersion(0);
         handler.selectedRecord.setCreatedAt(OffsetDateTime.parse("2026-04-19T10:00:00+08:00"));
         handler.selectedRecord.setUpdatedAt(OffsetDateTime.parse("2026-04-19T10:00:00+08:00"));
-
-        handler.selectedContent = new EmrRecordContentDO();
-        handler.selectedContent.setRecordId(7101L);
-        handler.selectedContent.setContentEncrypted("encrypted:Detailed medical examination findings...");
+        handler.selectedRecord.setContentEncrypted("encrypted:Detailed medical examination findings...");
 
         EmrDiagnosisDO primaryDiagnosis = new EmrDiagnosisDO();
         primaryDiagnosis.setId(81001L);
@@ -149,7 +139,6 @@ class EmrRecordRepositoryAdapterTest {
                 new StubAiContentEncryptor(),
                 proxy(EmrRecordMapper.class, Map.of(
                         "selectByEncounterId", handler::selectByEncounterId,
-                        "selectContentByRecordId", handler::selectContentByRecordId,
                         "selectDiagnosesByRecordId", handler::selectDiagnosesByRecordId
                 ))
         );
@@ -158,7 +147,6 @@ class EmrRecordRepositoryAdapterTest {
 
         assertTrue(result.isPresent());
         assertEquals(8101L, handler.selectedEncounterIdArg);
-        assertEquals(7101L, handler.selectedContentRecordIdArg);
         assertEquals(7101L, handler.selectedDiagnosesRecordIdArg);
         assertEquals("Detailed medical examination findings...", result.get().content());
         assertEquals(1, result.get().diagnoses().size());
@@ -279,27 +267,19 @@ class EmrRecordRepositoryAdapterTest {
 
     private static final class EmrMapperCapturingHandler {
         EmrRecordDO insertedRecord;
-        EmrRecordContentDO insertedContent;
         List<EmrDiagnosisDO> insertedDiagnoses;
         Long existsByEncounterIdArg;
         Boolean existsByEncounterIdResult;
         Long selectedEncounterIdArg;
         Long selectedAccessRecordIdArg;
-        Long selectedContentRecordIdArg;
         Long selectedDiagnosesRecordIdArg;
         Long selectedRecordId;
         EmrRecordDO selectedRecord;
         EmrRecordDO selectedAccessRecord;
-        EmrRecordContentDO selectedContent;
         List<EmrDiagnosisDO> selectedDiagnoses;
 
         private Object insertRecord(Object[] arguments) {
             this.insertedRecord = (EmrRecordDO) arguments[0];
-            return 1;
-        }
-
-        private Object insertContent(Object[] arguments) {
-            this.insertedContent = (EmrRecordContentDO) arguments[0];
             return 1;
         }
 
@@ -326,11 +306,6 @@ class EmrRecordRepositoryAdapterTest {
         private Object selectAccessByRecordId(Object[] arguments) {
             this.selectedAccessRecordIdArg = (Long) arguments[0];
             return Optional.ofNullable(selectedAccessRecord);
-        }
-
-        private Object selectContentByRecordId(Object[] arguments) {
-            this.selectedContentRecordIdArg = (Long) arguments[0];
-            return Optional.ofNullable(selectedContent);
         }
 
         private Object selectDiagnosesByRecordId(Object[] arguments) {

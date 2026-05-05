@@ -74,4 +74,44 @@ public record PrescriptionOrder(
                 now,
                 now);
     }
+
+    public PrescriptionOrder updateItems(List<PrescriptionItem> newItems) {
+        if (prescriptionStatus != PrescriptionStatus.DRAFT) {
+            throw new IllegalStateException("Only DRAFT prescriptions can have items updated");
+        }
+        if (newItems == null || newItems.isEmpty()) {
+            throw new IllegalArgumentException("items cannot be null or empty");
+        }
+        Instant now = Instant.now();
+        return new PrescriptionOrder(
+                prescriptionOrderId, prescriptionNo, recordId, encounterId,
+                patientId, doctorId, prescriptionStatus,
+                List.copyOf(newItems),
+                version, createdAt, now);
+    }
+
+    public PrescriptionOrder issue() {
+        if (prescriptionStatus != PrescriptionStatus.DRAFT) {
+            throw new IllegalStateException("Only DRAFT prescriptions can be issued");
+        }
+        Instant now = Instant.now();
+        return new PrescriptionOrder(
+                prescriptionOrderId, prescriptionNo, recordId, encounterId,
+                patientId, doctorId, PrescriptionStatus.ISSUED,
+                items,
+                version, createdAt, now);
+    }
+
+    public PrescriptionOrder cancel() {
+        if (prescriptionStatus != PrescriptionStatus.DRAFT
+                && prescriptionStatus != PrescriptionStatus.ISSUED) {
+            throw new IllegalStateException("Only DRAFT or ISSUED prescriptions can be cancelled");
+        }
+        Instant now = Instant.now();
+        return new PrescriptionOrder(
+                prescriptionOrderId, prescriptionNo, recordId, encounterId,
+                patientId, doctorId, PrescriptionStatus.CANCELLED,
+                items,
+                version, createdAt, now);
+    }
 }

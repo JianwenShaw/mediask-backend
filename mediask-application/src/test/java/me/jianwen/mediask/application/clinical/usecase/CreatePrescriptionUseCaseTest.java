@@ -140,6 +140,12 @@ class CreatePrescriptionUseCaseTest {
         public boolean existsByEncounterId(Long encounterId) {
             return prescriptionExists;
         }
+
+        @Override
+        public boolean update(PrescriptionOrder prescriptionOrder) {
+            this.savedPrescription = prescriptionOrder;
+            return true;
+        }
     }
 
     private static class StubEncounterQueryRepository implements EncounterQueryRepository {

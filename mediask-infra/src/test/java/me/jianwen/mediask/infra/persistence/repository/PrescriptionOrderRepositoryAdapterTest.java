@@ -101,6 +101,109 @@ class PrescriptionOrderRepositoryAdapterTest {
     }
 
     @Test
+    void update_WhenVersionMatches_UpdatesOrderAndReplacesItems() {
+        MapperHandler handler = new MapperHandler();
+        handler.updateByIdResult = 1;
+        PrescriptionOrderRepositoryAdapter adapter = new PrescriptionOrderRepositoryAdapter(
+                proxy(PrescriptionOrderMapper.class, Map.of(
+                        "updateById", handler::updateById,
+                        "deleteItemsByPrescriptionId", handler::deleteItemsByPrescriptionId,
+                        "insertItems", handler::insertItems)));
+
+        PrescriptionOrder updated = prescriptionOrder().updateItems(List.of(
+                new PrescriptionItem(9101L, 0, "布洛芬缓释胶囊", "0.3g*20粒", "每次1粒", "每日2次", "3天",
+                        new BigDecimal("6"), "粒", "口服")));
+
+        assertTrue(adapter.update(updated));
+
+        assertEquals(7101L, handler.updatedOrder.getId());
+        assertEquals(0, handler.updatedOrder.getVersion());
+        assertEquals("DRAFT", updated.prescriptionStatus().name());
+        assertEquals(7101L, handler.deletedItemsPrescriptionId);
+        assertEquals(1, handler.insertedItems.size());
+        assertEquals("布洛芬缓释胶囊", handler.insertedItems.getFirst().getDrugName());
+    }
+
+    @Test
+    void update_WhenIssuePrescription_PassesPreviousVersionToMybatisPlus() {
+        MapperHandler handler = new MapperHandler();
+        handler.updateByIdResult = 1;
+        PrescriptionOrderRepositoryAdapter adapter = new PrescriptionOrderRepositoryAdapter(
+                proxy(PrescriptionOrderMapper.class, Map.of(
+                        "updateById", handler::updateById,
+                        "deleteItemsByPrescriptionId", handler::deleteItemsByPrescriptionId,
+                        "insertItems", handler::insertItems)));
+
+        PrescriptionOrder issued = prescriptionOrder().issue();
+
+        assertTrue(adapter.update(issued));
+
+        assertEquals(PrescriptionStatus.ISSUED.name(), handler.updatedOrder.getPrescriptionStatus());
+        assertEquals(0, handler.updatedOrder.getVersion());
+    }
+
+    @Test
+    void update_WhenVersionMismatch_ReturnsFalse() {
+        MapperHandler handler = new MapperHandler();
+        handler.updateByIdResult = 0;
+        PrescriptionOrderRepositoryAdapter adapter = new PrescriptionOrderRepositoryAdapter(
+                proxy(PrescriptionOrderMapper.class, Map.of(
+                        "updateById", handler::updateById)));
+
+        PrescriptionOrder issued = prescriptionOrder().issue();
+
+        assertFalse(adapter.update(issued));
+    }
+
+    @Test
+    void findById_WhenExists_ReturnsPrescriptionWithItems() {
+        MapperHandler handler = new MapperHandler();
+        handler.selectedOrder = new PrescriptionOrderDO();
+        handler.selectedOrder.setId(7101L);
+        handler.selectedOrder.setPrescriptionNo("RX123456");
+        handler.selectedOrder.setRecordId(6102L);
+        handler.selectedOrder.setEncounterId(8101L);
+        handler.selectedOrder.setPatientId(1001L);
+        handler.selectedOrder.setDoctorId(2101L);
+        handler.selectedOrder.setPrescriptionStatus("DRAFT");
+        handler.selectedOrder.setVersion(0);
+        handler.selectedOrder.setCreatedAt(OffsetDateTime.parse("2026-04-18T10:00:00+08:00"));
+        handler.selectedOrder.setUpdatedAt(OffsetDateTime.parse("2026-04-18T10:00:00+08:00"));
+
+        PrescriptionItemDO item = new PrescriptionItemDO();
+        item.setId(8101L);
+        item.setPrescriptionId(7101L);
+        item.setSortOrder(0);
+        item.setDrugName("阿莫西林胶囊");
+        item.setDosageText("每次2粒");
+        item.setFrequencyText("每日3次");
+        item.setDurationText("5天");
+        item.setQuantity(new BigDecimal("30"));
+        item.setUnit("粒");
+        item.setRoute("口服");
+        handler.selectedItems = List.of(item);
+
+        PrescriptionOrderRepositoryAdapter adapter = new PrescriptionOrderRepositoryAdapter(
+                proxy(PrescriptionOrderMapper.class, Map.of(
+                        "selectById", handler::selectById,
+                        "selectItemsByPrescriptionId", handler::selectItemsByPrescriptionId)));
+
+        PrescriptionOrder result = adapter.findById(7101L).orElseThrow();
+
+        assertEquals(PrescriptionStatus.DRAFT, result.prescriptionStatus());
+        assertEquals("阿莫西林胶囊", result.items().getFirst().drugName());
+    }
+
+    @Test
+    void findById_WhenNotExists_ReturnsEmpty() {
+        PrescriptionOrderRepositoryAdapter adapter = new PrescriptionOrderRepositoryAdapter(
+                proxy(PrescriptionOrderMapper.class, Map.of(
+                        "selectById", arguments -> Optional.empty())));
+
+        assertTrue(adapter.findById(9999L).isEmpty());
+    }
+
+    @Test
     void save_WhenEncounterDuplicate_ThrowsConflictBizException() {
         PrescriptionOrderRepositoryAdapter adapter = new PrescriptionOrderRepositoryAdapter(
                 proxy(PrescriptionOrderMapper.class, Map.of(
@@ -155,6 +258,9 @@ class PrescriptionOrderRepositoryAdapterTest {
         private boolean existsResult;
         private PrescriptionOrderDO selectedOrder;
         private List<PrescriptionItemDO> selectedItems = List.of();
+        private PrescriptionOrderDO updatedOrder;
+        private int updateByIdResult;
+        private Long deletedItemsPrescriptionId;
 
         private Object insertOrder(Object[] arguments) {
             insertedOrder = (PrescriptionOrderDO) arguments[0];
@@ -177,6 +283,20 @@ class PrescriptionOrderRepositoryAdapterTest {
 
         private Object selectItemsByPrescriptionId(Object[] arguments) {
             return selectedItems;
+        }
+
+        private Object updateById(Object[] arguments) {
+            updatedOrder = (PrescriptionOrderDO) arguments[0];
+            return updateByIdResult;
+        }
+
+        private Object deleteItemsByPrescriptionId(Object[] arguments) {
+            deletedItemsPrescriptionId = (Long) arguments[0];
+            return 1;
+        }
+
+        private Object selectById(Object[] arguments) {
+            return Optional.ofNullable(selectedOrder);
         }
     }
 }

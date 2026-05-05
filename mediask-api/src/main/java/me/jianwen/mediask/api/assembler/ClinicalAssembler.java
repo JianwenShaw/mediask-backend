@@ -14,11 +14,16 @@ import me.jianwen.mediask.api.dto.EncounterListItemResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
 import me.jianwen.mediask.api.dto.EncounterPatientSummaryResponse;
 import me.jianwen.mediask.api.dto.PrescriptionDetailResponse;
+import me.jianwen.mediask.api.dto.PrescriptionStatusTransitionResponse;
 import me.jianwen.mediask.api.dto.UpdateEncounterStatusRequest;
 import me.jianwen.mediask.api.dto.UpdateEncounterStatusResponse;
+import me.jianwen.mediask.api.dto.UpdatePrescriptionItemsRequest;
+import me.jianwen.mediask.application.clinical.command.CancelPrescriptionCommand;
 import me.jianwen.mediask.application.clinical.command.CreatePrescriptionCommand;
 import me.jianwen.mediask.application.clinical.command.CreateEmrCommand;
+import me.jianwen.mediask.application.clinical.command.IssuePrescriptionCommand;
 import me.jianwen.mediask.application.clinical.command.UpdateEncounterStatusCommand;
+import me.jianwen.mediask.application.clinical.command.UpdatePrescriptionItemsCommand;
 import me.jianwen.mediask.application.clinical.query.GetEmrDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetPrescriptionDetailQuery;
@@ -141,6 +146,40 @@ public final class ClinicalAssembler {
                                 item.unit(),
                                 item.route()))
                         .toList());
+    }
+
+    public static UpdatePrescriptionItemsCommand toUpdatePrescriptionItemsCommand(
+            Long encounterId, Long doctorId, UpdatePrescriptionItemsRequest request) {
+        List<UpdatePrescriptionItemsCommand.PrescriptionItemCommand> itemCommands = request.items().stream()
+                .map(item -> new UpdatePrescriptionItemsCommand.PrescriptionItemCommand(
+                        item.sortOrder(),
+                        item.drugName(),
+                        item.drugSpecification(),
+                        item.dosageText(),
+                        item.frequencyText(),
+                        item.durationText(),
+                        item.quantity(),
+                        item.unit(),
+                        item.route()))
+                .toList();
+        return new UpdatePrescriptionItemsCommand(encounterId, doctorId, itemCommands);
+    }
+
+    public static IssuePrescriptionCommand toIssuePrescriptionCommand(Long encounterId, Long doctorId) {
+        return new IssuePrescriptionCommand(encounterId, doctorId);
+    }
+
+    public static CancelPrescriptionCommand toCancelPrescriptionCommand(Long encounterId, Long doctorId) {
+        return new CancelPrescriptionCommand(encounterId, doctorId);
+    }
+
+    public static PrescriptionStatusTransitionResponse toPrescriptionStatusTransitionResponse(
+            PrescriptionOrder prescriptionOrder) {
+        return new PrescriptionStatusTransitionResponse(
+                prescriptionOrder.prescriptionOrderId(),
+                prescriptionOrder.encounterId(),
+                prescriptionOrder.prescriptionStatus().name(),
+                prescriptionOrder.version());
     }
 
     public static PrescriptionDetailResponse toPrescriptionDetailResponse(PrescriptionOrder prescriptionOrder) {

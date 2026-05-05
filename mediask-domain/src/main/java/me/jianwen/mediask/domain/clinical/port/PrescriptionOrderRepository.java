@@ -7,4 +7,6 @@ public interface PrescriptionOrderRepository {
     void save(PrescriptionOrder prescriptionOrder);
 
     boolean existsByEncounterId(Long encounterId);
+
+    boolean update(PrescriptionOrder prescriptionOrder);
 }

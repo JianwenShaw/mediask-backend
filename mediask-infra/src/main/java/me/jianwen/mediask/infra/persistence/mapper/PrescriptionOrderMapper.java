@@ -18,4 +18,8 @@ public interface PrescriptionOrderMapper extends BaseMapper<PrescriptionOrderDO>
     Optional<PrescriptionOrderDO> selectByEncounterId(@Param("encounterId") Long encounterId);
 
     List<PrescriptionItemDO> selectItemsByPrescriptionId(@Param("prescriptionId") Long prescriptionId);
+
+    Optional<PrescriptionOrderDO> selectById(@Param("id") Long id);
+
+    int deleteItemsByPrescriptionId(@Param("prescriptionId") Long prescriptionId);
 }

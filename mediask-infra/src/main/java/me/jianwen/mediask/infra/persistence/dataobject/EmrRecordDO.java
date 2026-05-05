@@ -19,4 +19,7 @@ public class EmrRecordDO extends BaseDO {
     private Long departmentId;
     private String recordStatus;
     private String chiefComplaintSummary;
+    private String contentEncrypted;
+    private String contentMasked;
+    private String contentHash;
 }

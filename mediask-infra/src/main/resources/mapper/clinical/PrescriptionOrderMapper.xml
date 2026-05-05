@@ -81,4 +81,26 @@
         WHERE prescription_id = #{prescriptionId}
         ORDER BY sort_order ASC, id ASC
     </select>
+
+    <select id="selectById" resultType="me.jianwen.mediask.infra.persistence.dataobject.PrescriptionOrderDO">
+        SELECT id,
+               version,
+               created_at,
+               updated_at,
+               deleted_at,
+               prescription_no,
+               record_id,
+               encounter_id,
+               patient_id,
+               doctor_id,
+               prescription_status
+        FROM prescription_order
+        WHERE id = #{id}
+          AND deleted_at IS NULL
+    </select>
+
+    <delete id="deleteItemsByPrescriptionId">
+        DELETE FROM prescription_item
+        WHERE prescription_id = #{prescriptionId}
+    </delete>
 </mapper>

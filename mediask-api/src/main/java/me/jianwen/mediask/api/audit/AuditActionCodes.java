@@ -14,6 +14,9 @@ public final class AuditActionCodes {
     public static final String ADMIN_PATIENT_UPDATE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_PATIENT_UPDATE;
     public static final String ADMIN_PATIENT_DELETE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_PATIENT_DELETE;
     public static final String PRESCRIPTION_CREATE = me.jianwen.mediask.application.audit.AuditActionCodes.PRESCRIPTION_CREATE;
+    public static final String PRESCRIPTION_UPDATE = me.jianwen.mediask.application.audit.AuditActionCodes.PRESCRIPTION_UPDATE;
+    public static final String PRESCRIPTION_ISSUE = me.jianwen.mediask.application.audit.AuditActionCodes.PRESCRIPTION_ISSUE;
+    public static final String PRESCRIPTION_CANCEL = me.jianwen.mediask.application.audit.AuditActionCodes.PRESCRIPTION_CANCEL;
     public static final String AI_SESSION_VIEW_FAILED = me.jianwen.mediask.application.audit.AuditActionCodes.AI_SESSION_VIEW_FAILED;
     public static final String AI_TRIAGE_RESULT_VIEW_FAILED =
             me.jianwen.mediask.application.audit.AuditActionCodes.AI_TRIAGE_RESULT_VIEW_FAILED;

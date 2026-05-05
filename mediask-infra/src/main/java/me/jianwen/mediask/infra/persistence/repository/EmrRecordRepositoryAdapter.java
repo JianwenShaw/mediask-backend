@@ -17,7 +17,6 @@ import me.jianwen.mediask.domain.clinical.model.EmrRecord;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordRepository;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrDiagnosisDO;
-import me.jianwen.mediask.infra.persistence.dataobject.EmrRecordContentDO;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrRecordDO;
 import me.jianwen.mediask.infra.persistence.mapper.EmrRecordMapper;
 import org.springframework.dao.DuplicateKeyException;
@@ -48,19 +47,13 @@ public class EmrRecordRepositoryAdapter implements EmrRecordRepository, EmrRecor
             recordDO.setDepartmentId(emrRecord.departmentId());
             recordDO.setRecordStatus(emrRecord.recordStatus().name());
             recordDO.setChiefComplaintSummary(emrRecord.chiefComplaintSummary());
+            recordDO.setContentEncrypted(aiContentEncryptorPort.encrypt(emrRecord.content()));
+            recordDO.setContentMasked(maskContent(emrRecord.content()));
+            recordDO.setContentHash(computeContentHash(emrRecord.content()));
             recordDO.setVersion(emrRecord.version());
             recordDO.setCreatedAt(emrRecord.createdAt().atOffset(ZoneOffset.UTC));
             recordDO.setUpdatedAt(emrRecord.updatedAt().atOffset(ZoneOffset.UTC));
             emrRecordMapper.insert(recordDO);
-
-            EmrRecordContentDO contentDO = new EmrRecordContentDO();
-            contentDO.setRecordId(emrRecord.recordId());
-            contentDO.setContentEncrypted(aiContentEncryptorPort.encrypt(emrRecord.content()));
-            contentDO.setContentMasked(maskContent(emrRecord.content()));
-            contentDO.setContentHash(computeContentHash(emrRecord.content()));
-            contentDO.setCreatedAt(emrRecord.createdAt().atOffset(ZoneOffset.UTC));
-            contentDO.setUpdatedAt(emrRecord.updatedAt().atOffset(ZoneOffset.UTC));
-            emrRecordMapper.insertContent(contentDO);
 
             List<EmrDiagnosisDO> diagnosisDOs = emrRecord.diagnoses().stream()
                     .map(diagnosis -> {
@@ -93,9 +86,6 @@ public class EmrRecordRepositoryAdapter implements EmrRecordRepository, EmrRecor
     @Override
     public Optional<EmrRecord> findByEncounterId(Long encounterId) {
         return emrRecordMapper.selectByEncounterId(encounterId).map(recordDO -> {
-            EmrRecordContentDO contentDO = emrRecordMapper
-                    .selectContentByRecordId(recordDO.getId())
-                    .orElseThrow(() -> new IllegalStateException("missing emr record content"));
             List<EmrDiagnosis> diagnoses = emrRecordMapper.selectDiagnosesByRecordId(recordDO.getId()).stream()
                     .map(diagnosisDO -> new EmrDiagnosis(
                             EmrDiagnosis.DiagnosisType.valueOf(diagnosisDO.getDiagnosisType()),
@@ -113,7 +103,7 @@ public class EmrRecordRepositoryAdapter implements EmrRecordRepository, EmrRecor
                     recordDO.getDepartmentId(),
                     me.jianwen.mediask.domain.clinical.model.EmrRecordStatus.valueOf(recordDO.getRecordStatus()),
                     recordDO.getChiefComplaintSummary(),
-                    aiContentEncryptorPort.decrypt(contentDO.getContentEncrypted()),
+                    aiContentEncryptorPort.decrypt(recordDO.getContentEncrypted()),
                     diagnoses,
                     recordDO.getVersion(),
                     recordDO.getCreatedAt().toInstant(),
