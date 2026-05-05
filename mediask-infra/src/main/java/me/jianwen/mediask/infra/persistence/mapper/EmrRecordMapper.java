@@ -20,6 +20,10 @@ public interface EmrRecordMapper extends BaseMapper<EmrRecordDO> {
 
     Optional<EmrRecordDO> selectByEncounterId(@Param("encounterId") Long encounterId);
 
+    List<EmrRecordListRow> selectListByPatientUserId(
+            @Param("patientUserId") Long patientUserId,
+            @Param("excludeEncounterId") Long excludeEncounterId);
+
     Optional<Long> selectRecordIdByEncounterId(@Param("encounterId") Long encounterId);
 
     Optional<EmrRecordDO> selectAccessByRecordId(@Param("recordId") Long recordId);

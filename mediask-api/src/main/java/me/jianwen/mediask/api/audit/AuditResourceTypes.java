@@ -6,6 +6,7 @@ public final class AuditResourceTypes {
     public static final String REGISTRATION_ORDER = me.jianwen.mediask.application.audit.AuditResourceTypes.REGISTRATION_ORDER;
     public static final String ENCOUNTER = me.jianwen.mediask.application.audit.AuditResourceTypes.ENCOUNTER;
     public static final String EMR_RECORD = me.jianwen.mediask.application.audit.AuditResourceTypes.EMR_RECORD;
+    public static final String EMR_SUMMARY = me.jianwen.mediask.application.audit.AuditResourceTypes.EMR_SUMMARY;
     public static final String EMR_CONTENT = me.jianwen.mediask.application.audit.AuditResourceTypes.EMR_CONTENT;
     public static final String PRESCRIPTION_ORDER = me.jianwen.mediask.application.audit.AuditResourceTypes.PRESCRIPTION_ORDER;
     public static final String PRESCRIPTION_DETAIL = me.jianwen.mediask.application.audit.AuditResourceTypes.PRESCRIPTION_DETAIL;

@@ -14,6 +14,7 @@ import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
 import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordListItem;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordRepository;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrDiagnosisDO;
@@ -109,6 +110,24 @@ public class EmrRecordRepositoryAdapter implements EmrRecordRepository, EmrRecor
                     recordDO.getCreatedAt().toInstant(),
                     recordDO.getUpdatedAt().toInstant());
         });
+    }
+
+    @Override
+    public List<EmrRecordListItem> listByPatientUserId(Long patientUserId, Long excludeEncounterId) {
+        return emrRecordMapper.selectListByPatientUserId(patientUserId, excludeEncounterId).stream()
+                .map(row -> new EmrRecordListItem(
+                        row.getRecordId(),
+                        row.getRecordNo(),
+                        row.getEncounterId(),
+                        me.jianwen.mediask.domain.clinical.model.EmrRecordStatus.valueOf(row.getRecordStatus()),
+                        row.getDepartmentId(),
+                        row.getDepartmentName(),
+                        row.getDoctorId(),
+                        row.getDoctorName(),
+                        row.getSessionDate(),
+                        row.getChiefComplaintSummary(),
+                        row.getCreatedAt()))
+                .toList();
     }
 
     @Override

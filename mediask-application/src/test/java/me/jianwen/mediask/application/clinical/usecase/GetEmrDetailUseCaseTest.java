@@ -16,8 +16,9 @@ import me.jianwen.mediask.domain.audit.model.DataAccessPurposeCode;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
 import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
-import me.jianwen.mediask.domain.clinical.model.EmrRecordStatus;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordListItem;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordStatus;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Propagation;
@@ -90,6 +91,11 @@ class GetEmrDetailUseCaseTest {
                     0,
                     Instant.parse("2026-04-19T10:00:00Z"),
                     Instant.parse("2026-04-19T10:00:00Z")));
+        }
+
+        @Override
+        public List<EmrRecordListItem> listByPatientUserId(Long patientUserId, Long excludeEncounterId) {
+            throw new UnsupportedOperationException();
         }
 
         @Override

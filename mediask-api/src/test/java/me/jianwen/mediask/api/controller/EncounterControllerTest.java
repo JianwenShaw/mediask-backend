@@ -20,6 +20,8 @@ import java.util.Optional;
 import java.util.Set;
 import me.jianwen.mediask.api.TestAuditSupport;
 import me.jianwen.mediask.api.advice.ResultResponseBodyAdvice;
+import me.jianwen.mediask.api.authz.EmrRecordResourceAccessResolver;
+import me.jianwen.mediask.api.authz.EmrRecordResourceReferenceAssembler;
 import me.jianwen.mediask.api.exception.GlobalExceptionHandler;
 import me.jianwen.mediask.api.filter.RequestCorrelationFilter;
 import me.jianwen.mediask.api.security.ApiCorsProperties;
@@ -32,9 +34,11 @@ import me.jianwen.mediask.application.audit.model.AuditContext;
 import me.jianwen.mediask.application.authz.AuthorizationDecisionService;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
+import me.jianwen.mediask.application.clinical.query.ListEncounterHistoryEmrsQuery;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterAiSummaryUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
+import me.jianwen.mediask.application.clinical.usecase.ListEncounterHistoryEmrsUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusResult;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusUseCase;
@@ -46,7 +50,10 @@ import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterListItem;
 import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordListItem;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordStatus;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
+import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
 import me.jianwen.mediask.domain.user.model.AccessToken;
 import me.jianwen.mediask.domain.user.model.AccessTokenClaims;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
@@ -80,28 +87,36 @@ class EncounterControllerTest {
     private StubListEncountersUseCase doctorListEncountersUseCase;
     private StubGetEncounterDetailUseCase doctorGetEncounterDetailUseCase;
     private StubGetEncounterAiSummaryUseCase doctorGetEncounterAiSummaryUseCase;
+    private StubListEncounterHistoryEmrsUseCase doctorListEncounterHistoryEmrsUseCase;
     private StubUpdateEncounterStatusUseCase doctorUpdateEncounterStatusUseCase;
+    private StubEncounterQueryRepository authzEncounterQueryRepository;
 
     @BeforeEach
     void setUp() {
         doctorListEncountersUseCase = new StubListEncountersUseCase();
         doctorGetEncounterDetailUseCase = new StubGetEncounterDetailUseCase();
         doctorGetEncounterAiSummaryUseCase = new StubGetEncounterAiSummaryUseCase();
+        doctorListEncounterHistoryEmrsUseCase = new StubListEncounterHistoryEmrsUseCase();
         doctorUpdateEncounterStatusUseCase = new StubUpdateEncounterStatusUseCase();
+        authzEncounterQueryRepository = new StubEncounterQueryRepository();
         doctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2004L,
                 "doctor_zhang",
                 "张医生",
                 UserType.DOCTOR,
                 new LinkedHashSet<>(List.of(RoleCode.DOCTOR)),
-                Set.of("encounter:query", "encounter:update"),
-                Set.of(),
+                Set.of("encounter:query", "encounter:update", "emr:read"),
+                Set.of(new me.jianwen.mediask.domain.user.model.DataScopeRule(
+                        "EMR_RECORD",
+                        me.jianwen.mediask.domain.user.model.DataScopeType.DEPARTMENT,
+                        3101L)),
                 null,
                 2101L,
                 3101L),
                 doctorListEncountersUseCase,
                 doctorGetEncounterDetailUseCase,
                 doctorGetEncounterAiSummaryUseCase,
+                doctorListEncounterHistoryEmrsUseCase,
                 doctorUpdateEncounterStatusUseCase);
         patientMockMvc = buildMockMvc(new AuthenticatedUser(
                 2003L,
@@ -117,6 +132,7 @@ class EncounterControllerTest {
                 new StubListEncountersUseCase(),
                 new StubGetEncounterDetailUseCase(),
                 new StubGetEncounterAiSummaryUseCase(),
+                new StubListEncounterHistoryEmrsUseCase(),
                 new StubUpdateEncounterStatusUseCase());
         noPermissionDoctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2005L,
@@ -132,6 +148,7 @@ class EncounterControllerTest {
                 new StubListEncountersUseCase(),
                 new StubGetEncounterDetailUseCase(),
                 new StubGetEncounterAiSummaryUseCase(),
+                new StubListEncounterHistoryEmrsUseCase(),
                 new StubUpdateEncounterStatusUseCase());
     }
 
@@ -276,6 +293,25 @@ class EncounterControllerTest {
     }
 
     @Test
+    void emrHistory_WhenAuthenticatedDoctor_ReturnPatientHistory() throws Exception {
+        doctorMockMvc.perform(get("/api/v1/encounters/8101/emr-history")
+                        .header("Authorization", "Bearer " + DOCTOR_TOKEN)
+                        .contentType(APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.items[0].emrRecordId").value("7101"))
+                .andExpect(jsonPath("$.data.items[0].encounterId").value("8001"))
+                .andExpect(jsonPath("$.data.items[0].recordNo").value("EMR20260418001"))
+                .andExpect(jsonPath("$.data.items[0].doctorId").value("2101"))
+                .andExpect(jsonPath("$.data.items[0].departmentId").value("3101"))
+                .andExpect(jsonPath("$.data.items[0].sessionDate").value("2026-04-01"))
+                .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-04-01T08:30:00+08:00"));
+
+        assertEquals(8101L, doctorListEncounterHistoryEmrsUseCase.lastQuery.encounterId());
+    }
+
+    @Test
     void updateStatus_WhenAuthenticatedDoctor_ReturnUpdatedEncounter() throws Exception {
         doctorMockMvc.perform(patch("/api/v1/encounters/8101")
                         .header("Authorization", "Bearer " + DOCTOR_TOKEN)
@@ -363,19 +399,23 @@ class EncounterControllerTest {
             StubListEncountersUseCase listEncountersUseCase,
             StubGetEncounterDetailUseCase getEncounterDetailUseCase,
             StubGetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase,
+            StubListEncounterHistoryEmrsUseCase listEncounterHistoryEmrsUseCase,
             StubUpdateEncounterStatusUseCase updateEncounterStatusUseCase) {
         EncounterController target = new EncounterController(
                 listEncountersUseCase,
                 getEncounterDetailUseCase,
                 getEncounterAiSummaryUseCase,
+                listEncounterHistoryEmrsUseCase,
                 updateEncounterStatusUseCase,
                 TestAuditSupport.auditApiSupport());
         AspectJProxyFactory proxyFactory = new AspectJProxyFactory(target);
         proxyFactory.setProxyTargetClass(true);
         proxyFactory.addAspect(new ScenarioAuthorizationAspect(
-                new AuthorizationDecisionService(List.of(), List.of()),
+                new AuthorizationDecisionService(
+                        List.of(new EmrRecordResourceReferenceAssembler()),
+                        List.of(new EmrRecordResourceAccessResolver(authzEncounterQueryRepository))),
                 TestAuditSupport.auditApiSupport(),
-                TestAuditSupport.emptyEncounterQueryRepository(),
+                authzEncounterQueryRepository,
                 TestAuditSupport.emptyAdminPatientQueryRepository()));
         EncounterController controller = proxyFactory.getProxy();
 
@@ -534,6 +574,65 @@ class EncounterControllerTest {
                     null,
                     "deptcat-v20260501-01",
                     OffsetDateTime.parse("2026-05-01T09:03:00+08:00"));
+        }
+    }
+
+    private static final class StubListEncounterHistoryEmrsUseCase extends ListEncounterHistoryEmrsUseCase {
+
+        private ListEncounterHistoryEmrsQuery lastQuery;
+
+        private StubListEncounterHistoryEmrsUseCase() {
+            super(null, null, TestAuditSupport.auditTrailService());
+        }
+
+        @Override
+        public List<EmrRecordListItem> handle(
+                ListEncounterHistoryEmrsQuery query,
+                AuditContext auditContext) {
+            this.lastQuery = query;
+            return List.of(new EmrRecordListItem(
+                    7101L,
+                    "EMR20260418001",
+                    8001L,
+                    EmrRecordStatus.DRAFT,
+                    3101L,
+                    "心内科",
+                    2101L,
+                    "张医生",
+                    LocalDate.parse("2026-04-01"),
+                    "反复头痛 1 周",
+                    OffsetDateTime.parse("2026-04-01T08:30:00+08:00")));
+        }
+    }
+
+    private static final class StubEncounterQueryRepository implements EncounterQueryRepository {
+
+        @Override
+        public List<EncounterListItem> listByDoctorId(Long doctorId, VisitEncounterStatus status) {
+            return List.of();
+        }
+
+        @Override
+        public Optional<EncounterDetail> findDetailByEncounterId(Long encounterId) {
+            if (!Long.valueOf(8101L).equals(encounterId)) {
+                return Optional.empty();
+            }
+            return Optional.of(new EncounterDetail(
+                    8101L,
+                    6101L,
+                    2101L,
+                    new EncounterPatientSummary(
+                            2003L,
+                            "李患者",
+                            "FEMALE",
+                            3101L,
+                            "心内科",
+                            LocalDate.parse("2026-04-03"),
+                            "MORNING",
+                            VisitEncounterStatus.SCHEDULED,
+                            OffsetDateTime.parse("2026-04-03T09:00:00+08:00"),
+                            null,
+                            LocalDate.parse("1990-05-15"))));
         }
     }
 

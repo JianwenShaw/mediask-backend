@@ -6,10 +6,12 @@ import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
 import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordListItem;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordStatus;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrDiagnosisDO;
 import me.jianwen.mediask.infra.persistence.dataobject.EmrRecordDO;
 import me.jianwen.mediask.infra.persistence.mapper.EmrRecordMapper;
+import me.jianwen.mediask.infra.persistence.mapper.EmrRecordListRow;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
@@ -192,6 +194,37 @@ class EmrRecordRepositoryAdapterTest {
     }
 
     @Test
+    void listByPatientUserId_WhenRowsExist_MapSummaryRows() {
+        EmrMapperCapturingHandler handler = new EmrMapperCapturingHandler();
+        EmrRecordListRow row = new EmrRecordListRow();
+        row.setRecordId(7101L);
+        row.setRecordNo("EMR20260504001");
+        row.setEncounterId(8104L);
+        row.setRecordStatus("DRAFT");
+        row.setDepartmentId(3102L);
+        row.setDepartmentName("全科门诊");
+        row.setDoctorId(3203L);
+        row.setDoctorName("李医生");
+        row.setSessionDate(java.time.LocalDate.parse("2026-05-04"));
+        row.setChiefComplaintSummary("发热缓解后复诊评估");
+        row.setCreatedAt(OffsetDateTime.parse("2026-05-04T15:10:00+08:00"));
+        handler.listRows = List.of(row);
+
+        EmrRecordRepositoryAdapter adapter = new EmrRecordRepositoryAdapter(
+                new StubAiContentEncryptor(),
+                proxy(EmrRecordMapper.class, Map.of("selectListByPatientUserId", handler::selectListByPatientUserId))
+        );
+
+        List<EmrRecordListItem> result = adapter.listByPatientUserId(2003L, 8101L);
+
+        assertEquals(2003L, handler.listPatientUserIdArg);
+        assertEquals(8101L, handler.listExcludeEncounterIdArg);
+        assertEquals(1, result.size());
+        assertEquals(7101L, result.getFirst().recordId());
+        assertEquals("李医生", result.getFirst().doctorName());
+    }
+
+    @Test
     void save_WhenEncounterDuplicate_ThrowsConflictBizException() {
         EmrRecordRepositoryAdapter adapter = new EmrRecordRepositoryAdapter(
                 new StubAiContentEncryptor(),
@@ -274,9 +307,12 @@ class EmrRecordRepositoryAdapterTest {
         Long selectedAccessRecordIdArg;
         Long selectedDiagnosesRecordIdArg;
         Long selectedRecordId;
+        Long listPatientUserIdArg;
+        Long listExcludeEncounterIdArg;
         EmrRecordDO selectedRecord;
         EmrRecordDO selectedAccessRecord;
         List<EmrDiagnosisDO> selectedDiagnoses;
+        List<EmrRecordListRow> listRows;
 
         private Object insertRecord(Object[] arguments) {
             this.insertedRecord = (EmrRecordDO) arguments[0];
@@ -311,6 +347,12 @@ class EmrRecordRepositoryAdapterTest {
         private Object selectDiagnosesByRecordId(Object[] arguments) {
             this.selectedDiagnosesRecordIdArg = (Long) arguments[0];
             return selectedDiagnoses == null ? List.of() : selectedDiagnoses;
+        }
+
+        private Object selectListByPatientUserId(Object[] arguments) {
+            this.listPatientUserIdArg = (Long) arguments[0];
+            this.listExcludeEncounterIdArg = (Long) arguments[1];
+            return listRows == null ? List.of() : listRows;
         }
     }
 }

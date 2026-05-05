@@ -114,7 +114,20 @@ public class ScenarioAuthorizationAspect {
                     denyReasonCode);
             return;
         }
-        if (scenarioCode != ScenarioCode.EMR_RECORD_READ && scenarioCode != ScenarioCode.PRESCRIPTION_READ) {
+        if (scenarioCode == ScenarioCode.EMR_RECORD_LIST) {
+            auditApiSupport.recordDeniedDataAccess(
+                    AuditResourceTypes.EMR_SUMMARY,
+                    auditApiSupport.resourceIdOf(principal.userId()),
+                    principal,
+                    principal.userId(),
+                    null,
+                    DataAccessPurposeCode.SELF_SERVICE,
+                    denyReasonCode);
+            return;
+        }
+        if (scenarioCode != ScenarioCode.EMR_RECORD_READ
+                && scenarioCode != ScenarioCode.EMR_RECORD_HISTORY_READ
+                && scenarioCode != ScenarioCode.PRESCRIPTION_READ) {
             return;
         }
         Object encounterIdArgument = arguments.get("encounterId");
@@ -126,9 +139,11 @@ public class ScenarioAuthorizationAspect {
         DataAccessPurposeCode purposeCode =
                 principal.patientId() != null ? DataAccessPurposeCode.SELF_SERVICE : DataAccessPurposeCode.TREATMENT;
         auditApiSupport.recordDeniedDataAccess(
-                scenarioCode == ScenarioCode.EMR_RECORD_READ
-                        ? AuditResourceTypes.EMR_CONTENT
-                        : AuditResourceTypes.PRESCRIPTION_DETAIL,
+                scenarioCode == ScenarioCode.PRESCRIPTION_READ
+                        ? AuditResourceTypes.PRESCRIPTION_DETAIL
+                        : scenarioCode == ScenarioCode.EMR_RECORD_READ
+                                ? AuditResourceTypes.EMR_CONTENT
+                                : AuditResourceTypes.EMR_SUMMARY,
                 auditApiSupport.resourceIdOf(encounterId),
                 principal,
                 patientUserId,

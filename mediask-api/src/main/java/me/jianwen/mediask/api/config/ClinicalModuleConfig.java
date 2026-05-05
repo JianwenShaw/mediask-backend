@@ -9,6 +9,8 @@ import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase
 import me.jianwen.mediask.application.clinical.usecase.GetEmrDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetPrescriptionDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.IssuePrescriptionUseCase;
+import me.jianwen.mediask.application.clinical.usecase.ListCurrentPatientEmrsUseCase;
+import me.jianwen.mediask.application.clinical.usecase.ListEncounterHistoryEmrsUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusUseCase;
 import me.jianwen.mediask.application.clinical.usecase.UpdatePrescriptionItemsUseCase;
@@ -72,6 +74,21 @@ public class ClinicalModuleConfig {
     public GetEmrDetailUseCase getEmrDetailUseCase(
             EmrRecordQueryRepository emrRecordQueryRepository, AuditTrailService auditTrailService) {
         return new GetEmrDetailUseCase(emrRecordQueryRepository, auditTrailService);
+    }
+
+    @Bean
+    public ListCurrentPatientEmrsUseCase listCurrentPatientEmrsUseCase(
+            EmrRecordQueryRepository emrRecordQueryRepository, AuditTrailService auditTrailService) {
+        return new ListCurrentPatientEmrsUseCase(emrRecordQueryRepository, auditTrailService);
+    }
+
+    @Bean
+    public ListEncounterHistoryEmrsUseCase listEncounterHistoryEmrsUseCase(
+            EncounterQueryRepository encounterQueryRepository,
+            EmrRecordQueryRepository emrRecordQueryRepository,
+            AuditTrailService auditTrailService) {
+        return new ListEncounterHistoryEmrsUseCase(
+                encounterQueryRepository, emrRecordQueryRepository, auditTrailService);
     }
 
     @Bean

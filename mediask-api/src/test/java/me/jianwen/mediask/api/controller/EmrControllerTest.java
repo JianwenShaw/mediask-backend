@@ -30,6 +30,7 @@ import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
 import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordListItem;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordStatus;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
 import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
@@ -482,6 +483,11 @@ class EmrControllerTest {
 
         @Override
         public Optional<EmrRecord> findByEncounterId(Long encounterId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<EmrRecordListItem> listByPatientUserId(Long patientUserId, Long excludeEncounterId) {
             throw new UnsupportedOperationException();
         }
 

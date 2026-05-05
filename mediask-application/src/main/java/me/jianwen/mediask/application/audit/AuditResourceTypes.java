@@ -6,6 +6,7 @@ public final class AuditResourceTypes {
     public static final String REGISTRATION_ORDER = "REGISTRATION_ORDER";
     public static final String ENCOUNTER = "ENCOUNTER";
     public static final String EMR_RECORD = "EMR_RECORD";
+    public static final String EMR_SUMMARY = "EMR_SUMMARY";
     public static final String EMR_CONTENT = "EMR_CONTENT";
     public static final String PRESCRIPTION_ORDER = "PRESCRIPTION_ORDER";
     public static final String PRESCRIPTION_DETAIL = "PRESCRIPTION_DETAIL";

@@ -43,6 +43,7 @@ import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordListItem;
 import me.jianwen.mediask.domain.clinical.model.PrescriptionItem;
 import me.jianwen.mediask.domain.clinical.model.PrescriptionOrder;
 import me.jianwen.mediask.domain.clinical.model.PrescriptionStatus;
@@ -643,6 +644,11 @@ class PrescriptionControllerTest {
 
         @Override
         public Optional<me.jianwen.mediask.domain.clinical.model.EmrRecord> findByEncounterId(Long encounterId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<EmrRecordListItem> listByPatientUserId(Long patientUserId, Long excludeEncounterId) {
             throw new UnsupportedOperationException();
         }
 

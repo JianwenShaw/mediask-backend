@@ -7,6 +7,7 @@ import me.jianwen.mediask.api.audit.AuditResourceTypes;
 import me.jianwen.mediask.api.dto.EncounterAiSummaryResponse;
 import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
+import me.jianwen.mediask.api.dto.EmrRecordListResponse;
 import me.jianwen.mediask.api.dto.UpdateEncounterStatusRequest;
 import me.jianwen.mediask.api.dto.UpdateEncounterStatusResponse;
 import me.jianwen.mediask.api.security.AuthenticatedUserPrincipal;
@@ -14,6 +15,7 @@ import me.jianwen.mediask.application.authz.AuthorizeScenario;
 import me.jianwen.mediask.application.authz.ScenarioCode;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterAiSummaryUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
+import me.jianwen.mediask.application.clinical.usecase.ListEncounterHistoryEmrsUseCase;
 import me.jianwen.mediask.application.clinical.usecase.ListEncountersUseCase;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusUseCase;
 import me.jianwen.mediask.common.exception.BizException;
@@ -36,6 +38,7 @@ public class EncounterController {
     private final ListEncountersUseCase listEncountersUseCase;
     private final GetEncounterDetailUseCase getEncounterDetailUseCase;
     private final GetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase;
+    private final ListEncounterHistoryEmrsUseCase listEncounterHistoryEmrsUseCase;
     private final UpdateEncounterStatusUseCase updateEncounterStatusUseCase;
     private final AuditApiSupport auditApiSupport;
 
@@ -43,11 +46,13 @@ public class EncounterController {
             ListEncountersUseCase listEncountersUseCase,
             GetEncounterDetailUseCase getEncounterDetailUseCase,
             GetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase,
+            ListEncounterHistoryEmrsUseCase listEncounterHistoryEmrsUseCase,
             UpdateEncounterStatusUseCase updateEncounterStatusUseCase,
             AuditApiSupport auditApiSupport) {
         this.listEncountersUseCase = listEncountersUseCase;
         this.getEncounterDetailUseCase = getEncounterDetailUseCase;
         this.getEncounterAiSummaryUseCase = getEncounterAiSummaryUseCase;
+        this.listEncounterHistoryEmrsUseCase = listEncounterHistoryEmrsUseCase;
         this.updateEncounterStatusUseCase = updateEncounterStatusUseCase;
         this.auditApiSupport = auditApiSupport;
     }
@@ -110,6 +115,22 @@ public class EncounterController {
                     null);
             throw exception;
         }
+    }
+
+    @GetMapping("/{encounterId}/emr-history")
+    @AuthorizeScenario(ScenarioCode.EMR_RECORD_HISTORY_READ)
+    public Result<EmrRecordListResponse> emrHistory(
+            @PathVariable Long encounterId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        if (principal == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED);
+        }
+        if (principal.doctorId() == null) {
+            throw new BizException(UserErrorCode.ROLE_MISMATCH);
+        }
+        return Result.ok(ClinicalAssembler.toEmrRecordListResponse(listEncounterHistoryEmrsUseCase.handle(
+                ClinicalAssembler.toListEncounterHistoryEmrsQuery(encounterId),
+                auditApiSupport.currentContext(principal))));
     }
 
     @PatchMapping("/{encounterId}")

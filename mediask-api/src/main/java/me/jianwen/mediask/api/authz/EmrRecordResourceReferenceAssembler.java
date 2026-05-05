@@ -15,7 +15,8 @@ public class EmrRecordResourceReferenceAssembler implements ResourceReferenceAss
 
     @Override
     public boolean supports(ScenarioCode scenarioCode) {
-        return scenarioCode == ScenarioCode.EMR_RECORD_READ;
+        return scenarioCode == ScenarioCode.EMR_RECORD_READ
+                || scenarioCode == ScenarioCode.EMR_RECORD_HISTORY_READ;
     }
 
     @Override

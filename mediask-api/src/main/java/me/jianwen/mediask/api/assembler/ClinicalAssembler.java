@@ -10,6 +10,8 @@ import me.jianwen.mediask.api.dto.CreatePrescriptionResponse;
 import me.jianwen.mediask.api.dto.CreateEmrRequest;
 import me.jianwen.mediask.api.dto.CreateEmrResponse;
 import me.jianwen.mediask.api.dto.EmrDetailResponse;
+import me.jianwen.mediask.api.dto.EmrRecordListItemResponse;
+import me.jianwen.mediask.api.dto.EmrRecordListResponse;
 import me.jianwen.mediask.api.dto.EncounterDetailResponse;
 import me.jianwen.mediask.api.dto.EncounterListItemResponse;
 import me.jianwen.mediask.api.dto.EncounterListResponse;
@@ -29,12 +31,15 @@ import me.jianwen.mediask.application.clinical.query.GetEmrDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetPrescriptionDetailQuery;
+import me.jianwen.mediask.application.clinical.query.ListCurrentPatientEmrsQuery;
+import me.jianwen.mediask.application.clinical.query.ListEncounterHistoryEmrsQuery;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusResult;
 import me.jianwen.mediask.domain.ai.model.AiTriageCitation;
 import me.jianwen.mediask.domain.ai.model.AiTriageRecommendedDepartment;
 import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
+import me.jianwen.mediask.domain.clinical.model.EmrRecordListItem;
 import me.jianwen.mediask.domain.clinical.model.PrescriptionOrder;
 import me.jianwen.mediask.application.clinical.query.ListEncountersQuery;
 import me.jianwen.mediask.common.exception.BizException;
@@ -61,6 +66,14 @@ public final class ClinicalAssembler {
 
     public static GetEmrDetailQuery toGetEmrDetailQuery(Long encounterId) {
         return new GetEmrDetailQuery(encounterId);
+    }
+
+    public static ListCurrentPatientEmrsQuery toListCurrentPatientEmrsQuery(Long patientUserId) {
+        return new ListCurrentPatientEmrsQuery(patientUserId);
+    }
+
+    public static ListEncounterHistoryEmrsQuery toListEncounterHistoryEmrsQuery(Long encounterId) {
+        return new ListEncounterHistoryEmrsQuery(encounterId);
     }
 
     public static GetPrescriptionDetailQuery toGetPrescriptionDetailQuery(
@@ -136,6 +149,12 @@ public final class ClinicalAssembler {
                                 diagnosis.isPrimary(),
                                 diagnosis.sortOrder()))
                         .toList());
+    }
+
+    public static EmrRecordListResponse toEmrRecordListResponse(List<EmrRecordListItem> items) {
+        return new EmrRecordListResponse(items.stream()
+                .map(ClinicalAssembler::toEmrRecordListItemResponse)
+                .toList());
     }
 
     public static CreatePrescriptionResponse toCreatePrescriptionResponse(PrescriptionOrder prescriptionOrder) {
@@ -273,6 +292,21 @@ public final class ClinicalAssembler {
                 item.encounterStatus().name(),
                 item.startedAt(),
                 item.endedAt());
+    }
+
+    private static EmrRecordListItemResponse toEmrRecordListItemResponse(EmrRecordListItem item) {
+        return new EmrRecordListItemResponse(
+                item.recordId(),
+                item.recordNo(),
+                item.encounterId(),
+                item.recordStatus().name(),
+                item.departmentId(),
+                item.departmentName(),
+                item.doctorId(),
+                item.doctorName(),
+                item.sessionDate(),
+                item.chiefComplaintSummary(),
+                item.createdAt());
     }
 
     private static VisitEncounterStatus toVisitEncounterStatus(String status) {

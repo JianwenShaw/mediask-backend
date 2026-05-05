@@ -46,6 +46,47 @@
           AND deleted_at IS NULL
     </select>
 
+    <select id="selectListByPatientUserId"
+            resultType="me.jianwen.mediask.infra.persistence.mapper.EmrRecordListRow">
+        SELECT
+            record.id AS record_id,
+            record.record_no,
+            record.encounter_id,
+            record.record_status,
+            record.department_id,
+            department.name AS department_name,
+            record.doctor_id,
+            doctor_user.display_name AS doctor_name,
+            session.session_date,
+            record.chief_complaint_summary,
+            record.created_at
+        FROM emr_record record
+        JOIN visit_encounter encounter
+          ON encounter.id = record.encounter_id
+         AND encounter.deleted_at IS NULL
+        LEFT JOIN registration_order registration
+               ON registration.id = encounter.order_id
+              AND registration.deleted_at IS NULL
+        LEFT JOIN clinic_session session
+               ON session.id = registration.session_id
+              AND session.deleted_at IS NULL
+        LEFT JOIN departments department
+               ON department.id = record.department_id
+              AND department.deleted_at IS NULL
+        LEFT JOIN doctors doctor
+               ON doctor.id = record.doctor_id
+              AND doctor.deleted_at IS NULL
+        LEFT JOIN users doctor_user
+               ON doctor_user.id = doctor.user_id
+              AND doctor_user.deleted_at IS NULL
+        WHERE record.deleted_at IS NULL
+          AND record.patient_id = #{patientUserId}
+        <if test="excludeEncounterId != null">
+            AND record.encounter_id != #{excludeEncounterId}
+        </if>
+        ORDER BY record.created_at DESC, record.id DESC
+    </select>
+
     <select id="selectRecordIdByEncounterId" resultType="java.lang.Long">
         SELECT id
         FROM emr_record
