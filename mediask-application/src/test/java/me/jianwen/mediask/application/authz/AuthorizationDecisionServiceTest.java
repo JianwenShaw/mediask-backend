@@ -37,6 +37,32 @@ class AuthorizationDecisionServiceTest {
     }
 
     @Test
+    void decide_WhenObjectScopedScenarioAndResourceReferenceMissing_Deny() {
+        ResourceReferenceAssemblerPort assembler = new ResourceReferenceAssemblerPort() {
+            @Override
+            public boolean supports(ScenarioCode scenarioCode) {
+                return scenarioCode == ScenarioCode.EMR_RECORD_READ;
+            }
+
+            @Override
+            public List<ResourceRef> assemble(AuthzInvocationContext invocationContext) {
+                return List.of();
+            }
+        };
+        AuthorizationDecisionService decisionService = new AuthorizationDecisionService(List.of(assembler), List.of());
+        AuthzDecision decision = decisionService.decide(new AuthzInvocationContext(
+                ScenarioCode.EMR_RECORD_READ,
+                new AuthzSubject(
+                        2003L,
+                        Set.of("emr:read"),
+                        Set.of(new DataScopeRule("EMR_RECORD", DataScopeType.SELF, null)),
+                        3103L),
+                Map.of("encounterId", 1001L)));
+
+        assertEquals(AuthzDecisionReason.RESOURCE_REFERENCE_MISSING, decision.reason());
+    }
+
+    @Test
     void decide_WhenObjectScopeScenarioAndSelfScopeMatched_Allow() {
         ResourceReferenceAssemblerPort assembler = new ResourceReferenceAssemblerPort() {
             @Override

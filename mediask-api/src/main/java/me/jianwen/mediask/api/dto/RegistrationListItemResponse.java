@@ -10,5 +10,6 @@ public record RegistrationListItemResponse(
         String orderNo,
         String status,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
-        OffsetDateTime createdAt) {
+        OffsetDateTime createdAt,
+        String sourceAiSessionId) {
 }

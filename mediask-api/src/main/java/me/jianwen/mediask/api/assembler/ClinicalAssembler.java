@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
+import me.jianwen.mediask.api.dto.EncounterAiSummaryResponse;
 import me.jianwen.mediask.api.dto.CreatePrescriptionRequest;
 import me.jianwen.mediask.api.dto.CreatePrescriptionResponse;
 import me.jianwen.mediask.api.dto.CreateEmrRequest;
@@ -25,9 +26,13 @@ import me.jianwen.mediask.application.clinical.command.IssuePrescriptionCommand;
 import me.jianwen.mediask.application.clinical.command.UpdateEncounterStatusCommand;
 import me.jianwen.mediask.application.clinical.command.UpdatePrescriptionItemsCommand;
 import me.jianwen.mediask.application.clinical.query.GetEmrDetailQuery;
+import me.jianwen.mediask.application.clinical.query.GetEncounterAiSummaryQuery;
 import me.jianwen.mediask.application.clinical.query.GetEncounterDetailQuery;
 import me.jianwen.mediask.application.clinical.query.GetPrescriptionDetailQuery;
 import me.jianwen.mediask.application.clinical.usecase.UpdateEncounterStatusResult;
+import me.jianwen.mediask.domain.ai.model.AiTriageCitation;
+import me.jianwen.mediask.domain.ai.model.AiTriageRecommendedDepartment;
+import me.jianwen.mediask.domain.clinical.model.EncounterAiSummary;
 import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
 import me.jianwen.mediask.domain.clinical.model.PrescriptionOrder;
@@ -48,6 +53,10 @@ public final class ClinicalAssembler {
 
     public static GetEncounterDetailQuery toGetEncounterDetailQuery(Long encounterId, Long doctorId) {
         return new GetEncounterDetailQuery(encounterId, doctorId);
+    }
+
+    public static GetEncounterAiSummaryQuery toGetEncounterAiSummaryQuery(Long encounterId, Long doctorId) {
+        return new GetEncounterAiSummaryQuery(encounterId, doctorId);
     }
 
     public static GetEmrDetailQuery toGetEmrDetailQuery(Long encounterId) {
@@ -229,6 +238,20 @@ public final class ClinicalAssembler {
                         age));
     }
 
+    public static EncounterAiSummaryResponse toEncounterAiSummaryResponse(EncounterAiSummary summary) {
+        return new EncounterAiSummaryResponse(
+                summary.encounterId(),
+                summary.sessionId(),
+                summary.chiefComplaintSummary(),
+                summary.riskLevel(),
+                toEncounterAiSummaryRecommendedDepartments(summary.recommendedDepartments()),
+                summary.careAdvice(),
+                toEncounterAiSummaryCitations(summary.citations()),
+                summary.blockedReason(),
+                summary.catalogVersion(),
+                summary.finalizedAt());
+    }
+
     public static UpdateEncounterStatusResponse toUpdateEncounterStatusResponse(UpdateEncounterStatusResult result) {
         return new UpdateEncounterStatusResponse(
                 result.encounterId(),
@@ -261,5 +284,26 @@ public final class ClinicalAssembler {
         } catch (IllegalArgumentException exception) {
             throw new BizException(ErrorCode.INVALID_PARAMETER);
         }
+    }
+
+    private static List<EncounterAiSummaryResponse.RecommendedDepartmentResponse> toEncounterAiSummaryRecommendedDepartments(
+            List<AiTriageRecommendedDepartment> departments) {
+        return departments == null ? List.of() : departments.stream()
+                .map(item -> new EncounterAiSummaryResponse.RecommendedDepartmentResponse(
+                        item.departmentId() == null ? null : String.valueOf(item.departmentId()),
+                        item.departmentName(),
+                        item.priority(),
+                        item.reason()))
+                .toList();
+    }
+
+    private static List<EncounterAiSummaryResponse.CitationResponse> toEncounterAiSummaryCitations(
+            List<AiTriageCitation> citations) {
+        return citations == null ? List.of() : citations.stream()
+                .map(item -> new EncounterAiSummaryResponse.CitationResponse(
+                        item.citationOrder(),
+                        item.chunkId(),
+                        item.snippet()))
+                .toList();
     }
 }

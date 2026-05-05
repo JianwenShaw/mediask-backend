@@ -15,6 +15,7 @@ public class RegistrationDetailRow {
     private String orderNo;
     private String orderStatus;
     private OffsetDateTime createdAt;
+    private String sourceAiSessionId;
     private Long clinicSessionId;
     private Long clinicSlotId;
     private Long departmentId;

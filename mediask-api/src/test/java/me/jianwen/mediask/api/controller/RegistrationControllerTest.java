@@ -117,7 +117,8 @@ class RegistrationControllerTest {
                         .content("""
                                 {
                                   "clinicSessionId": 4101,
-                                  "clinicSlotId": 5101
+                                  "clinicSlotId": 5101,
+                                  "sourceAiSessionId": "session-1"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -130,6 +131,7 @@ class RegistrationControllerTest {
         assertEquals(2003L, patientCreateRegistrationUseCase.lastCommand.patientUserId());
         assertEquals(4101L, patientCreateRegistrationUseCase.lastCommand.clinicSessionId());
         assertEquals(5101L, patientCreateRegistrationUseCase.lastCommand.clinicSlotId());
+        assertEquals("session-1", patientCreateRegistrationUseCase.lastCommand.sourceAiSessionId());
     }
 
     @Test
@@ -143,7 +145,8 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.data.items[0].registrationId").value("6101"))
                 .andExpect(jsonPath("$.data.items[0].orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.items[0].status").value("CONFIRMED"))
-                .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-04-02T10:00:00+08:00"));
+                .andExpect(jsonPath("$.data.items[0].createdAt").value("2026-04-02T10:00:00+08:00"))
+                .andExpect(jsonPath("$.data.items[0].sourceAiSessionId").value("session-1"));
 
         assertEquals(2003L, patientListRegistrationsUseCase.lastQuery.patientUserId());
         assertEquals(RegistrationStatus.CONFIRMED, patientListRegistrationsUseCase.lastQuery.status());
@@ -159,6 +162,7 @@ class RegistrationControllerTest {
                 .andExpect(jsonPath("$.data.orderNo").value("REG6101"))
                 .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
                 .andExpect(jsonPath("$.data.createdAt").value("2026-04-02T10:00:00+08:00"))
+                .andExpect(jsonPath("$.data.sourceAiSessionId").value("session-1"))
                 .andExpect(jsonPath("$.data.clinicSessionId").value("4101"))
                 .andExpect(jsonPath("$.data.clinicSlotId").value("5101"))
                 .andExpect(jsonPath("$.data.departmentId").value("3101"))
@@ -194,7 +198,8 @@ class RegistrationControllerTest {
                         .content("""
                                 {
                                   "clinicSessionId": 4101,
-                                  "clinicSlotId": 5101
+                                  "clinicSlotId": 5101,
+                                  "sourceAiSessionId": "session-1"
                                 }
                                 """))
                 .andExpect(status().isUnauthorized())
@@ -209,7 +214,8 @@ class RegistrationControllerTest {
                         .content("""
                                 {
                                   "clinicSessionId": 4101,
-                                  "clinicSlotId": 5101
+                                  "clinicSlotId": 5101,
+                                  "sourceAiSessionId": "session-1"
                                 }
                                 """))
                 .andExpect(status().isForbidden())
@@ -336,7 +342,8 @@ class RegistrationControllerTest {
                             6101L,
                             "REG6101",
                             RegistrationStatus.CONFIRMED,
-                            OffsetDateTime.parse("2026-04-02T10:00:00+08:00")));
+                            OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
+                            "session-1"));
         }
     }
 
@@ -361,6 +368,7 @@ class RegistrationControllerTest {
                     "REG6101",
                     RegistrationStatus.CONFIRMED,
                     OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
+                    "session-1",
                     4101L,
                     5101L,
                     3101L,

@@ -10,6 +10,7 @@ public record RegistrationDetail(
         String orderNo,
         RegistrationStatus status,
         OffsetDateTime createdAt,
+        String sourceAiSessionId,
         Long clinicSessionId,
         Long clinicSlotId,
         Long departmentId,

@@ -8,6 +8,7 @@ public final class AuditActionCodes {
     public static final String REGISTRATION_CREATE = "REGISTRATION_CREATE";
     public static final String REGISTRATION_CANCEL = "REGISTRATION_CANCEL";
     public static final String ENCOUNTER_UPDATE = "ENCOUNTER_UPDATE";
+    public static final String ENCOUNTER_AI_SUMMARY_VIEW_FAILED = "ENCOUNTER_AI_SUMMARY_VIEW_FAILED";
     public static final String EMR_CREATE = "EMR_CREATE";
     public static final String PRESCRIPTION_CREATE = "PRESCRIPTION_CREATE";
     public static final String PRESCRIPTION_UPDATE = "PRESCRIPTION_UPDATE";

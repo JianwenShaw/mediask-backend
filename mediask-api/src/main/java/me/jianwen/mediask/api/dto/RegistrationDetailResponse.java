@@ -13,6 +13,7 @@ public record RegistrationDetailResponse(
         String status,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
         OffsetDateTime createdAt,
+        String sourceAiSessionId,
         @JsonSerialize(using = ToStringSerializer.class) Long clinicSessionId,
         @JsonSerialize(using = ToStringSerializer.class) Long clinicSlotId,
         @JsonSerialize(using = ToStringSerializer.class) Long departmentId,

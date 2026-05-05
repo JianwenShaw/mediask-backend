@@ -25,7 +25,8 @@ class RegistrationOrderQueryRepositoryAdapterTest {
         RegistrationOrderQueryRepositoryAdapter adapter = new RegistrationOrderQueryRepositoryAdapter(
                 proxy(RegistrationOrderMapper.class, Map.of(
                         "selectList", handler::selectList,
-                        "selectRegistrationDetail", handler::selectRegistrationDetail)));
+                        "selectRegistrationDetail", handler::selectRegistrationDetail,
+                        "selectOne", handler::selectOne)));
 
         List<RegistrationListItem> result = adapter.listByPatientUserId(2003L, RegistrationStatus.CONFIRMED);
 
@@ -33,6 +34,7 @@ class RegistrationOrderQueryRepositoryAdapterTest {
         assertEquals(6101L, result.getFirst().registrationId());
         assertEquals("REG6101", result.getFirst().orderNo());
         assertEquals(RegistrationStatus.CONFIRMED, result.getFirst().status());
+        assertEquals("session-1", result.getFirst().sourceAiSessionId());
         assertEquals(1, handler.selectListInvocations);
     }
 
@@ -42,13 +44,15 @@ class RegistrationOrderQueryRepositoryAdapterTest {
         RegistrationOrderQueryRepositoryAdapter adapter = new RegistrationOrderQueryRepositoryAdapter(
                 proxy(RegistrationOrderMapper.class, Map.of(
                         "selectList", handler::selectList,
-                        "selectRegistrationDetail", handler::selectRegistrationDetail)));
+                        "selectRegistrationDetail", handler::selectRegistrationDetail,
+                        "selectOne", handler::selectOne)));
 
         List<RegistrationListItem> result = adapter.listByPatientUserId(2003L, null);
 
         assertEquals(1, result.size());
         assertEquals(6101L, result.getFirst().registrationId());
         assertEquals(RegistrationStatus.CONFIRMED, result.getFirst().status());
+        assertEquals("session-1", result.getFirst().sourceAiSessionId());
         assertEquals(1, handler.selectListInvocations);
     }
 
@@ -58,13 +62,15 @@ class RegistrationOrderQueryRepositoryAdapterTest {
         RegistrationOrderQueryRepositoryAdapter adapter = new RegistrationOrderQueryRepositoryAdapter(
                 proxy(RegistrationOrderMapper.class, Map.of(
                         "selectList", handler::selectList,
-                        "selectRegistrationDetail", handler::selectRegistrationDetail)));
+                        "selectRegistrationDetail", handler::selectRegistrationDetail,
+                        "selectOne", handler::selectOne)));
 
         Optional<RegistrationDetail> result = adapter.findDetailByPatientUserIdAndRegistrationId(2003L, 6101L);
 
         assertEquals("REG6101", result.orElseThrow().orderNo());
         assertEquals("张医生", result.orElseThrow().doctorName());
         assertEquals(RegistrationStatus.CONFIRMED, result.orElseThrow().status());
+        assertEquals("session-1", result.orElseThrow().sourceAiSessionId());
     }
 
     @Test
@@ -74,7 +80,8 @@ class RegistrationOrderQueryRepositoryAdapterTest {
         RegistrationOrderQueryRepositoryAdapter adapter = new RegistrationOrderQueryRepositoryAdapter(
                 proxy(RegistrationOrderMapper.class, Map.of(
                         "selectList", handler::selectList,
-                        "selectRegistrationDetail", handler::selectRegistrationDetail)));
+                        "selectRegistrationDetail", handler::selectRegistrationDetail,
+                        "selectOne", handler::selectOne)));
 
         Optional<RegistrationDetail> result = adapter.findDetailByPatientUserIdAndRegistrationId(2003L, 6101L);
 
@@ -85,6 +92,20 @@ class RegistrationOrderQueryRepositoryAdapterTest {
         assertEquals(null, result.orElseThrow().doctorName());
         assertEquals(null, result.orElseThrow().sessionDate());
         assertEquals(null, result.orElseThrow().periodCode());
+    }
+
+    @Test
+    void findSourceAiSessionIdByRegistrationId_WhenPresent_ReturnSessionId() {
+        CapturingHandler handler = new CapturingHandler();
+        RegistrationOrderQueryRepositoryAdapter adapter = new RegistrationOrderQueryRepositoryAdapter(
+                proxy(RegistrationOrderMapper.class, Map.of(
+                        "selectList", handler::selectList,
+                        "selectRegistrationDetail", handler::selectRegistrationDetail,
+                        "selectOne", handler::selectOne)));
+
+        Optional<String> result = adapter.findSourceAiSessionIdByRegistrationId(6101L);
+
+        assertEquals("session-1", result.orElseThrow());
     }
 
     private static <T> T proxy(Class<T> type, Map<String, Function<Object[], Object>> handlers) {
@@ -119,8 +140,15 @@ class RegistrationOrderQueryRepositoryAdapterTest {
             dataObject.setOrderNo("REG6101");
             dataObject.setOrderStatus("CONFIRMED");
             dataObject.setCreatedAt(OffsetDateTime.parse("2026-04-02T10:00:00+08:00"));
+            dataObject.setSourceAiSessionId("session-1");
             dataObject.setFee(new BigDecimal("18.00"));
             return List.of(dataObject);
+        }
+
+        private Object selectOne(Object[] arguments) {
+            RegistrationOrderDO dataObject = new RegistrationOrderDO();
+            dataObject.setSourceAiSessionId("session-1");
+            return dataObject;
         }
 
         private Object selectRegistrationDetail(Object[] arguments) {
@@ -130,6 +158,7 @@ class RegistrationOrderQueryRepositoryAdapterTest {
             row.setOrderNo("REG6101");
             row.setOrderStatus("CONFIRMED");
             row.setCreatedAt(OffsetDateTime.parse("2026-04-02T10:00:00+08:00"));
+            row.setSourceAiSessionId("session-1");
             row.setClinicSessionId(4101L);
             row.setClinicSlotId(5101L);
             row.setDepartmentId(3101L);

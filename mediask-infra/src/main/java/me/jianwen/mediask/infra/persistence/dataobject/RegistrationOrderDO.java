@@ -20,6 +20,7 @@ public class RegistrationOrderDO extends BaseDO {
     private Long departmentId;
     private Long sessionId;
     private Long slotId;
+    private String sourceAiSessionId;
     private String orderStatus;
     private BigDecimal fee;
     private OffsetDateTime paidAt;

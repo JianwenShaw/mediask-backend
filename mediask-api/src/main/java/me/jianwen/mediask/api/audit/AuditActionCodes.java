@@ -8,6 +8,8 @@ public final class AuditActionCodes {
     public static final String REGISTRATION_CREATE = me.jianwen.mediask.application.audit.AuditActionCodes.REGISTRATION_CREATE;
     public static final String REGISTRATION_CANCEL = me.jianwen.mediask.application.audit.AuditActionCodes.REGISTRATION_CANCEL;
     public static final String ENCOUNTER_UPDATE = me.jianwen.mediask.application.audit.AuditActionCodes.ENCOUNTER_UPDATE;
+    public static final String ENCOUNTER_AI_SUMMARY_VIEW_FAILED =
+            me.jianwen.mediask.application.audit.AuditActionCodes.ENCOUNTER_AI_SUMMARY_VIEW_FAILED;
     public static final String EMR_CREATE = me.jianwen.mediask.application.audit.AuditActionCodes.EMR_CREATE;
     public static final String PATIENT_PROFILE_UPDATE = me.jianwen.mediask.application.audit.AuditActionCodes.PATIENT_PROFILE_UPDATE;
     public static final String ADMIN_PATIENT_CREATE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_PATIENT_CREATE;

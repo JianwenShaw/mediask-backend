@@ -40,11 +40,17 @@ class ListRegistrationsUseCaseTest {
                     6101L,
                     "REG6101",
                     RegistrationStatus.CONFIRMED,
-                    OffsetDateTime.parse("2026-04-02T10:00:00+08:00")));
+                    OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
+                    "session-1"));
         }
 
         @Override
         public Optional<RegistrationDetail> findDetailByPatientUserIdAndRegistrationId(Long patientUserId, Long registrationId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<String> findSourceAiSessionIdByRegistrationId(Long registrationId) {
             throw new UnsupportedOperationException();
         }
     }

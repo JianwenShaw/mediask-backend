@@ -34,7 +34,7 @@ class CreateRegistrationUseCaseTest {
                         TestAuditSupport.auditTrailService());
 
         CreateRegistrationResult result = useCase.handle(
-                new CreateRegistrationCommand(2003L, 4101L, 5101L), TestAuditSupport.auditContext());
+                new CreateRegistrationCommand(2003L, 4101L, 5101L, "session-1"), TestAuditSupport.auditContext());
 
         assertTrue(reservationRepository.existsOpenSessionCalled);
         assertTrue(reservationRepository.reserveAvailableSlotCalled);
@@ -44,6 +44,7 @@ class CreateRegistrationUseCaseTest {
         assertEquals(3101L, orderRepository.savedOrder.departmentId());
         assertEquals(4101L, orderRepository.savedOrder.sessionId());
         assertEquals(5101L, orderRepository.savedOrder.slotId());
+        assertEquals("session-1", orderRepository.savedOrder.sourceAiSessionId());
         assertEquals(orderRepository.savedOrder.registrationId(), visitEncounterRepository.savedEncounter.registrationId());
         assertEquals(2003L, visitEncounterRepository.savedEncounter.patientUserId());
         assertEquals(2101L, visitEncounterRepository.savedEncounter.doctorId());
@@ -66,7 +67,9 @@ class CreateRegistrationUseCaseTest {
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L), TestAuditSupport.auditContext()));
+                () -> useCase.handle(
+                        new CreateRegistrationCommand(2003L, 4101L, 5101L, "session-1"),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(OutpatientErrorCode.SESSION_NOT_FOUND, exception.getErrorCode());
     }
@@ -83,7 +86,9 @@ class CreateRegistrationUseCaseTest {
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> useCase.handle(new CreateRegistrationCommand(2003L, 4101L, 5101L), TestAuditSupport.auditContext()));
+                () -> useCase.handle(
+                        new CreateRegistrationCommand(2003L, 4101L, 5101L, "session-1"),
+                        TestAuditSupport.auditContext()));
 
         assertEquals(OutpatientErrorCode.SLOT_NOT_AVAILABLE, exception.getErrorCode());
     }

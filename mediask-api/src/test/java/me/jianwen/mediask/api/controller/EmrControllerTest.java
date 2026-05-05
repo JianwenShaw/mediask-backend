@@ -25,10 +25,14 @@ import me.jianwen.mediask.application.clinical.usecase.GetEmrDetailUseCase;
 import me.jianwen.mediask.application.clinical.query.GetEmrDetailQuery;
 import me.jianwen.mediask.application.clinical.usecase.CreateEmrUseCase;
 import me.jianwen.mediask.domain.clinical.exception.ClinicalErrorCode;
+import me.jianwen.mediask.domain.clinical.model.EncounterDetail;
+import me.jianwen.mediask.domain.clinical.model.EncounterPatientSummary;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordAccess;
 import me.jianwen.mediask.domain.clinical.model.EmrDiagnosis;
 import me.jianwen.mediask.domain.clinical.model.EmrRecord;
 import me.jianwen.mediask.domain.clinical.model.EmrRecordStatus;
+import me.jianwen.mediask.domain.clinical.model.VisitEncounterStatus;
+import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
 import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import me.jianwen.mediask.domain.user.model.DataScopeRule;
 import me.jianwen.mediask.domain.user.model.DataScopeType;
@@ -70,6 +74,7 @@ class EmrControllerTest {
     private final StubCreateEmrUseCase doctorCreateEmrUseCase = new StubCreateEmrUseCase();
     private final StubGetEmrDetailUseCase getEmrDetailUseCase = new StubGetEmrDetailUseCase();
     private final StubEmrRecordQueryRepository emrRecordQueryRepository = new StubEmrRecordQueryRepository();
+    private final StubEncounterQueryRepository encounterQueryRepository = new StubEncounterQueryRepository();
 
     @BeforeEach
     void setUp() {
@@ -77,6 +82,7 @@ class EmrControllerTest {
         doctorCreateEmrUseCase.throwErrorCode = null;
         getEmrDetailUseCase.throwErrorCode = null;
         emrRecordQueryRepository.reset();
+        encounterQueryRepository.reset();
         doctorMockMvc = buildMockMvc(new AuthenticatedUser(
                 2001L,
                 "doctor_li",
@@ -344,7 +350,7 @@ class EmrControllerTest {
     }
 
     @Test
-    void detail_WhenResourceReferenceMissingInAuthz_ReturnsForbidden() throws Exception {
+    void detail_WhenEncounterMissingInAuthz_ReturnsForbidden() throws Exception {
         doctorMockMvc.perform(get("/api/v1/emr/9999")
                         .header("Authorization", "Bearer " + DOCTOR_TOKEN))
                 .andExpect(status().isForbidden())
@@ -390,8 +396,8 @@ class EmrControllerTest {
 
     private AuthorizationDecisionService buildAuthorizationDecisionService(EmrRecordQueryRepository emrRecordQueryRepository) {
         return new AuthorizationDecisionService(
-                List.of(new EmrRecordResourceReferenceAssembler(emrRecordQueryRepository)),
-                List.of(new EmrRecordResourceAccessResolver(emrRecordQueryRepository)));
+                List.of(new EmrRecordResourceReferenceAssembler()),
+                List.of(new EmrRecordResourceAccessResolver(encounterQueryRepository)));
     }
 
     private static class StubCreateEmrUseCase extends CreateEmrUseCase {
@@ -491,6 +497,58 @@ class EmrControllerTest {
         public Optional<EmrRecordAccess> findAccessByRecordId(Long recordId) {
             if (access != null && access.recordId().equals(recordId)) {
                 return Optional.of(access);
+            }
+            return Optional.empty();
+        }
+    }
+
+    private static class StubEncounterQueryRepository implements EncounterQueryRepository {
+        private Optional<EncounterDetail> encounter = Optional.of(new EncounterDetail(
+                8101L,
+                6101L,
+                2101L,
+                new EncounterPatientSummary(
+                        1001L,
+                        "张患者",
+                        "FEMALE",
+                        3101L,
+                        "神经内科",
+                        java.time.LocalDate.parse("2026-04-18"),
+                        "MORNING",
+                        VisitEncounterStatus.SCHEDULED,
+                        null,
+                        null,
+                        null)));
+
+        void reset() {
+            this.encounter = Optional.of(new EncounterDetail(
+                    8101L,
+                    6101L,
+                    2101L,
+                    new EncounterPatientSummary(
+                            1001L,
+                            "张患者",
+                            "FEMALE",
+                            3101L,
+                            "神经内科",
+                            java.time.LocalDate.parse("2026-04-18"),
+                            "MORNING",
+                            VisitEncounterStatus.SCHEDULED,
+                            null,
+                            null,
+                            null)));
+        }
+
+        @Override
+        public List<me.jianwen.mediask.domain.clinical.model.EncounterListItem> listByDoctorId(
+                Long doctorId, VisitEncounterStatus status) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Optional<EncounterDetail> findDetailByEncounterId(Long encounterId) {
+            if (encounter.isPresent() && encounter.get().encounterId().equals(encounterId)) {
+                return encounter;
             }
             return Optional.empty();
         }

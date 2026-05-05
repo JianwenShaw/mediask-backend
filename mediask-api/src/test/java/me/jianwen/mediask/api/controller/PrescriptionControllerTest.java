@@ -463,10 +463,10 @@ class PrescriptionControllerTest {
     private AuthorizationDecisionService buildAuthorizationDecisionService() {
         return new AuthorizationDecisionService(
                 List.of(
-                        new EmrRecordResourceReferenceAssembler(emrRecordQueryRepository),
+                        new EmrRecordResourceReferenceAssembler(),
                         new PrescriptionResourceReferenceAssembler()),
                 List.of(
-                        new EmrRecordResourceAccessResolver(emrRecordQueryRepository),
+                        new EmrRecordResourceAccessResolver(encounterQueryRepository),
                         new PrescriptionResourceAccessResolver(encounterQueryRepository)));
     }
 

@@ -4,16 +4,16 @@ import java.util.Optional;
 import me.jianwen.mediask.application.authz.ResourceAccessContext;
 import me.jianwen.mediask.application.authz.ResourceAccessResolverPort;
 import me.jianwen.mediask.application.authz.ResourceType;
-import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
+import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
 import org.springframework.stereotype.Component;
 
 @Component
 public class EmrRecordResourceAccessResolver implements ResourceAccessResolverPort {
 
-    private final EmrRecordQueryRepository emrRecordQueryRepository;
+    private final EncounterQueryRepository encounterQueryRepository;
 
-    public EmrRecordResourceAccessResolver(EmrRecordQueryRepository emrRecordQueryRepository) {
-        this.emrRecordQueryRepository = emrRecordQueryRepository;
+    public EmrRecordResourceAccessResolver(EncounterQueryRepository encounterQueryRepository) {
+        this.encounterQueryRepository = encounterQueryRepository;
     }
 
     @Override
@@ -23,7 +23,9 @@ public class EmrRecordResourceAccessResolver implements ResourceAccessResolverPo
 
     @Override
     public Optional<ResourceAccessContext> resolve(Long resourceId) {
-        return emrRecordQueryRepository.findAccessByRecordId(resourceId)
-                .map(access -> new ResourceAccessContext(access.patientId(), access.departmentId()));
+        return encounterQueryRepository.findDetailByEncounterId(resourceId)
+                .map(encounter -> new ResourceAccessContext(
+                        encounter.patientSummary().patientUserId(),
+                        encounter.patientSummary().departmentId()));
     }
 }

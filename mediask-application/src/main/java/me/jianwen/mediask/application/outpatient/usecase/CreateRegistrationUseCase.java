@@ -48,6 +48,7 @@ public class CreateRegistrationUseCase {
                 reservation.departmentId(),
                 reservation.sessionId(),
                 reservation.slotId(),
+                command.sourceAiSessionId(),
                 reservation.fee());
         registrationOrderRepository.save(registrationOrder);
         visitEncounterRepository.save(VisitEncounter.createScheduled(

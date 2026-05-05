@@ -43,12 +43,22 @@ public class RegistrationOrderQueryRepositoryAdapter implements RegistrationOrde
                 .map(this::toDetail);
     }
 
+    @Override
+    public Optional<String> findSourceAiSessionIdByRegistrationId(Long registrationId) {
+        return Optional.ofNullable(registrationOrderMapper.selectOne(Wrappers.lambdaQuery(RegistrationOrderDO.class)
+                        .eq(RegistrationOrderDO::getId, registrationId)
+                        .isNull(RegistrationOrderDO::getDeletedAt)))
+                .map(RegistrationOrderDO::getSourceAiSessionId)
+                .filter(sourceAiSessionId -> !sourceAiSessionId.isBlank());
+    }
+
     private RegistrationListItem toListItem(RegistrationOrderDO dataObject) {
         return new RegistrationListItem(
                 dataObject.getId(),
                 dataObject.getOrderNo(),
                 RegistrationStatus.valueOf(dataObject.getOrderStatus()),
-                dataObject.getCreatedAt());
+                dataObject.getCreatedAt(),
+                dataObject.getSourceAiSessionId());
     }
 
     private RegistrationDetail toDetail(RegistrationDetailRow row) {
@@ -58,6 +68,7 @@ public class RegistrationOrderQueryRepositoryAdapter implements RegistrationOrde
                 row.getOrderNo(),
                 RegistrationStatus.valueOf(row.getOrderStatus()),
                 row.getCreatedAt(),
+                row.getSourceAiSessionId(),
                 row.getClinicSessionId(),
                 row.getClinicSlotId(),
                 row.getDepartmentId(),

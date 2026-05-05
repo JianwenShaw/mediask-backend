@@ -6,17 +6,12 @@ import me.jianwen.mediask.application.authz.ResourceRef;
 import me.jianwen.mediask.application.authz.ResourceReferenceAssemblerPort;
 import me.jianwen.mediask.application.authz.ResourceType;
 import me.jianwen.mediask.application.authz.ScenarioCode;
-import me.jianwen.mediask.domain.clinical.port.EmrRecordQueryRepository;
 import org.springframework.stereotype.Component;
 
 @Component
 public class EmrRecordResourceReferenceAssembler implements ResourceReferenceAssemblerPort {
 
-    private final EmrRecordQueryRepository emrRecordQueryRepository;
-
-    public EmrRecordResourceReferenceAssembler(EmrRecordQueryRepository emrRecordQueryRepository) {
-        this.emrRecordQueryRepository = emrRecordQueryRepository;
-    }
+    public EmrRecordResourceReferenceAssembler() {}
 
     @Override
     public boolean supports(ScenarioCode scenarioCode) {
@@ -29,8 +24,6 @@ public class EmrRecordResourceReferenceAssembler implements ResourceReferenceAss
         if (!(encounterIdArgument instanceof Long encounterId) || encounterId <= 0L) {
             return List.of();
         }
-        return emrRecordQueryRepository.findRecordIdByEncounterId(encounterId)
-                .map(recordId -> List.of(new ResourceRef(ResourceType.EMR_RECORD, recordId)))
-                .orElseGet(List::of);
+        return List.of(new ResourceRef(ResourceType.EMR_RECORD, encounterId));
     }
 }

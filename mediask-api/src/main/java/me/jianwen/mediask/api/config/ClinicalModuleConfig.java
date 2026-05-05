@@ -4,6 +4,7 @@ import me.jianwen.mediask.application.audit.usecase.AuditTrailService;
 import me.jianwen.mediask.application.clinical.usecase.CancelPrescriptionUseCase;
 import me.jianwen.mediask.application.clinical.usecase.CreateEmrUseCase;
 import me.jianwen.mediask.application.clinical.usecase.CreatePrescriptionUseCase;
+import me.jianwen.mediask.application.clinical.usecase.GetEncounterAiSummaryUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEncounterDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetEmrDetailUseCase;
 import me.jianwen.mediask.application.clinical.usecase.GetPrescriptionDetailUseCase;
@@ -17,6 +18,8 @@ import me.jianwen.mediask.domain.clinical.port.EncounterQueryRepository;
 import me.jianwen.mediask.domain.clinical.port.PrescriptionOrderQueryRepository;
 import me.jianwen.mediask.domain.clinical.port.PrescriptionOrderRepository;
 import me.jianwen.mediask.domain.clinical.port.VisitEncounterRepository;
+import me.jianwen.mediask.domain.ai.port.AiTriageGatewayPort;
+import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderQueryRepository;
 import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,6 +35,19 @@ public class ClinicalModuleConfig {
     @Bean
     public GetEncounterDetailUseCase getEncounterDetailUseCase(EncounterQueryRepository encounterQueryRepository) {
         return new GetEncounterDetailUseCase(encounterQueryRepository);
+    }
+
+    @Bean
+    public GetEncounterAiSummaryUseCase getEncounterAiSummaryUseCase(
+            EncounterQueryRepository encounterQueryRepository,
+            RegistrationOrderQueryRepository registrationOrderQueryRepository,
+            AiTriageGatewayPort aiTriageGatewayPort,
+            AuditTrailService auditTrailService) {
+        return new GetEncounterAiSummaryUseCase(
+                encounterQueryRepository,
+                registrationOrderQueryRepository,
+                aiTriageGatewayPort,
+                auditTrailService);
     }
 
     @Bean

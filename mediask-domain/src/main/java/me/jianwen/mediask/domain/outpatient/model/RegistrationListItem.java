@@ -6,5 +6,6 @@ public record RegistrationListItem(
         Long registrationId,
         String orderNo,
         RegistrationStatus status,
-        OffsetDateTime createdAt) {
+        OffsetDateTime createdAt,
+        String sourceAiSessionId) {
 }

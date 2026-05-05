@@ -15,6 +15,7 @@ public final class RegistrationOrder {
     private final Long departmentId;
     private final Long sessionId;
     private final Long slotId;
+    private final String sourceAiSessionId;
     private final RegistrationStatus status;
     private final BigDecimal fee;
     private final OffsetDateTime cancelledAt;
@@ -28,6 +29,7 @@ public final class RegistrationOrder {
             Long departmentId,
             Long sessionId,
             Long slotId,
+            String sourceAiSessionId,
             RegistrationStatus status,
             BigDecimal fee,
             OffsetDateTime cancelledAt,
@@ -39,6 +41,7 @@ public final class RegistrationOrder {
         this.departmentId = departmentId;
         this.sessionId = sessionId;
         this.slotId = slotId;
+        this.sourceAiSessionId = sourceAiSessionId;
         this.status = status;
         this.fee = fee;
         this.cancelledAt = cancelledAt;
@@ -51,6 +54,7 @@ public final class RegistrationOrder {
             Long departmentId,
             Long sessionId,
             Long slotId,
+            String sourceAiSessionId,
             BigDecimal fee) {
         Long registrationId = SnowflakeIdGenerator.nextId();
         return new RegistrationOrder(
@@ -61,6 +65,7 @@ public final class RegistrationOrder {
                 departmentId,
                 sessionId,
                 slotId,
+                sourceAiSessionId,
                 RegistrationStatus.CONFIRMED,
                 fee,
                 null,
@@ -75,6 +80,7 @@ public final class RegistrationOrder {
             Long departmentId,
             Long sessionId,
             Long slotId,
+            String sourceAiSessionId,
             RegistrationStatus status,
             BigDecimal fee,
             OffsetDateTime cancelledAt,
@@ -87,6 +93,7 @@ public final class RegistrationOrder {
                 departmentId,
                 sessionId,
                 slotId,
+                sourceAiSessionId,
                 status,
                 fee,
                 cancelledAt,
@@ -105,6 +112,7 @@ public final class RegistrationOrder {
                 departmentId,
                 sessionId,
                 slotId,
+                sourceAiSessionId,
                 RegistrationStatus.CANCELLED,
                 fee,
                 cancelledAt,
@@ -137,6 +145,10 @@ public final class RegistrationOrder {
 
     public Long slotId() {
         return slotId;
+    }
+
+    public String sourceAiSessionId() {
+        return sourceAiSessionId;
     }
 
     public RegistrationStatus status() {

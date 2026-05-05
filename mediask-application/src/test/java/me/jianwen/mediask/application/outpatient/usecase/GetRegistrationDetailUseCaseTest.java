@@ -69,6 +69,7 @@ class GetRegistrationDetailUseCaseTest {
                     "REG6101",
                     RegistrationStatus.CONFIRMED,
                     OffsetDateTime.parse("2026-04-02T10:00:00+08:00"),
+                    "session-1",
                     4101L,
                     5101L,
                     3101L,
@@ -80,6 +81,11 @@ class GetRegistrationDetailUseCaseTest {
                     new BigDecimal("18.00"),
                     null,
                     null));
+        }
+
+        @Override
+        public Optional<String> findSourceAiSessionIdByRegistrationId(Long registrationId) {
+            throw new UnsupportedOperationException();
         }
     }
 }

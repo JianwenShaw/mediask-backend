@@ -11,4 +11,6 @@ public interface RegistrationOrderQueryRepository {
     List<RegistrationListItem> listByPatientUserId(Long patientUserId, RegistrationStatus status);
 
     Optional<RegistrationDetail> findDetailByPatientUserIdAndRegistrationId(Long patientUserId, Long registrationId);
+
+    Optional<String> findSourceAiSessionIdByRegistrationId(Long registrationId);
 }

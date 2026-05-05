@@ -66,7 +66,8 @@ public final class OutpatientAssembler {
 
     public static CreateRegistrationCommand toCreateRegistrationCommand(
             Long patientUserId, CreateRegistrationRequest request) {
-        return new CreateRegistrationCommand(patientUserId, request.clinicSessionId(), request.clinicSlotId());
+        return new CreateRegistrationCommand(
+                patientUserId, request.clinicSessionId(), request.clinicSlotId(), request.sourceAiSessionId());
     }
 
     public static CreateRegistrationResponse toCreateRegistrationResponse(CreateRegistrationResult result) {
@@ -92,7 +93,12 @@ public final class OutpatientAssembler {
     }
 
     private static RegistrationListItemResponse toRegistrationListItemResponse(RegistrationListItem item) {
-        return new RegistrationListItemResponse(item.registrationId(), item.orderNo(), item.status().name(), item.createdAt());
+        return new RegistrationListItemResponse(
+                item.registrationId(),
+                item.orderNo(),
+                item.status().name(),
+                item.createdAt(),
+                item.sourceAiSessionId());
     }
 
     public static RegistrationDetailResponse toRegistrationDetailResponse(RegistrationDetail detail) {
@@ -101,6 +107,7 @@ public final class OutpatientAssembler {
                 detail.orderNo(),
                 detail.status().name(),
                 detail.createdAt(),
+                detail.sourceAiSessionId(),
                 detail.clinicSessionId(),
                 detail.clinicSlotId(),
                 detail.departmentId(),
