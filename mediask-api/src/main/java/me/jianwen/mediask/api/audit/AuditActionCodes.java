@@ -18,6 +18,9 @@ public final class AuditActionCodes {
     public static final String ADMIN_DOCTOR_CREATE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_DOCTOR_CREATE;
     public static final String ADMIN_DOCTOR_UPDATE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_DOCTOR_UPDATE;
     public static final String ADMIN_DOCTOR_DELETE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_DOCTOR_DELETE;
+    public static final String ADMIN_DEPARTMENT_CREATE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_DEPARTMENT_CREATE;
+    public static final String ADMIN_DEPARTMENT_UPDATE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_DEPARTMENT_UPDATE;
+    public static final String ADMIN_DEPARTMENT_DELETE = me.jianwen.mediask.application.audit.AuditActionCodes.ADMIN_DEPARTMENT_DELETE;
     public static final String PRESCRIPTION_CREATE = me.jianwen.mediask.application.audit.AuditActionCodes.PRESCRIPTION_CREATE;
     public static final String PRESCRIPTION_UPDATE = me.jianwen.mediask.application.audit.AuditActionCodes.PRESCRIPTION_UPDATE;
     public static final String PRESCRIPTION_ISSUE = me.jianwen.mediask.application.audit.AuditActionCodes.PRESCRIPTION_ISSUE;

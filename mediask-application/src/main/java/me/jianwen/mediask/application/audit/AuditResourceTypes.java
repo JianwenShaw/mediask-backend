@@ -13,6 +13,7 @@ public final class AuditResourceTypes {
     public static final String AI_SESSION = "AI_SESSION";
     public static final String PATIENT_PROFILE = "PATIENT_PROFILE";
     public static final String DOCTOR_PROFILE = "DOCTOR_PROFILE";
+    public static final String DEPARTMENT = "DEPARTMENT";
     public static final String AUDIT_EVENT = "AUDIT_EVENT";
     public static final String DATA_ACCESS_LOG = "DATA_ACCESS_LOG";
 

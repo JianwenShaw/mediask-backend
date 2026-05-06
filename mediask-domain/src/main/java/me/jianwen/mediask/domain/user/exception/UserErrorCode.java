@@ -30,7 +30,10 @@ public enum UserErrorCode implements ErrorCodeType {
     ADMIN_DOCTOR_PHONE_CONFLICT(2024, "admin doctor phone conflict", ErrorCodeCategory.CONFLICT),
     ADMIN_DOCTOR_ROLE_NOT_FOUND(2025, "admin doctor role not found", ErrorCodeCategory.NOT_FOUND),
     ADMIN_DOCTOR_UPDATE_CONFLICT(2026, "admin doctor update conflict", ErrorCodeCategory.CONFLICT),
-    ADMIN_DOCTOR_DELETE_CONFLICT(2027, "admin doctor delete conflict", ErrorCodeCategory.CONFLICT);
+    ADMIN_DOCTOR_DELETE_CONFLICT(2027, "admin doctor delete conflict", ErrorCodeCategory.CONFLICT),
+    ADMIN_DEPARTMENT_NOT_FOUND(2028, "admin department not found", ErrorCodeCategory.NOT_FOUND),
+    ADMIN_DEPARTMENT_CODE_CONFLICT(2029, "admin department code conflict", ErrorCodeCategory.CONFLICT),
+    ADMIN_DEPARTMENT_UPDATE_CONFLICT(2030, "admin department update conflict", ErrorCodeCategory.CONFLICT);
 
     private final int code;
     private final String message;

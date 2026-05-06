@@ -10,9 +10,13 @@ import me.jianwen.mediask.api.dto.LoginResponse;
 import me.jianwen.mediask.api.dto.PatientProfileResponse;
 import me.jianwen.mediask.api.dto.RefreshTokenResponse;
 import me.jianwen.mediask.application.user.usecase.AuthenticationResult;
+import me.jianwen.mediask.api.dto.AdminDepartmentDetailResponse;
+import me.jianwen.mediask.api.dto.AdminDepartmentListItemResponse;
 import me.jianwen.mediask.api.dto.AdminDoctorDetailResponse;
 import me.jianwen.mediask.api.dto.AdminDoctorListItemResponse;
 import me.jianwen.mediask.api.dto.DoctorDepartmentAssignmentResponse;
+import me.jianwen.mediask.domain.user.model.AdminDepartmentDetail;
+import me.jianwen.mediask.domain.user.model.AdminDepartmentListItem;
 import me.jianwen.mediask.domain.user.model.AdminDoctorDetail;
 import me.jianwen.mediask.domain.user.model.AdminDoctorListItem;
 import me.jianwen.mediask.domain.user.model.AdminPatientDetail;
@@ -153,6 +157,28 @@ public final class AuthAssembler {
         return authenticatedUser.dataScopeRules().stream()
                 .map(AuthAssembler::toDataScopeRuleResponse)
                 .toList();
+    }
+
+    public static AdminDepartmentListItemResponse toAdminDepartmentListItemResponse(AdminDepartmentListItem item) {
+        return new AdminDepartmentListItemResponse(
+                String.valueOf(item.id()),
+                String.valueOf(item.hospitalId()),
+                item.deptCode(),
+                item.name(),
+                item.deptType(),
+                item.sortOrder(),
+                item.status());
+    }
+
+    public static AdminDepartmentDetailResponse toAdminDepartmentDetailResponse(AdminDepartmentDetail detail) {
+        return new AdminDepartmentDetailResponse(
+                String.valueOf(detail.id()),
+                String.valueOf(detail.hospitalId()),
+                detail.deptCode(),
+                detail.name(),
+                detail.deptType(),
+                detail.sortOrder(),
+                detail.status());
     }
 
     private static DataScopeRuleResponse toDataScopeRuleResponse(DataScopeRule dataScopeRule) {

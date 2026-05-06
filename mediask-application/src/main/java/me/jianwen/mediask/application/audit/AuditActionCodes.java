@@ -23,6 +23,9 @@ public final class AuditActionCodes {
     public static final String ADMIN_DOCTOR_CREATE = "ADMIN_DOCTOR_CREATE";
     public static final String ADMIN_DOCTOR_UPDATE = "ADMIN_DOCTOR_UPDATE";
     public static final String ADMIN_DOCTOR_DELETE = "ADMIN_DOCTOR_DELETE";
+    public static final String ADMIN_DEPARTMENT_CREATE = "ADMIN_DEPARTMENT_CREATE";
+    public static final String ADMIN_DEPARTMENT_UPDATE = "ADMIN_DEPARTMENT_UPDATE";
+    public static final String ADMIN_DEPARTMENT_DELETE = "ADMIN_DEPARTMENT_DELETE";
     public static final String AUDIT_QUERY = "AUDIT_QUERY";
     public static final String AUDIT_QUERY_DENIED = "AUDIT_QUERY_DENIED";
 

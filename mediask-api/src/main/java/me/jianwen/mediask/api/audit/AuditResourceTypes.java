@@ -13,6 +13,7 @@ public final class AuditResourceTypes {
     public static final String AI_SESSION = me.jianwen.mediask.application.audit.AuditResourceTypes.AI_SESSION;
     public static final String PATIENT_PROFILE = me.jianwen.mediask.application.audit.AuditResourceTypes.PATIENT_PROFILE;
     public static final String DOCTOR_PROFILE = me.jianwen.mediask.application.audit.AuditResourceTypes.DOCTOR_PROFILE;
+    public static final String DEPARTMENT = me.jianwen.mediask.application.audit.AuditResourceTypes.DEPARTMENT;
     public static final String AUDIT_EVENT = me.jianwen.mediask.application.audit.AuditResourceTypes.AUDIT_EVENT;
     public static final String DATA_ACCESS_LOG = me.jianwen.mediask.application.audit.AuditResourceTypes.DATA_ACCESS_LOG;
 

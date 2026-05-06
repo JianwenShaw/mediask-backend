@@ -1,7 +1,11 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import me.jianwen.mediask.common.cache.CacheKeyGenerator;
 import me.jianwen.mediask.common.exception.BizException;
 import me.jianwen.mediask.common.id.SnowflakeIdGenerator;
@@ -196,14 +200,54 @@ public class AdminDoctorWriteRepositoryAdapter implements AdminDoctorWriteReposi
     }
 
     private void replaceDepartmentRelations(Long doctorId, List<Long> departmentIds) {
-        disableDepartmentRelations(doctorId);
-        insertDepartmentRelations(doctorId, departmentIds);
+        List<DoctorDepartmentRelationDO> allExisting = doctorDepartmentRelationMapper.selectList(
+                Wrappers.lambdaQuery(DoctorDepartmentRelationDO.class)
+                        .eq(DoctorDepartmentRelationDO::getDoctorId, doctorId));
+        Map<Long, DoctorDepartmentRelationDO> existingMap = new HashMap<>();
+        for (DoctorDepartmentRelationDO rel : allExisting) {
+            existingMap.put(rel.getDepartmentId(), rel);
+        }
+
+        Set<Long> newDeptIds = new HashSet<>(departmentIds);
+
+        for (DoctorDepartmentRelationDO rel : allExisting) {
+            if (newDeptIds.contains(rel.getDepartmentId())) {
+                boolean shouldBePrimary = departmentIds.indexOf(rel.getDepartmentId()) == 0;
+                boolean needsUpdate = !"ACTIVE".equals(rel.getRelationStatus())
+                        || (shouldBePrimary != Boolean.TRUE.equals(rel.getPrimary()));
+                if (needsUpdate) {
+                    rel.setRelationStatus("ACTIVE");
+                    rel.setPrimary(shouldBePrimary);
+                    doctorDepartmentRelationMapper.updateById(rel);
+                }
+            } else {
+                if ("ACTIVE".equals(rel.getRelationStatus())) {
+                    rel.setRelationStatus("DISABLED");
+                    doctorDepartmentRelationMapper.updateById(rel);
+                }
+            }
+        }
+
+        for (int i = 0; i < departmentIds.size(); i++) {
+            Long deptId = departmentIds.get(i);
+            if (!existingMap.containsKey(deptId)) {
+                DoctorDepartmentRelationDO relation = new DoctorDepartmentRelationDO();
+                relation.setId(SnowflakeIdGenerator.nextId());
+                relation.setDoctorId(doctorId);
+                relation.setDepartmentId(deptId);
+                relation.setPrimary(i == 0);
+                relation.setRelationStatus("ACTIVE");
+                doctorDepartmentRelationMapper.insert(relation);
+            }
+        }
     }
 
     private void disableDepartmentRelations(Long doctorId) {
-        List<DoctorDepartmentRelationDO> existingRelations = doctorDepartmentRelationMapper
-                .selectActiveByDoctorId(doctorId);
-        for (DoctorDepartmentRelationDO relation : existingRelations) {
+        List<DoctorDepartmentRelationDO> activeRelations = doctorDepartmentRelationMapper.selectList(
+                Wrappers.lambdaQuery(DoctorDepartmentRelationDO.class)
+                        .eq(DoctorDepartmentRelationDO::getDoctorId, doctorId)
+                        .eq(DoctorDepartmentRelationDO::getRelationStatus, "ACTIVE"));
+        for (DoctorDepartmentRelationDO relation : activeRelations) {
             relation.setRelationStatus("DISABLED");
             doctorDepartmentRelationMapper.updateById(relation);
         }
