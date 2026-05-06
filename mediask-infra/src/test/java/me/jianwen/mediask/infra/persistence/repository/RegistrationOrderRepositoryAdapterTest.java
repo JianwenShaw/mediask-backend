@@ -12,7 +12,6 @@ import java.util.function.Function;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationOrder;
 import me.jianwen.mediask.infra.persistence.dataobject.RegistrationOrderDO;
 import me.jianwen.mediask.infra.persistence.mapper.RegistrationOrderMapper;
-import me.jianwen.mediask.infra.persistence.mapper.StatusTransitionLogMapper;
 import org.junit.jupiter.api.Test;
 
 class RegistrationOrderRepositoryAdapterTest {
@@ -20,12 +19,11 @@ class RegistrationOrderRepositoryAdapterTest {
     @Test
     void save_WhenCalled_InsertMappedRegistrationOrder() {
         CapturingHandler handler = new CapturingHandler();
-        RegistrationOrderRepositoryAdapter adapter =
-                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
-                        "insert", handler::insert,
-                        "selectOne", handler::selectOne,
-                        "selectById", handler::selectById,
-                        "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+        RegistrationOrderRepositoryAdapter adapter = new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
+                "insert", handler::insert,
+                "selectOne", handler::selectOne,
+                "selectById", handler::selectById,
+                "updateById", handler::updateById)));
 
         RegistrationOrder registrationOrder =
                 RegistrationOrder.createConfirmed(
@@ -47,12 +45,11 @@ class RegistrationOrderRepositoryAdapterTest {
     @Test
     void findByRegistrationIdAndPatientId_WhenFound_ReturnMappedOrder() {
         CapturingHandler handler = new CapturingHandler();
-        RegistrationOrderRepositoryAdapter adapter =
-                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
-                        "insert", handler::insert,
-                        "selectOne", handler::selectOne,
-                        "selectById", handler::selectById,
-                        "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+        RegistrationOrderRepositoryAdapter adapter = new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
+                "insert", handler::insert,
+                "selectOne", handler::selectOne,
+                "selectById", handler::selectById,
+                "updateById", handler::updateById)));
 
         Optional<RegistrationOrder> result = adapter.findByRegistrationIdAndPatientId(6101L, 2003L);
 
@@ -76,12 +73,11 @@ class RegistrationOrderRepositoryAdapterTest {
     @Test
     void update_WhenCalled_UpdateMappedRegistrationOrder() {
         CapturingHandler handler = new CapturingHandler();
-        RegistrationOrderRepositoryAdapter adapter =
-                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
-                        "insert", handler::insert,
-                        "selectOne", handler::selectOne,
-                        "selectById", handler::selectById,
-                        "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+        RegistrationOrderRepositoryAdapter adapter = new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
+                "insert", handler::insert,
+                "selectOne", handler::selectOne,
+                "selectById", handler::selectById,
+                "updateById", handler::updateById)));
 
         RegistrationOrder registrationOrder = RegistrationOrder.reconstitute(
                 6101L,
@@ -106,12 +102,11 @@ class RegistrationOrderRepositoryAdapterTest {
     @Test
     void completeConfirmedByRegistrationId_WhenConfirmed_UpdateCompletedStatus() {
         CapturingHandler handler = new CapturingHandler();
-        RegistrationOrderRepositoryAdapter adapter =
-                new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
-                        "insert", handler::insert,
-                        "selectOne", handler::selectOne,
-                        "selectById", handler::selectById,
-                        "updateById", handler::updateById)), proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+        RegistrationOrderRepositoryAdapter adapter = new RegistrationOrderRepositoryAdapter(proxy(RegistrationOrderMapper.class, Map.of(
+                "insert", handler::insert,
+                "selectOne", handler::selectOne,
+                "selectById", handler::selectById,
+                "updateById", handler::updateById)));
 
         boolean result = adapter.completeConfirmedByRegistrationId(6101L);
 
@@ -159,10 +154,6 @@ class RegistrationOrderRepositoryAdapterTest {
 
         private Object updateById(Object[] arguments) {
             this.updated = (RegistrationOrderDO) arguments[0];
-            return 1;
-        }
-
-        private Object insertLog(Object[] arguments) {
             return 1;
         }
 

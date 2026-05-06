@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.function.Function;
 import me.jianwen.mediask.domain.clinical.model.VisitEncounter;
 import me.jianwen.mediask.infra.persistence.dataobject.VisitEncounterDO;
-import me.jianwen.mediask.infra.persistence.mapper.StatusTransitionLogMapper;
 import me.jianwen.mediask.infra.persistence.mapper.VisitEncounterMapper;
 import org.junit.jupiter.api.Test;
 
@@ -18,13 +17,11 @@ class VisitEncounterRepositoryAdapterTest {
     @Test
     void save_WhenCalled_InsertMappedVisitEncounter() {
         CapturingHandler handler = new CapturingHandler();
-        VisitEncounterRepositoryAdapter adapter =
-                new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
-                        "insert", handler::insert,
-                        "selectOne", handler::selectOne,
-                        "updateById", handler::updateById,
-                        "startEncounterWhenScheduledAndRegistrationConfirmed", handler::startEncounterWhenScheduledAndRegistrationConfirmed)),
-                        proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+        VisitEncounterRepositoryAdapter adapter = new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
+                "insert", handler::insert,
+                "selectOne", handler::selectOne,
+                "updateById", handler::updateById,
+                "startEncounterWhenScheduledAndRegistrationConfirmed", handler::startEncounterWhenScheduledAndRegistrationConfirmed)));
 
         VisitEncounter visitEncounter = VisitEncounter.createScheduled(6101L, 2003L, 2101L, 3101L);
         adapter.save(visitEncounter);
@@ -40,13 +37,11 @@ class VisitEncounterRepositoryAdapterTest {
     @Test
     void cancelScheduledByRegistrationId_WhenScheduled_UpdateCancelledStatus() {
         CapturingHandler handler = new CapturingHandler();
-        VisitEncounterRepositoryAdapter adapter =
-                new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
-                        "insert", handler::insert,
-                        "selectOne", handler::selectOne,
-                        "updateById", handler::updateById,
-                        "startEncounterWhenScheduledAndRegistrationConfirmed", handler::startEncounterWhenScheduledAndRegistrationConfirmed)),
-                        proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+        VisitEncounterRepositoryAdapter adapter = new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
+                "insert", handler::insert,
+                "selectOne", handler::selectOne,
+                "updateById", handler::updateById,
+                "startEncounterWhenScheduledAndRegistrationConfirmed", handler::startEncounterWhenScheduledAndRegistrationConfirmed)));
 
         boolean result = adapter.cancelScheduledByRegistrationId(6101L);
 
@@ -57,13 +52,11 @@ class VisitEncounterRepositoryAdapterTest {
     @Test
     void startScheduledByEncounterId_WhenScheduled_UpdateInProgressStatus() {
         CapturingHandler handler = new CapturingHandler();
-        VisitEncounterRepositoryAdapter adapter =
-                new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
-                        "insert", handler::insert,
-                        "selectOne", handler::selectOne,
-                        "updateById", handler::updateById,
-                        "startEncounterWhenScheduledAndRegistrationConfirmed", handler::startEncounterWhenScheduledAndRegistrationConfirmed)),
-                        proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+        VisitEncounterRepositoryAdapter adapter = new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
+                "insert", handler::insert,
+                "selectOne", handler::selectOne,
+                "updateById", handler::updateById,
+                "startEncounterWhenScheduledAndRegistrationConfirmed", handler::startEncounterWhenScheduledAndRegistrationConfirmed)));
         OffsetDateTime startedAt = OffsetDateTime.parse("2026-04-21T10:00:00+08:00");
 
         boolean result = adapter.startScheduledByEncounterId(8101L, startedAt);
@@ -76,13 +69,11 @@ class VisitEncounterRepositoryAdapterTest {
     @Test
     void completeInProgressByEncounterId_WhenInProgress_UpdateCompletedStatus() {
         CapturingHandler handler = new CapturingHandler();
-        VisitEncounterRepositoryAdapter adapter =
-                new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
-                        "insert", handler::insert,
-                        "selectOne", handler::selectOne,
-                        "updateById", handler::updateById,
-                        "startEncounterWhenScheduledAndRegistrationConfirmed", handler::startEncounterWhenScheduledAndRegistrationConfirmed)),
-                        proxy(StatusTransitionLogMapper.class, Map.of("insert", handler::insertLog)));
+        VisitEncounterRepositoryAdapter adapter = new VisitEncounterRepositoryAdapter(proxy(VisitEncounterMapper.class, Map.of(
+                "insert", handler::insert,
+                "selectOne", handler::selectOne,
+                "updateById", handler::updateById,
+                "startEncounterWhenScheduledAndRegistrationConfirmed", handler::startEncounterWhenScheduledAndRegistrationConfirmed)));
         handler.selectedStatus = "IN_PROGRESS";
         OffsetDateTime endedAt = OffsetDateTime.parse("2026-04-21T10:30:00+08:00");
 
@@ -145,8 +136,5 @@ class VisitEncounterRepositoryAdapterTest {
             return 1;
         }
 
-        private Object insertLog(Object[] arguments) {
-            return 1;
-        }
     }
 }

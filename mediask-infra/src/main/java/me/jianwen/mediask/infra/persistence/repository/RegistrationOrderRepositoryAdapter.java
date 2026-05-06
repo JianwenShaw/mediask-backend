@@ -1,32 +1,23 @@
 package me.jianwen.mediask.infra.persistence.repository;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import java.time.OffsetDateTime;
 import java.util.Optional;
 import me.jianwen.mediask.common.exception.BizException;
-import me.jianwen.mediask.common.id.SnowflakeIdGenerator;
-import me.jianwen.mediask.common.request.RequestConstants;
 import me.jianwen.mediask.domain.outpatient.exception.OutpatientErrorCode;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationOrder;
 import me.jianwen.mediask.domain.outpatient.model.RegistrationStatus;
 import me.jianwen.mediask.domain.outpatient.port.RegistrationOrderRepository;
 import me.jianwen.mediask.infra.persistence.dataobject.RegistrationOrderDO;
-import me.jianwen.mediask.infra.persistence.dataobject.StatusTransitionLogDO;
 import me.jianwen.mediask.infra.persistence.mapper.RegistrationOrderMapper;
-import me.jianwen.mediask.infra.persistence.mapper.StatusTransitionLogMapper;
-import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
 @Component
 public class RegistrationOrderRepositoryAdapter implements RegistrationOrderRepository {
 
     private final RegistrationOrderMapper registrationOrderMapper;
-    private final StatusTransitionLogMapper statusTransitionLogMapper;
 
-    public RegistrationOrderRepositoryAdapter(
-            RegistrationOrderMapper registrationOrderMapper, StatusTransitionLogMapper statusTransitionLogMapper) {
+    public RegistrationOrderRepositoryAdapter(RegistrationOrderMapper registrationOrderMapper) {
         this.registrationOrderMapper = registrationOrderMapper;
-        this.statusTransitionLogMapper = statusTransitionLogMapper;
     }
 
     @Override
@@ -35,7 +26,6 @@ public class RegistrationOrderRepositoryAdapter implements RegistrationOrderRepo
         dataObject.setId(registrationOrder.registrationId());
         mapToDataObject(registrationOrder, dataObject);
         registrationOrderMapper.insert(dataObject);
-        recordTransition("REGISTRATION_ORDER", registrationOrder.registrationId(), null, "CONFIRMED", "CREATE");
     }
 
     @Override
@@ -62,12 +52,6 @@ public class RegistrationOrderRepositoryAdapter implements RegistrationOrderRepo
         if (updatedRows == 0) {
             throw new BizException(OutpatientErrorCode.REGISTRATION_CANCEL_NOT_ALLOWED);
         }
-        recordTransition(
-                "REGISTRATION_ORDER",
-                registrationOrder.registrationId(),
-                existing.getOrderStatus(),
-                registrationOrder.status().name(),
-                "CANCEL");
     }
 
     @Override
@@ -86,7 +70,6 @@ public class RegistrationOrderRepositoryAdapter implements RegistrationOrderRepo
         if (registrationOrderMapper.updateById(dataObject) == 0) {
             return false;
         }
-        recordTransition("REGISTRATION_ORDER", registrationId, "CONFIRMED", "COMPLETED", "COMPLETE_ENCOUNTER");
         return true;
     }
 
@@ -120,28 +103,4 @@ public class RegistrationOrderRepositoryAdapter implements RegistrationOrderRepo
                 dataObject.getCancellationReason());
     }
 
-    private void recordTransition(Long entityId, String fromStatus, String toStatus, String action) {
-        recordTransition("REGISTRATION_ORDER", entityId, fromStatus, toStatus, action);
-    }
-
-    private void recordTransition(String entityType, Long entityId, String fromStatus, String toStatus, String action) {
-        StatusTransitionLogDO log = new StatusTransitionLogDO();
-        log.setId(SnowflakeIdGenerator.nextId());
-        log.setEntityType(entityType);
-        log.setEntityId(entityId);
-        log.setFromStatus(fromStatus);
-        log.setToStatus(toStatus);
-        log.setAction(action);
-        log.setOperatorUserId(parseLong(MDC.get(RequestConstants.MDC_USER_ID)));
-        log.setRequestId(MDC.get(RequestConstants.MDC_REQUEST_ID));
-        log.setOccurredAt(OffsetDateTime.now());
-        statusTransitionLogMapper.insert(log);
-    }
-
-    private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return Long.valueOf(value);
-    }
 }
