@@ -10,6 +10,11 @@ import me.jianwen.mediask.api.dto.LoginResponse;
 import me.jianwen.mediask.api.dto.PatientProfileResponse;
 import me.jianwen.mediask.api.dto.RefreshTokenResponse;
 import me.jianwen.mediask.application.user.usecase.AuthenticationResult;
+import me.jianwen.mediask.api.dto.AdminDoctorDetailResponse;
+import me.jianwen.mediask.api.dto.AdminDoctorListItemResponse;
+import me.jianwen.mediask.api.dto.DoctorDepartmentAssignmentResponse;
+import me.jianwen.mediask.domain.user.model.AdminDoctorDetail;
+import me.jianwen.mediask.domain.user.model.AdminDoctorListItem;
 import me.jianwen.mediask.domain.user.model.AdminPatientDetail;
 import me.jianwen.mediask.domain.user.model.AdminPatientListItem;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
@@ -104,6 +109,36 @@ public final class AuthAssembler {
                 doctorProfile.hospitalId(),
                 doctorProfile.primaryDepartmentId(),
                 doctorProfile.primaryDepartmentName());
+    }
+
+    public static AdminDoctorListItemResponse toAdminDoctorListItemResponse(AdminDoctorListItem item) {
+        return new AdminDoctorListItemResponse(
+                String.valueOf(item.doctorId()),
+                String.valueOf(item.userId()),
+                item.username(),
+                item.displayName(),
+                item.doctorCode(),
+                item.professionalTitle(),
+                item.primaryDepartmentName(),
+                item.accountStatus());
+    }
+
+    public static AdminDoctorDetailResponse toAdminDoctorDetailResponse(AdminDoctorDetail detail) {
+        return new AdminDoctorDetailResponse(
+                String.valueOf(detail.doctorId()),
+                String.valueOf(detail.userId()),
+                detail.username(),
+                detail.displayName(),
+                detail.phone(),
+                String.valueOf(detail.hospitalId()),
+                detail.doctorCode(),
+                detail.professionalTitle(),
+                detail.introductionMasked(),
+                detail.departments().stream()
+                        .map(d -> new DoctorDepartmentAssignmentResponse(
+                                String.valueOf(d.departmentId()), d.departmentName(), d.primary()))
+                        .toList(),
+                detail.accountStatus());
     }
 
     private static List<String> toRoleCodes(AuthenticatedUser authenticatedUser) {
