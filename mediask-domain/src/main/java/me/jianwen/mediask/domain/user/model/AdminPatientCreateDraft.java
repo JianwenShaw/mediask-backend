@@ -5,6 +5,7 @@ import me.jianwen.mediask.common.util.ArgumentChecks;
 
 public record AdminPatientCreateDraft(
         String username,
+        String phone,
         String passwordHash,
         String displayName,
         String mobileMasked,
@@ -15,6 +16,7 @@ public record AdminPatientCreateDraft(
 
     public AdminPatientCreateDraft {
         username = ArgumentChecks.requireNonBlank(username, "username");
+        phone = ArgumentChecks.requireNonBlank(phone, "phone");
         passwordHash = ArgumentChecks.requireNonBlank(passwordHash, "passwordHash");
         displayName = ArgumentChecks.requireNonBlank(displayName, "displayName");
         mobileMasked = ArgumentChecks.blankToNull(mobileMasked);

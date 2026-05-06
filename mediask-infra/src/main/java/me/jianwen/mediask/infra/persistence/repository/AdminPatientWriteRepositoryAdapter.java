@@ -65,6 +65,7 @@ public class AdminPatientWriteRepositoryAdapter implements AdminPatientWriteRepo
         UserDO userDO = new UserDO();
         userDO.setId(userId);
         userDO.setUsername(draft.username());
+        userDO.setPhone(draft.phone());
         userDO.setPasswordHash(draft.passwordHash());
         userDO.setDisplayName(draft.displayName());
         userDO.setMobileMasked(draft.mobileMasked());
@@ -110,6 +111,7 @@ public class AdminPatientWriteRepositoryAdapter implements AdminPatientWriteRepo
         userToUpdate.setId(existingRow.getUserId());
         userToUpdate.setVersion(existingRow.getUserVersion());
         userToUpdate.setDisplayName(draft.displayName());
+        userToUpdate.setPhone(draft.phone());
         userToUpdate.setMobileMasked(draft.mobileMasked());
 
         PatientProfileDO patientProfileToUpdate = new PatientProfileDO();
@@ -162,6 +164,9 @@ public class AdminPatientWriteRepositoryAdapter implements AdminPatientWriteRepo
         String message = exception.getMessage();
         if (message != null && message.contains("uk_users_username")) {
             return new BizException(UserErrorCode.ADMIN_PATIENT_USERNAME_CONFLICT);
+        }
+        if (message != null && message.contains("uk_users_phone")) {
+            return new BizException(UserErrorCode.ADMIN_PATIENT_PHONE_CONFLICT);
         }
         if (message != null && message.contains("uk_patient_profile_no")) {
             return new BizException(UserErrorCode.ADMIN_PATIENT_NO_CONFLICT);

@@ -126,7 +126,7 @@ class RefreshTokenUseCaseTest {
         }
 
         @Override
-        public Optional<LoginAccount> findLoginAccountByUsername(String username) {
+        public Optional<LoginAccount> findLoginAccountByPhone(String phone) {
             return Optional.empty();
         }
 

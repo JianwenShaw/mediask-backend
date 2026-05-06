@@ -762,7 +762,7 @@ class PrescriptionControllerTest {
         }
 
         @Override
-        public java.util.Optional<me.jianwen.mediask.domain.user.model.LoginAccount> findLoginAccountByUsername(String username) {
+        public java.util.Optional<me.jianwen.mediask.domain.user.model.LoginAccount> findLoginAccountByPhone(String phone) {
             throw new UnsupportedOperationException();
         }
 

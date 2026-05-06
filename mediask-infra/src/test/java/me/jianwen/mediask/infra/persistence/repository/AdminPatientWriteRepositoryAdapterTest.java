@@ -69,9 +69,18 @@ class AdminPatientWriteRepositoryAdapterTest {
                 })));
 
         AdminPatientDetail detail = adapter.create(new AdminPatientCreateDraft(
-                "patient_new", "hash<patient123>", "李新患者", "137****1234", "FEMALE", LocalDate.of(1995, 6, 1), "A", "Peanut"));
+                "patient_new",
+                "13700009999",
+                "hash<patient123>",
+                "李新患者",
+                "137****1234",
+                "FEMALE",
+                LocalDate.of(1995, 6, 1),
+                "A",
+                "Peanut"));
 
         assertEquals("patient_new", insertedUser.value.getUsername());
+        assertEquals("13700009999", insertedUser.value.getPhone());
         assertEquals("hash<patient123>", insertedUser.value.getPasswordHash());
         assertTrue(insertedProfile.value.getPatientNo().startsWith("P"));
         assertEquals(role().getId(), insertedUserRole.value.getRoleId());
@@ -89,7 +98,7 @@ class AdminPatientWriteRepositoryAdapterTest {
 
         BizException exception = assertThrows(
                 BizException.class,
-                () -> adapter.update(2208L, new AdminPatientUpdateDraft("李修改", null, null, null, null, null)));
+                () -> adapter.update(2208L, new AdminPatientUpdateDraft("李修改", "13700001111", null, null, null, null, null)));
 
         assertEquals(UserErrorCode.ADMIN_PATIENT_NOT_FOUND.getCode(), exception.getCode());
     }
@@ -116,11 +125,12 @@ class AdminPatientWriteRepositoryAdapterTest {
                 proxy(UserRoleMapper.class, Map.of()));
 
         AdminPatientDetail detail = adapter.update(
-                2208L, new AdminPatientUpdateDraft("李修改", "   ", null, null, "   ", null));
+                2208L, new AdminPatientUpdateDraft("李修改", "13700001111", "   ", null, null, "   ", null));
 
         assertEquals(2008L, updatedUser.value.getId());
         assertEquals(4, updatedUser.value.getVersion());
         assertEquals("李修改", updatedUser.value.getDisplayName());
+        assertEquals("13700001111", updatedUser.value.getPhone());
         assertNull(updatedUser.value.getMobileMasked());
         assertEquals(2208L, updatedProfile.value.getId());
         assertEquals(3, updatedProfile.value.getVersion());
@@ -162,11 +172,13 @@ class AdminPatientWriteRepositoryAdapterTest {
                 proxy(UserRoleMapper.class, Map.of()));
 
         AdminPatientDetail detail = adapter.update(
-                2208L, new AdminPatientUpdateDraft("李修改", "137****9999", "MALE", LocalDate.of(1990, 1, 2), "B", "Dust"));
+                2208L,
+                new AdminPatientUpdateDraft("李修改", "13700002222", "137****9999", "MALE", LocalDate.of(1990, 1, 2), "B", "Dust"));
 
         assertEquals(2008L, updatedUser.value.getId());
         assertEquals(4, updatedUser.value.getVersion());
         assertEquals("李修改", updatedUser.value.getDisplayName());
+        assertEquals("13700002222", updatedUser.value.getPhone());
         assertEquals("137****9999", updatedUser.value.getMobileMasked());
         assertEquals(2208L, updatedProfile.value.getId());
         assertEquals(3, updatedProfile.value.getVersion());
@@ -227,9 +239,28 @@ class AdminPatientWriteRepositoryAdapterTest {
         BizException exception = assertThrows(
                 BizException.class,
                 () -> adapter.create(new AdminPatientCreateDraft(
-                        "patient_new", "hash<patient123>", "李新患者", null, null, null, null, null)));
+                        "patient_new", "13700009999", "hash<patient123>", "李新患者", null, null, null, null, null)));
 
         assertEquals(UserErrorCode.ADMIN_PATIENT_USERNAME_CONFLICT.getCode(), exception.getCode());
+    }
+
+    @Test
+    void create_WhenPhoneConflict_ThrowBizException() {
+        AdminPatientWriteRepositoryAdapter adapter = new AdminPatientWriteRepositoryAdapter(
+                new StubRedisJsonCacheHelper(),
+                proxy(UserMapper.class, Map.of("insert", arguments -> {
+                    throw new DuplicateKeyException("duplicate key value violates unique constraint \"uk_users_phone\"");
+                })),
+                proxy(PatientProfileMapper.class, Map.of()),
+                proxy(RoleMapper.class, Map.of("selectOne", arguments -> role())),
+                proxy(UserRoleMapper.class, Map.of()));
+
+        BizException exception = assertThrows(
+                BizException.class,
+                () -> adapter.create(new AdminPatientCreateDraft(
+                        "patient_new", "13700009999", "hash<patient123>", "李新患者", null, null, null, null, null)));
+
+        assertEquals(UserErrorCode.ADMIN_PATIENT_PHONE_CONFLICT.getCode(), exception.getCode());
     }
 
     @Test

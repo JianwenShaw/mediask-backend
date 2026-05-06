@@ -322,7 +322,7 @@ class AuditControllerTest {
         }
 
         @Override
-        public Optional<me.jianwen.mediask.domain.user.model.LoginAccount> findLoginAccountByUsername(String username) {
+        public Optional<me.jianwen.mediask.domain.user.model.LoginAccount> findLoginAccountByPhone(String phone) {
             throw new UnsupportedOperationException();
         }
 

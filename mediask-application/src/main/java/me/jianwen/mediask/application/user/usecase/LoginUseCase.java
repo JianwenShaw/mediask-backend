@@ -45,7 +45,7 @@ public class LoginUseCase {
 
     @Transactional
     public AuthenticationResult handle(LoginCommand command, AuditContext auditContext) {
-        LoginAccount loginAccount = userAuthenticationRepository.findLoginAccountByUsername(command.username())
+        LoginAccount loginAccount = userAuthenticationRepository.findLoginAccountByPhone(command.phone())
                 .orElseThrow(() -> new BizException(UserErrorCode.INVALID_CREDENTIALS));
         ensureAccountAvailable(loginAccount.accountStatus());
         ensureRoleAssigned(loginAccount.authenticatedUser());

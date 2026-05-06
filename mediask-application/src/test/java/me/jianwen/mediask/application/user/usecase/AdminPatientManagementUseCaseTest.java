@@ -42,10 +42,19 @@ class AdminPatientManagementUseCaseTest {
 
         AdminPatientDetail result = useCase.handle(
                 new CreateAdminPatientCommand(
-                        "patient_new", "patient123", "李新患者", "137****1234", "female", LocalDate.of(1995, 6, 1), "A", "Peanut"),
+                        "patient_new",
+                        "13700009999",
+                        "patient123",
+                        "李新患者",
+                        "137****1234",
+                        "female",
+                        LocalDate.of(1995, 6, 1),
+                        "A",
+                        "Peanut"),
                 TestAuditSupport.auditContext());
 
         assertEquals("patient_new", writeRepository.lastCreateDraft.username());
+        assertEquals("13700009999", writeRepository.lastCreateDraft.phone());
         assertEquals("hash<patient123>", writeRepository.lastCreateDraft.passwordHash());
         assertEquals("female", writeRepository.lastCreateDraft.gender());
         assertEquals(2208L, result.patientId());
@@ -60,7 +69,15 @@ class AdminPatientManagementUseCaseTest {
 
         useCase.handle(
                 new CreateAdminPatientCommand(
-                        "patient_new", "  patient123  ", "李新患者", "137****1234", "female", LocalDate.of(1995, 6, 1), "A", "Peanut"),
+                        "patient_new",
+                        "13700009999",
+                        "  patient123  ",
+                        "李新患者",
+                        "137****1234",
+                        "female",
+                        LocalDate.of(1995, 6, 1),
+                        "A",
+                        "Peanut"),
                 TestAuditSupport.auditContext());
 
         assertEquals("  patient123  ", passwordHasher.lastRawPassword);
@@ -74,11 +91,13 @@ class AdminPatientManagementUseCaseTest {
                 new UpdateAdminPatientUseCase(writeRepository, TestAuditSupport.auditTrailService());
 
         AdminPatientDetail result = useCase.handle(
-                new UpdateAdminPatientCommand(2208L, "李修改", "137****9999", "MALE", LocalDate.of(1990, 1, 2), "B", "Dust"),
+                new UpdateAdminPatientCommand(
+                        2208L, "李修改", "13700008888", "137****9999", "MALE", LocalDate.of(1990, 1, 2), "B", "Dust"),
                 TestAuditSupport.auditContext());
 
         assertEquals(2208L, writeRepository.lastUpdatedPatientId);
         assertEquals("李修改", writeRepository.lastUpdateDraft.displayName());
+        assertEquals("13700008888", writeRepository.lastUpdateDraft.phone());
         assertEquals("B", writeRepository.lastUpdateDraft.bloodType());
         assertEquals("李修改", result.displayName());
     }

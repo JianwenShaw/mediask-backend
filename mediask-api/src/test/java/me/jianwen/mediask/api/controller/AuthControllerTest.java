@@ -204,7 +204,7 @@ class AuthControllerTest {
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "patient_li",
+                                  "phone": "13700000002",
                                   "password": "patient123"
                                 }
                                 """))
@@ -234,7 +234,7 @@ class AuthControllerTest {
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "patient_space",
+                                  "phone": "13700000004",
                                   "password": "  secret-pass  "
                                 }
                                 """))
@@ -256,7 +256,7 @@ class AuthControllerTest {
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "patient_li",
+                                  "phone": "13700000002",
                                   "password": "patient123"
                                 }
                                 """))
@@ -267,12 +267,12 @@ class AuthControllerTest {
     }
 
     @Test
-    void login_WhenCredentialsInvalid_AuditFailureKeepsAttemptedUsername() throws Exception {
+    void login_WhenCredentialsInvalid_AuditFailureKeepsAttemptedPhone() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "patient_li",
+                                  "phone": "13700000002",
                                   "password": "wrong-password"
                                 }
                                 """))
@@ -283,7 +283,7 @@ class AuthControllerTest {
         AuditEventRecord auditEvent = auditEvents.getLast();
         assertEquals("AUTH_LOGIN_FAILED", auditEvent.actionCode());
         assertEquals(null, auditEvent.operatorUserId());
-        assertEquals("patient_li", auditEvent.operatorUsername());
+        assertEquals("13700000002", auditEvent.operatorUsername());
     }
 
     @Test
@@ -293,7 +293,7 @@ class AuthControllerTest {
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
-                                  "username": "patient_li",
+                                  "phone": "13700000002",
                                   "password": "patient123"
                                 }
                                 """))
@@ -522,7 +522,7 @@ class AuthControllerTest {
     private static final class StubUserAuthenticationRepository implements UserAuthenticationRepository {
 
         private final Map<Long, AuthenticatedUser> usersById = new ConcurrentHashMap<>();
-        private final Map<String, LoginAccount> loginAccountsByUsername = new ConcurrentHashMap<>();
+        private final Map<String, LoginAccount> loginAccountsByPhone = new ConcurrentHashMap<>();
         private final AuthenticatedUser spacedPasswordUser = new AuthenticatedUser(
                 2004L,
                 "patient_space",
@@ -536,14 +536,14 @@ class AuthControllerTest {
                 null);
 
         private StubUserAuthenticationRepository(AuthenticatedUser authenticatedUser, AuthenticatedUser otherUser) {
-            registerUser(authenticatedUser, "hash<patient123>");
-            registerUser(otherUser, "hash<patient456>");
-            registerUser(spacedPasswordUser, "hash<  secret-pass  >");
+            registerUser(authenticatedUser, "13700000002", "hash<patient123>");
+            registerUser(otherUser, "13700000005", "hash<patient456>");
+            registerUser(spacedPasswordUser, "13700000004", "hash<  secret-pass  >");
         }
 
-        private void registerUser(AuthenticatedUser user, String passwordHash) {
+        private void registerUser(AuthenticatedUser user, String phone, String passwordHash) {
             usersById.put(user.userId(), user);
-            loginAccountsByUsername.put(user.username(), new LoginAccount(user, passwordHash, AccountStatus.ACTIVE));
+            loginAccountsByPhone.put(phone, new LoginAccount(user, passwordHash, AccountStatus.ACTIVE));
         }
 
         private void replacePermissions(Long userId, Set<String> permissions) {
@@ -559,14 +559,19 @@ class AuthControllerTest {
                     currentUser.patientId(),
                     currentUser.doctorId(),
                     currentUser.primaryDepartmentId());
-            LoginAccount loginAccount = loginAccountsByUsername.get(currentUser.username());
+            Map.Entry<String, LoginAccount> loginEntry = loginAccountsByPhone.entrySet().stream()
+                    .filter(entry -> entry.getValue().authenticatedUser().userId().equals(userId))
+                    .findFirst()
+                    .orElseThrow();
             usersById.put(userId, updatedUser);
-            loginAccountsByUsername.put(currentUser.username(), new LoginAccount(updatedUser, loginAccount.passwordHash(), AccountStatus.ACTIVE));
+            loginAccountsByPhone.put(
+                    loginEntry.getKey(),
+                    new LoginAccount(updatedUser, loginEntry.getValue().passwordHash(), AccountStatus.ACTIVE));
         }
 
         @Override
-        public Optional<LoginAccount> findLoginAccountByUsername(String username) {
-            return Optional.ofNullable(loginAccountsByUsername.get(username));
+        public Optional<LoginAccount> findLoginAccountByPhone(String phone) {
+            return Optional.ofNullable(loginAccountsByPhone.get(phone));
         }
 
         @Override

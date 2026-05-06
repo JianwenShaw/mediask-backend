@@ -5,6 +5,7 @@ import me.jianwen.mediask.common.util.ArgumentChecks;
 
 public record AdminPatientUpdateDraft(
         String displayName,
+        String phone,
         String mobileMasked,
         String gender,
         LocalDate birthDate,
@@ -13,6 +14,7 @@ public record AdminPatientUpdateDraft(
 
     public AdminPatientUpdateDraft {
         displayName = ArgumentChecks.requireNonBlank(displayName, "displayName");
+        phone = ArgumentChecks.requireNonBlank(phone, "phone");
         mobileMasked = ArgumentChecks.blankToNull(mobileMasked);
         gender = ArgumentChecks.blankToNull(gender);
         bloodType = ArgumentChecks.blankToNull(bloodType);

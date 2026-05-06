@@ -1,14 +1,14 @@
 package me.jianwen.mediask.application.user.command;
 
-public record LoginCommand(String username, String password) {
+public record LoginCommand(String phone, String password) {
 
     public LoginCommand {
-        username = normalizeUsername(username);
+        phone = normalizePhone(phone);
         password = preservePassword(password);
     }
 
-    private static String normalizeUsername(String value) {
-        return requireNonBlank(value, "username").trim();
+    private static String normalizePhone(String value) {
+        return requireNonBlank(value, "phone").trim();
     }
 
     private static String preservePassword(String value) {

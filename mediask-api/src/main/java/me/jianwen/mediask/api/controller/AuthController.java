@@ -55,9 +55,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public Result<LoginResponse> login(@RequestBody LoginRequest request) {
-        var auditContext = auditApiSupport.currentContext(null, request.username());
+        var auditContext = auditApiSupport.currentContext(null, request.phone());
         try {
-            var result = loginUseCase.handle(new LoginCommand(request.username(), request.password()), auditContext);
+            var result = loginUseCase.handle(new LoginCommand(request.phone(), request.password()), auditContext);
             LoginResponse response = AuthAssembler.toLoginResponse(result);
             return Result.ok(response);
         } catch (BizException exception) {

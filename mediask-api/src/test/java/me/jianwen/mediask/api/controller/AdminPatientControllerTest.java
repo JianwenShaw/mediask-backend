@@ -214,6 +214,7 @@ class AdminPatientControllerTest {
                         .content("""
                                 {
                                   "username": "patient_new",
+                                  "phone": "13700009999",
                                   "password": "patient123",
                                   "displayName": "李新患者",
                                   "mobileMasked": "137****1234",
@@ -237,6 +238,7 @@ class AdminPatientControllerTest {
                         .content("""
                                 {
                                   "displayName": "李修改",
+                                  "phone": "13700008888",
                                   "mobileMasked": "137****9999",
                                   "gender": "MALE",
                                   "birthDate": "1990-01-02",
@@ -279,7 +281,7 @@ class AdminPatientControllerTest {
             implements UserAuthenticationRepository {
 
         @Override
-        public Optional<LoginAccount> findLoginAccountByUsername(String username) {
+        public Optional<LoginAccount> findLoginAccountByPhone(String phone) {
             throw new UnsupportedOperationException("not needed");
         }
 

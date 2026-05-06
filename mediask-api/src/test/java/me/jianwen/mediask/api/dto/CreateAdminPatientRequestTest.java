@@ -11,7 +11,7 @@ class CreateAdminPatientRequestTest {
     @Test
     void constructor_WhenPasswordHasEdgeSpaces_PreserveRawPassword() {
         CreateAdminPatientRequest request = new CreateAdminPatientRequest(
-                "patient_new", "  patient123  ", "李新患者", "137****1234", "FEMALE", LocalDate.of(1995, 6, 1), "A", "Peanut");
+                "patient_new", "13700009999", "  patient123  ", "李新患者", "137****1234", "FEMALE", LocalDate.of(1995, 6, 1), "A", "Peanut");
 
         assertEquals("  patient123  ", request.password());
     }
@@ -21,6 +21,6 @@ class CreateAdminPatientRequestTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new CreateAdminPatientRequest(
-                        "patient_new", "   ", "李新患者", "137****1234", "FEMALE", LocalDate.of(1995, 6, 1), "A", "Peanut"));
+                        "patient_new", "13700009999", "   ", "李新患者", "137****1234", "FEMALE", LocalDate.of(1995, 6, 1), "A", "Peanut"));
     }
 }

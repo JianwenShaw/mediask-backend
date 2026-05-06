@@ -56,9 +56,9 @@ public class UserAuthenticationRepositoryAdapter implements UserAuthenticationRe
     }
 
     @Override
-    public Optional<LoginAccount> findLoginAccountByUsername(String username) {
+    public Optional<LoginAccount> findLoginAccountByPhone(String phone) {
         UserDO userDO = userMapper.selectOne(Wrappers.lambdaQuery(UserDO.class)
-                .eq(UserDO::getUsername, username)
+                .eq(UserDO::getPhone, phone)
                 .isNull(UserDO::getDeletedAt));
         return Optional.ofNullable(userDO).map(this::toLoginAccount);
     }

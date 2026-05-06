@@ -27,6 +27,7 @@ public class UpdateAdminPatientUseCase {
                 command.patientId(),
                 new AdminPatientUpdateDraft(
                         command.displayName(),
+                        command.phone(),
                         command.mobileMasked(),
                         command.gender(),
                         command.birthDate(),

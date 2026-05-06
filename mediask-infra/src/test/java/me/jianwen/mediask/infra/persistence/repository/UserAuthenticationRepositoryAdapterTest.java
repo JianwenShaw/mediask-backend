@@ -12,6 +12,7 @@ import java.util.function.Function;
 import me.jianwen.mediask.domain.user.model.AccountStatus;
 import me.jianwen.mediask.domain.user.model.AuthenticatedUser;
 import me.jianwen.mediask.domain.user.model.DataScopeType;
+import me.jianwen.mediask.domain.user.model.LoginAccount;
 import me.jianwen.mediask.domain.user.model.RoleCode;
 import me.jianwen.mediask.infra.persistence.mapper.ActiveDataScopeRuleRow;
 import me.jianwen.mediask.infra.persistence.mapper.ActiveRoleRow;
@@ -40,6 +41,17 @@ class UserAuthenticationRepositoryAdapterTest {
                     adapter.findAuthenticatedUserById(USER_ID).isEmpty(),
                     "Expected account status " + accountStatus + " to be excluded from /auth/me");
         }
+    }
+
+    @Test
+    void findLoginAccountByPhone_WhenPhoneMatches_ReturnLoginAccount() {
+        UserAuthenticationRepositoryAdapter adapter = newAdapter(createUserDO(AccountStatus.ACTIVE));
+
+        LoginAccount loginAccount = adapter.findLoginAccountByPhone("13700000002").orElseThrow();
+
+        assertEquals(USER_ID, loginAccount.authenticatedUser().userId());
+        assertEquals("patient_li", loginAccount.authenticatedUser().username());
+        assertEquals("hash:patient123", loginAccount.passwordHash());
     }
 
     @Test
@@ -86,6 +98,7 @@ class UserAuthenticationRepositoryAdapterTest {
         UserDO userDO = new UserDO();
         userDO.setId(USER_ID);
         userDO.setUsername("patient_li");
+        userDO.setPhone("13700000002");
         userDO.setDisplayName("李患者");
         userDO.setUserType("PATIENT");
         userDO.setAccountStatus(accountStatus.name());

@@ -5,6 +5,7 @@ import me.jianwen.mediask.common.util.ArgumentChecks;
 
 public record CreateAdminPatientCommand(
         String username,
+        String phone,
         String password,
         String displayName,
         String mobileMasked,
@@ -15,6 +16,7 @@ public record CreateAdminPatientCommand(
 
     public CreateAdminPatientCommand {
         username = ArgumentChecks.requireNonBlank(username, "username");
+        phone = ArgumentChecks.requireNonBlank(phone, "phone");
         password = preservePassword(password);
         displayName = ArgumentChecks.requireNonBlank(displayName, "displayName");
         mobileMasked = ArgumentChecks.blankToNull(mobileMasked);

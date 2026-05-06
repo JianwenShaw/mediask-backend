@@ -4,7 +4,7 @@ import me.jianwen.mediask.common.exception.ErrorCodeCategory;
 import me.jianwen.mediask.common.exception.ErrorCodeType;
 
 public enum UserErrorCode implements ErrorCodeType {
-    INVALID_CREDENTIALS(2001, "invalid username or password", ErrorCodeCategory.UNAUTHORIZED),
+    INVALID_CREDENTIALS(2001, "invalid phone or password", ErrorCodeCategory.UNAUTHORIZED),
     ACCOUNT_DISABLED(2002, "account disabled", ErrorCodeCategory.FORBIDDEN),
     ACCOUNT_LOCKED(2003, "account locked", ErrorCodeCategory.FORBIDDEN),
     AUTHENTICATED_USER_NOT_FOUND(2004, "authenticated user not found", ErrorCodeCategory.UNAUTHORIZED),
@@ -22,7 +22,8 @@ public enum UserErrorCode implements ErrorCodeType {
     ADMIN_PATIENT_NO_CONFLICT(2016, "admin patient number conflict", ErrorCodeCategory.CONFLICT),
     ADMIN_PATIENT_ROLE_NOT_FOUND(2017, "admin patient role not found", ErrorCodeCategory.NOT_FOUND),
     ADMIN_PATIENT_UPDATE_CONFLICT(2018, "admin patient update conflict", ErrorCodeCategory.CONFLICT),
-    ADMIN_PATIENT_DELETE_CONFLICT(2019, "admin patient delete conflict", ErrorCodeCategory.CONFLICT);
+    ADMIN_PATIENT_DELETE_CONFLICT(2019, "admin patient delete conflict", ErrorCodeCategory.CONFLICT),
+    ADMIN_PATIENT_PHONE_CONFLICT(2020, "admin patient phone conflict", ErrorCodeCategory.CONFLICT);
 
     private final int code;
     private final String message;

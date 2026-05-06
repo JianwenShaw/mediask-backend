@@ -1,14 +1,14 @@
 package me.jianwen.mediask.api.dto;
 
-public record LoginRequest(String username, String password) {
+public record LoginRequest(String phone, String password) {
 
     public LoginRequest {
-        username = normalizeUsername(username);
+        phone = normalizePhone(phone);
         password = preservePassword(password);
     }
 
-    private static String normalizeUsername(String value) {
-        return requireNonBlank(value, "username").trim();
+    private static String normalizePhone(String value) {
+        return requireNonBlank(value, "phone").trim();
     }
 
     private static String preservePassword(String value) {

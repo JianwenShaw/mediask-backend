@@ -16,6 +16,7 @@ import me.jianwen.mediask.infra.persistence.base.BaseDO;
 public class UserDO extends BaseDO {
 
     private String username;
+    private String phone;
     private String passwordHash;
     private String displayName;
     @TableField(updateStrategy = FieldStrategy.ALWAYS)

@@ -6,7 +6,7 @@ import me.jianwen.mediask.domain.user.model.LoginAccount;
 
 public interface UserAuthenticationRepository {
 
-    Optional<LoginAccount> findLoginAccountByUsername(String username);
+    Optional<LoginAccount> findLoginAccountByPhone(String phone);
 
     Optional<AuthenticatedUser> findAuthenticatedUserById(Long userId);
 

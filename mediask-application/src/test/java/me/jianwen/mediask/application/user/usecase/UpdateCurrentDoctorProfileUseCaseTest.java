@@ -86,7 +86,7 @@ class UpdateCurrentDoctorProfileUseCaseTest {
         }
 
         @Override
-        public Optional<LoginAccount> findLoginAccountByUsername(String username) {
+        public Optional<LoginAccount> findLoginAccountByPhone(String phone) {
             throw new UnsupportedOperationException("not needed for update profile tests");
         }
 

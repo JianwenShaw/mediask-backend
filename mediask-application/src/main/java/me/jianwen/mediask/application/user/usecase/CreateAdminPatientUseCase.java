@@ -29,6 +29,7 @@ public class CreateAdminPatientUseCase {
     public AdminPatientDetail handle(CreateAdminPatientCommand command, AuditContext auditContext) {
         AdminPatientDetail detail = adminPatientWriteRepository.create(new AdminPatientCreateDraft(
                 command.username(),
+                command.phone(),
                 passwordHasher.hash(command.password()),
                 command.displayName(),
                 command.mobileMasked(),

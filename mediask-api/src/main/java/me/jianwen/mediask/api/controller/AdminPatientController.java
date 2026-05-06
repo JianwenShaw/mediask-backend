@@ -92,6 +92,7 @@ public class AdminPatientController {
             return Result.ok(AuthAssembler.toAdminPatientDetailResponse(createAdminPatientUseCase.handle(
                     new CreateAdminPatientCommand(
                             request.username(),
+                            request.phone(),
                             request.password(),
                             request.displayName(),
                             request.mobileMasked(),
@@ -126,6 +127,7 @@ public class AdminPatientController {
                     new UpdateAdminPatientCommand(
                             patientId,
                             request.displayName(),
+                            request.phone(),
                             request.mobileMasked(),
                             request.gender(),
                             request.birthDate(),
