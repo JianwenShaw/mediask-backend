@@ -32,7 +32,7 @@
         <mybatis-plus.version>3.5.15</mybatis-plus.version>
 
         <!-- Redis & 缓存 -->
-<!--        <redisson.version>3.40.2</redisson.version>-->
+        <redisson.version>3.40.2</redisson.version>
 
         <!-- 工具类库 -->
         <lombok.version>1.18.36</lombok.version>
